@@ -1,0 +1,3 @@
+# Local Vercel project binding and deployment credentials.
+.vercel
+.env*
