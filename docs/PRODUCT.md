@@ -10,7 +10,7 @@ related_docs: [docs/GUIDE.md, docs/VISION.md, docs/PRODUCT_PAGE.md, README.md]
 
 **golos** is a small macOS menu-bar app that turns your voice into text
 anywhere a cursor can blink. Hold a key, talk, release — the text appears in
-whatever app you're in. It's a personal, open-source take on Wispr Flow:
+the compatible text field you're using. It's a personal, open-source take on Wispr Flow:
 inspectable, configurable Python, no subscription.
 
 End-user guides live in the Help Center:

@@ -13,7 +13,8 @@ related_docs: [site/README.md, RELEASE_CHECKLIST.md, docs/PRODUCT.md, docs/ROADM
 # Talk to your Mac. It types.
 **golos** (Ukrainian "voice") — push-to-talk dictation for macOS.
 Hold **fn**, say what you mean, let go. golos transcribes, cleans up, and
-types it into whatever app you're in — email, terminal, chat, IDE.
+posts it into the compatible text field you're using — email, terminal, chat,
+or IDE. Some apps may reject simulated insertion; History keeps the result.
 
 **Subheads:**
 
@@ -21,7 +22,7 @@ types it into whatever app you're in — email, terminal, chat, IDE.
   formatting handles punctuation, fillers, paragraphs, and lists.
 - **Cloud-first, local when you want it.** Start with OpenRouter—no model
   download. Apple Silicon users can explicitly download on-device Whisper.
-- **It knows where you're typing.** dictate sees the app, the window, even
+- **It knows where you're typing.** golos can see the app, the window, even
   the file you're editing — so "attach main dot pi" becomes `main.py`.
 
 **Hero CTAs:** direct architecture downloads (not the generic releases index):
@@ -114,9 +115,9 @@ toggle) to stop archiving. Text history (raw + final, with the app it went
 to) stays in a local JSONL file you own.
 
 **What does it cost?**
-golos is free and open-source. Local STT costs nothing forever. Cloud
-transcription on OpenRouter is fractions of a cent per minute — benchmark
-all 9 supported models on your own voice with the built-in
+golos is free and open-source. Local STT has no provider fee. Cloud
+transcription is billed by the provider you choose and varies by model —
+benchmark the 9 curated models on your own voice with the built-in
 `python -m dictate.bench` harness.
 
 **Why the permissions?**

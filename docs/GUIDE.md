@@ -16,7 +16,7 @@ prefer the public Help Center:
 ## What it is
 
 golos is a menu-bar dictation app: hold a key, speak, release — cleaned-up
-text appears at the cursor of whatever app you're in. OpenRouter speech-to-text
+text is posted at the cursor of the compatible frontmost text field. OpenRouter speech-to-text
 is the default; Apple Silicon users can explicitly download local Whisper
 (Intel builds are cloud-only). The LLM formatting pass is optional.
 It runs as an accessory app (no Dock icon) with a status-bar chakra glyph

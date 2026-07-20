@@ -150,7 +150,9 @@ cd ~/dictate
 ./dictate.sh restart    # quit + start
 ```
 
-Hold `fn`, speak, release. Text appears at the cursor of whatever app is frontmost.
+Hold `fn`, speak, release. Text is posted at the cursor of the compatible
+frontmost text field. Some apps or fields can reject simulated insertion;
+History keeps the result available to copy or retry.
 `fn`+Space locks recording on; **a single press of `fn`** (or `fn`+Space again)
 stops and inserts. The Space in the combo is swallowed by a CGEventTap (needs
 the Input Monitoring permission you already granted — if the tap can't be
