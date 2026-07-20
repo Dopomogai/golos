@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Golos Help Center — getting started, settings, workflows, privacy, and troubleshooting for the open-source macOS dictation app.">
+  <meta name="theme-color" content="#080b12">
+  <meta property="og:title" content="Golos Help Center">
+  <meta property="og:description" content="Docs for golos push-to-talk dictation on macOS: install, permissions, settings, privacy, and troubleshooting.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://golos.dopomogai.com/docs/">
+  <title>Golos Help Center — docs for v0.3.1</title>
+  <link rel="canonical" href="https://golos.dopomogai.com/docs/">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="../golos-mark.svg">
+  <link rel="stylesheet" href="docs.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="docs-nav-shell">
+    <nav class="docs-nav" aria-label="Primary navigation">
+      <a class="brand" href="https://golos.dopomogai.com/" aria-label="golos home">
+        <img class="brand-mark" src="../golos-mark.svg" width="28" height="28" alt="" aria-hidden="true">
+        <span>golos</span>
+      </a>
+      <div class="docs-nav-links">
+        <a href="https://golos.dopomogai.com/">Home</a>
+        <a href="./" aria-current="page">Docs</a>
+        <a class="button button-small" href="https://golos.dopomogai.com/#download">Download</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main" class="docs-shell">
+    <header class="page-hero">
+      <p class="kicker">Documentation</p>
+      <h1>Golos Help Center</h1>
+      <p class="lede">
+        How to install, configure, and drive <strong>golos</strong> — open-source push-to-talk dictation for macOS.
+        Hold <kbd>fn</kbd>, speak, release; text lands at the cursor of the frontmost app.
+      </p>
+      <div class="page-hero-meta">
+        <span class="version-badge" title="Documentation applies to this public beta">Applies to v0.3.1</span>
+        <span class="muted" style="font-size:13px">macOS 13+ · Apple Silicon &amp; Intel</span>
+      </div>
+    </header>
+
+    <div class="docs-search" data-docs-search>
+      <label class="docs-search-label" for="docs-filter">Search topics</label>
+      <div class="docs-search-field">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="M20 20l-3.5-3.5"></path>
+        </svg>
+        <input
+          id="docs-filter"
+          type="search"
+          name="q"
+          placeholder="Filter by topic — install, permissions, privacy…"
+          autocomplete="off"
+          spellcheck="false"
+          enterkeyhint="search"
+        >
+        <button type="button" class="docs-search-clear" data-docs-search-clear hidden aria-label="Clear search">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
+      <p class="docs-search-status" data-docs-search-status role="status"></p>
+    </div>
+
+    <section class="docs-section" aria-labelledby="topics-heading">
+      <div class="docs-section-heading">
+        <h2 id="topics-heading">Browse by topic</h2>
+        <p>Guides for day-to-day use of the v0.3.1 Mac beta</p>
+      </div>
+      <ul class="docs-cards">
+        <li data-docs-item data-docs-keywords="getting started install setup permissions onboarding first run dmg right-click open gatekeeper microphone accessibility input monitoring fn key apple silicon intel">
+          <a class="docs-card" href="getting-started/">
+            <span class="docs-card-icon" aria-hidden="true">01</span>
+            <p class="docs-card-kicker">Start here</p>
+            <h3>Getting started</h3>
+            <p>Download the right DMG, open an unsigned beta, grant three permissions, and run your first dictation.</p>
+            <span class="card-arrow">Open guide →</span>
+          </a>
+        </li>
+        <li data-docs-item data-docs-keywords="settings general history dictionary prompt learning models openrouter mlx format with llm fast mode hold key bubble config">
+          <a class="docs-card" href="settings/">
+            <span class="docs-card-icon" aria-hidden="true">02</span>
+            <p class="docs-card-kicker">Configure</p>
+            <h3>Settings</h3>
+            <p>Menu-bar chakra → History, General, Prompt, Learning, and Dictionary. Models, hold key, and Format with LLM.</p>
+            <span class="card-arrow">Open guide →</span>
+          </a>
+        </li>
+        <li data-docs-item data-docs-keywords="workflows push to talk lock mode hands-free esc cancel raw formatted pipeline insert notch bubble dictation">
+          <a class="docs-card" href="workflows/">
+            <span class="docs-card-icon" aria-hidden="true">03</span>
+            <p class="docs-card-kicker">Daily use</p>
+            <h3>Workflows</h3>
+            <p>Hold-to-talk, lock mode, cancel with Esc, raw vs formatted output, and what the notch strip is telling you.</p>
+            <span class="card-arrow">Open guide →</span>
+          </a>
+        </li>
+        <li data-docs-item data-docs-keywords="better results dictionary corrections learning context citations formatter languages fast mode send audio benchmark">
+          <a class="docs-card" href="better-results/">
+            <span class="docs-card-icon" aria-hidden="true">04</span>
+            <p class="docs-card-kicker">Quality</p>
+            <h3>Better results</h3>
+            <p>Dictionary and corrections, human-approved learning, context roles, and knobs that trade speed for polish.</p>
+            <span class="card-arrow">Open guide →</span>
+          </a>
+        </li>
+        <li data-docs-item data-docs-keywords="privacy data local mlx cloud openrouter recordings history ~/.golos reviewer formatting off fully local">
+          <a class="docs-card" href="privacy/">
+            <span class="docs-card-icon" aria-hidden="true">05</span>
+            <p class="docs-card-kicker">Trust</p>
+            <h3>Privacy &amp; data</h3>
+            <p>What stays on your Mac, what can leave when cloud or formatting is on, and how fully local mode works.</p>
+            <span class="card-arrow">Open guide →</span>
+          </a>
+        </li>
+        <li data-docs-item data-docs-keywords="troubleshooting nothing pasted fn broken already running no bubble permissions logs insertion test gatekeeper">
+          <a class="docs-card" href="troubleshooting/">
+            <span class="docs-card-icon" aria-hidden="true">06</span>
+            <p class="docs-card-kicker">Fix it</p>
+            <h3>Troubleshooting</h3>
+            <p>Nothing inserts, <kbd>fn</kbd> does nothing, “already running”, idle bubble, and how to read permissions status.</p>
+            <span class="card-arrow">Open guide →</span>
+          </a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="docs-section" aria-labelledby="quick-heading">
+      <div class="docs-section-heading">
+        <h2 id="quick-heading">Quick links</h2>
+        <p>Installers, source, and project direction</p>
+      </div>
+      <ul class="quick-links">
+        <li>
+          <a class="quick-link" href="https://golos.dopomogai.com/#download">
+            <strong>Download</strong>
+            <span>Apple Silicon and Intel DMGs for v0.3.1 on the product page</span>
+          </a>
+        </li>
+        <li>
+          <a class="quick-link" href="https://github.com/Dopomogai/golos" target="_blank" rel="noopener noreferrer">
+            <strong>GitHub</strong>
+            <span>Source, issues, and install-from-source notes</span>
+          </a>
+        </li>
+        <li>
+          <a class="quick-link" href="https://github.com/Dopomogai/golos/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">
+            <strong>Roadmap</strong>
+            <span>Shipped beta, near-term hardening, pipeline — no ship dates</span>
+          </a>
+        </li>
+        <li>
+          <a class="quick-link" href="https://github.com/Dopomogai/golos/releases/latest" target="_blank" rel="noopener noreferrer">
+            <strong>Release notes</strong>
+            <span>v0.3.1 assets, checksums, and changelog on GitHub Releases</span>
+          </a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="docs-section" aria-labelledby="beta-heading">
+      <div class="beta-notice" role="note">
+        <h2 id="beta-heading">Beta notice</h2>
+        <p>
+          This help center describes the public <strong>v0.3.1</strong> Mac beta.
+          Expect rough edges. Read these constraints before you install:
+        </p>
+        <ul>
+          <li><strong>macOS 13+</strong> (Ventura or newer).</li>
+          <li><strong>Apple Silicon</strong> builds: cloud OpenRouter STT plus optional local MLX (explicit ~1.5&nbsp;GB download). <strong>Intel</strong> builds: cloud-only.</li>
+          <li>Builds are <strong>unsigned</strong>. First launch: right-click <strong>golos</strong> → <strong>Open</strong> (Gatekeeper). Do not expect signed or notarized builds yet.</li>
+          <li><strong>Updates are manual</strong> — download a newer DMG from the release page. There is no automatic update installer in this beta.</li>
+          <li><strong>Windows desktop and mobile</strong> are in the pipeline with no announced date. Mac is supported today.</li>
+          <li><strong>Fully local</strong> processing requires Apple Silicon with the local MLX model, <strong>Format with LLM</strong> off, and the optional learning reviewer off. Cloud STT still sends audio when you use OpenRouter.</li>
+          <li>A green <strong>✓ inserted</strong> flash means the paste path ran — it is not a guarantee that every app or text field accepted the text correctly.</li>
+          <li>Context-aware citations and path resolution are best-effort from accessible context; they are not guaranteed in every app.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="docs-section" aria-labelledby="first-steps-heading">
+      <div class="docs-section-heading">
+        <h2 id="first-steps-heading">First five minutes</h2>
+        <p>Short path after you have a DMG</p>
+      </div>
+      <ol class="step-list">
+        <li>
+          <div>
+            <strong class="step-title">Install</strong>
+            <p>Open the DMG for your architecture, drag <strong>golos</strong> to Applications, then right-click → Open once.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong class="step-title">Permissions</strong>
+            <p>Grant Microphone, Input Monitoring, and Accessibility to <strong>golos.app</strong>. Set Keyboard → “Press 🌐/fn key to” → <strong>Do Nothing</strong>.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong class="step-title">Connect STT</strong>
+            <p>Add an OpenRouter key in onboarding for cloud transcription, or on Apple Silicon download the local model from Settings → General when you want on-device STT.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong class="step-title">Dictate</strong>
+            <p>Hold <kbd>fn</kbd>, say something, release. Use menu-bar → <strong>Test insertion</strong> if nothing lands at the cursor.</p>
+          </div>
+        </li>
+      </ol>
+      <p class="muted" style="margin-top:16px;font-size:14px">
+        Need the long form? Start with
+        <a class="text-link" href="getting-started/">Getting started</a>.
+      </p>
+    </section>
+
+    <section class="docs-section" aria-labelledby="modes-heading">
+      <div class="docs-section-heading">
+        <h2 id="modes-heading">Raw vs formatted at a glance</h2>
+        <p>Toggle in Settings → General → Format with LLM</p>
+      </div>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th scope="col">Mode</th>
+              <th scope="col">What runs</th>
+              <th scope="col">Speed</th>
+              <th scope="col">Privacy note</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Raw</th>
+              <td>STT only; no LLM cleanup</td>
+              <td>Fastest insert</td>
+              <td>Skips formatter and context sharing. Cloud STT still sends audio if OpenRouter is selected.</td>
+            </tr>
+            <tr>
+              <th scope="row">Formatted (default)</th>
+              <td>STT + optional LLM polish, lists, corrections, context</td>
+              <td>Typically a short extra wait</td>
+              <td>Transcript and allowed context can leave the Mac when formatting is on.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <aside class="callout callout--tip" aria-label="Tip">
+      <span class="callout-icon" aria-hidden="true">i</span>
+      <div class="callout-body">
+        <span class="callout-title">Where state lives</span>
+        <p>
+          Config, dictionary, corrections, history, and optional recordings live under
+          <code>~/.golos/</code> on your Mac. You can read, move, or delete them.
+          golos is free and open-source under MIT — cloud model usage is billed by the provider you choose, not by a golos subscription.
+        </p>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="docs-footer">
+    <a class="brand" href="https://golos.dopomogai.com/">
+      <img class="brand-mark" src="../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
+      <span>golos</span>
+    </a>
+    <p>Help Center · Applies to v0.3.1 · Made in Ukraine</p>
+    <div class="docs-footer-links">
+      <a href="https://golos.dopomogai.com/">Home</a>
+      <a href="https://golos.dopomogai.com/#download">Download</a>
+      <a href="https://github.com/Dopomogai/golos" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://github.com/Dopomogai/golos/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a>
+      <a href="https://github.com/Dopomogai/golos/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>
+    </div>
+  </footer>
+
+  <script src="docs.js"></script>
+</body>
+</html>
