@@ -28,6 +28,43 @@ _STATE_FILES = ("dictionary.txt", "corrections.tsv", "history.jsonl",
                 "suggestions.jsonl", "dismissed.jsonl")
 
 
+def bundled_config_path(project_root: Path = PROJECT_ROOT) -> Path | None:
+    """Find the key-free seed config in source or a frozen py2app bundle."""
+    # Contents/MacOS/golos -> Contents/Resources/config.toml. Checking the
+    # executable-relative candidate directly is more robust than relying on a
+    # particular py2app version's optional sys.frozen marker.
+    candidates = [
+        Path(sys.executable).resolve().parent.parent / "Resources" / "config.toml",
+        project_root / "config.toml",
+    ]
+    return next((path for path in candidates if path.is_file()), None)
+
+
+def configure_frozen_ca() -> Path | None:
+    """Point HTTP clients at the CA file copied into a py2app bundle.
+
+    certifi's importlib.resources lookup can resolve to the py2app zip while
+    its package data is unpacked beside it. A top-level bundle resource avoids
+    that mismatch. Existing operator-provided SSL settings always win.
+    """
+    if not getattr(sys, "frozen", False):
+        return None
+    existing_file = os.environ.get("SSL_CERT_FILE")
+    existing_dir = os.environ.get("SSL_CERT_DIR")
+    if ((existing_file and Path(existing_file).is_file())
+            or (existing_dir and Path(existing_dir).is_dir())):
+        return None
+    ca_path = (Path(sys.executable).resolve().parent.parent
+               / "Resources" / "cacert.pem")
+    if not ca_path.is_file():
+        log.warning("Bundled CA file is missing: %s", ca_path)
+        return None
+    os.environ["SSL_CERT_FILE"] = str(ca_path)
+    log.info("Configured bundled CA file: %s (executable=%s)",
+             ca_path, sys.executable)
+    return ca_path
+
+
 def ensure_data_dir(data_dir: Path = DATA_DIR,
                     project_root: Path = PROJECT_ROOT,
                     old_data_dir: Path = OLD_DATA_DIR) -> Path:
@@ -43,10 +80,12 @@ def ensure_data_dir(data_dir: Path = DATA_DIR,
         return data_dir
     if (old_data_dir / "config.toml").exists():
         source = old_data_dir
-    elif (project_root / "config.toml").exists():
-        source = project_root
     else:
-        return data_dir
+        seed = bundled_config_path(project_root)
+        if seed is not None:
+            source = seed.parent
+        else:
+            return data_dir
     import shutil
     shutil.copy2(source / "config.toml", dst_cfg)
     os.chmod(dst_cfg, 0o600)  # holds the API key

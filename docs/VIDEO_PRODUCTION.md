@@ -27,7 +27,7 @@ are written lines. Everything else is a speaking bullet: use your own words.
   around one person's workflow.
 - Later in the story, credit Wispr Flow as the specific product that inspired
   the interaction; do not make brand recognition a prerequisite for the hook.
-- Wanted transparency, ownership, flexibility, local-first options, visible
+- Wanted transparency, ownership, flexibility, a local option, visible
   settings, and learning that asks before changing vocabulary.
 - First usable golos build worked about 1.5 hours after starting.
 - Two days of using it for real work produced the polished version.
@@ -179,7 +179,7 @@ Target **~4:30–5:30**. Timecodes are edit targets, not master clock.
 |---|---|
 | **Hook (0–8 s)** | "I wanted push-to-talk like the best of that category — with ownership." |
 | **Master moments** | Hook B; problem principles; open-source files; privacy toggles |
-| **Captions / B-roll** | "Inspired by the push-to-talk dictation category (credit: Wispr Flow)" / "Local-first · open source · your files". One credit; no competitor logo, affiliation, or "alternative to" lower-third |
+| **Captions / B-roll** | "Inspired by the push-to-talk dictation category (credit: Wispr Flow)" / "Open source · cloud or local · your files". One credit; no competitor logo, affiliation, or "alternative to" lower-third |
 | **CTA** | Pre-launch: "Source and download when we publish." Post-launch: live URL/repo |
 
 ### Short 3 — "Built by dictating into itself"
@@ -197,7 +197,7 @@ Target **~4:30–5:30**. Timecodes are edit targets, not master clock.
 |---|---|
 | **Hook (0–8 s)** | "Dictation that doesn't decide everything for you." |
 | **Master moments** | Raw vs formatted; hold-key change; languages; learning approval; privacy section |
-| **Captions / B-roll** | Checklist captions: "Raw or formatted", "Your hold key", "Approve corrections", "Local-first default" |
+| **Captions / B-roll** | Checklist captions: "Raw or formatted", "Your hold key", "Approve corrections", "Cloud first, local optional" |
 | **CTA** | "Settings you can see. Learning you approve." + trial/feedback |
 
 **Shared pre-launch endcard for every short:** “Works on my machine; public
@@ -247,7 +247,9 @@ Avoid generic "smash that like button" energy; keep it peer-to-peer.
 - Credit inspiration; **never** imply affiliation, endorsement, or "official alternative."
 - No attack framing, no unverifiable "better than X" benchmarks.
 - No invented founder bio, user counts, revenue, security certifications, or compatibility matrices.
-- The supported release target is **Apple Silicon on macOS 13+**. Do not say "all Mac users" or imply Intel support.
+- The release target is **macOS 13+**: Apple Silicon supports cloud plus
+  optional local MLX; Intel uses the separate cloud-only build. Say this only
+  after both artifacts pass the release smoke test.
 - **Audio-assisted formatting** only feeds **golos's internal formatter** — never say audio is attached to the destination chat, email, or app.
 - "Wispr Flow" / category leaders: nominative use only; do not reuse their marks as golos branding.
 - Demo only what happens on camera; if context/citation fails, cut or re-take — don't voice over a fantasy result.
@@ -262,7 +264,7 @@ Avoid generic "smash that like button" energy; keep it peer-to-peer.
 | Public GitHub repo / clone URL | Use **swap-in**: "when the repo is public" | ✓ live URL | Fake star counts or "everyone is using this" |
 | Public download link | Swap-in only | ✓ live DMG URL | "Download today" without a real link |
 | Website / product page live | Swap-in only | ✓ when deployed | SEO or traffic claims |
-| Open source, local-first defaults, human-gated learning | ✓ (as implemented) | ✓ | "Military-grade encryption," "zero data ever leaves" while cloud STT/formatting is on |
+| Open source, cloud-first default, optional local STT, human-gated learning | ✓ (as implemented) | ✓ | "Military-grade encryption," "zero data ever leaves" while cloud STT/formatting is on |
 | Inspired by / comparable category to Wispr Flow | ✓ neutral credit | ✓ | "Replacement for," "clone of," affiliation |
 | Multilingual (e.g. en + uk) | ✓ only if configured and shown | ✓ | "All languages," "perfect Ukrainian" without demo |
 | Faster than typing / 2–3× | Soft personal experience only if you stand behind it | Same | Hard productivity studies you didn't run |
@@ -273,10 +275,9 @@ Avoid generic "smash that like button" energy; keep it peer-to-peer.
 
 **Pre-launch (record these; keep in master even if you later cut):**
 
-> "The app works on my machine — code, DMG, the full loop. Public release
-> still needs the repo published, a signed and notarized build, live
-> download and source URLs, and the site. I'm recording this so the story
-> is ready when those land."
+> "The app works on my machine—the code and public beta are already available.
+> The current DMG is unsigned, so the signed and notarized release is still a
+> separate step. I'm showing exactly what works today."
 
 **Post-launch:**
 
@@ -327,7 +328,7 @@ and the reusable outro. Prefer truth over polish.
 |---|---|
 | What it is | Menu-bar push-to-talk: hold key, speak, text at cursor |
 | Inspiration | Liked the category Wispr Flow helped define; built for ownership |
-| Local-first | Useful without an account; on-device STT path available |
+| STT choice | OpenRouter is the default; Apple Silicon can download optional on-device STT |
 | Formatting | Optional LLM pass; raw mode is one checkbox |
 | Learning | Proposes corrections; you approve or dismiss |
 | Audio to formatter | Optional assist **inside golos** — not sent to the chat you're typing in |

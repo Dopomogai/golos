@@ -10,6 +10,8 @@ import pytest
 from dictate.config import (
     _heal_char_arrays,
     _is_char_array,
+    bundled_config_path,
+    configure_frozen_ca,
     ensure_data_dir,
     env_key,
     load_config,
@@ -82,6 +84,44 @@ def test_ensure_data_dir_migrates_from_project(tmp_path):
     (project / "config.toml").write_text('[hotkey]\nhold_key = "fn"\n', encoding="utf-8")
     ensure_data_dir(data_dir=data, project_root=project, old_data_dir=old)
     assert "fn" in (data / "config.toml").read_text(encoding="utf-8")
+
+
+def test_bundled_config_path_finds_py2app_resource(tmp_path, monkeypatch):
+    contents = tmp_path / "golos.app" / "Contents"
+    executable = contents / "MacOS" / "golos"
+    resource = contents / "Resources" / "config.toml"
+    executable.parent.mkdir(parents=True)
+    resource.parent.mkdir(parents=True)
+    executable.write_text("", encoding="utf-8")
+    resource.write_text('[stt]\nbackend = "openrouter"\n', encoding="utf-8")
+    monkeypatch.setattr("dictate.config.sys.frozen", True, raising=False)
+    monkeypatch.setattr("dictate.config.sys.executable", str(executable))
+    missing_source = tmp_path / "missing-source"
+    assert bundled_config_path(missing_source) == resource
+    data = tmp_path / "new-home" / ".golos"
+    ensure_data_dir(
+        data_dir=data,
+        project_root=missing_source,
+        old_data_dir=tmp_path / "missing-old",
+    )
+    assert 'backend = "openrouter"' in (data / "config.toml").read_text()
+    assert (data / "config.toml").stat().st_mode & 0o777 == 0o600
+
+
+def test_configure_frozen_ca_uses_bundle_resource(tmp_path, monkeypatch):
+    contents = tmp_path / "golos.app" / "Contents"
+    executable = contents / "MacOS" / "golos"
+    ca = contents / "Resources" / "cacert.pem"
+    executable.parent.mkdir(parents=True)
+    ca.parent.mkdir(parents=True)
+    executable.write_text("", encoding="utf-8")
+    ca.write_text("test-ca", encoding="utf-8")
+    monkeypatch.setattr("dictate.config.sys.frozen", True, raising=False)
+    monkeypatch.setattr("dictate.config.sys.executable", str(executable))
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    monkeypatch.delenv("SSL_CERT_DIR", raising=False)
+    assert configure_frozen_ca() == ca
+    assert __import__("os").environ["SSL_CERT_FILE"] == str(ca)
 
 
 def test_load_config_absolute_paths_preserved(tmp_path, monkeypatch):

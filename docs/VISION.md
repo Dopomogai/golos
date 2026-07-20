@@ -1,6 +1,6 @@
 ---
 @purpose: "Why golos exists, design principles, and the roadmap through public release and later phases."
-@why: "Anchors product decisions so features stay local-first, human-gated, and legible."
+@why: "Anchors product decisions so processing choices stay explicit, human-gated, and legible."
 @role: reference
 @stability: evolving
 @tags: [golos, vision, principles, roadmap]
@@ -14,15 +14,15 @@ Wispr Flow proved that push-to-talk dictation, done well, is faster than
 typing for a huge class of daily writing. But it's closed, subscription,
 cloud-only, and its corrections model learns in ways you can't inspect.
 golos is the same core interaction rebuilt as a small, readable,
-local-first Python app you can actually own: every transcription, every
+inspectable Python app you can actually own: every transcription, every
 correction, every byte that leaves your machine is visible in a log file or
 a prompt you can print.
 
 ## Design principles
 
-- **Local-first.** The app is fully useful with zero API keys: on-device
-  Whisper, raw insertion, local history. Cloud is an upgrade, never a
-  requirement — and every cloud feature has an off switch that means off.
+- **Cloud-first, local by choice.** OpenRouter is the quickest setup and needs
+  no large model download. Apple Silicon users can explicitly download
+  on-device Whisper. Formatting and audio forwarding remain separate controls.
 - **Human-gated learning.** The app may *notice* that you fixed
   "wisper flow" to "Wispr Flow", but it never silently rewrites your
   dictionary. Suggestions are proposed; you promote or dismiss. Your
@@ -65,8 +65,8 @@ a prompt you can print.
 
 - **Windows/Linux ports** — the entire value proposition hangs off macOS
   APIs (AX, CGEvent, NSPanel); a port is a rewrite, not a port.
-- **One-stage multimodal audio** (LLM straight from audio) — kills the
-  local-first option and vocabulary biasing today; revisit when local
+- **One-stage multimodal audio** (LLM straight from audio) — weakens the
+  local option and vocabulary biasing today; revisit when local
   audio-LLMs mature.
 - **Emotion/style annotations** — tone inference from voice is creepy by
   default and high-effort; punctuation + context already covers the 95%

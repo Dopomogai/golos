@@ -4,13 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dictate"
-version = "0.2.0"
+version = "0.3.0"
 description = "Push-to-talk dictation for macOS, plus dictate_core: an embeddable voice pipeline library"
 requires-python = ">=3.11"
 dependencies = ["httpx", "numpy"]
 
 [project.optional-dependencies]
 mlx = ["mlx-whisper"]
+local = ["mlx-whisper"]
 mic = ["sounddevice"]
 app = [
     "pyobjc-core",
@@ -20,7 +21,6 @@ app = [
     "pyobjc-framework-AVFoundation",
     "toml",
     "sounddevice",
-    "mlx-whisper",
 ]
 dev = [
     "pytest>=8.0",

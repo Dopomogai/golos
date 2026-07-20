@@ -13,8 +13,9 @@ Everything the app does, and how to drive it. Verified against the current code.
 ## What it is
 
 golos is a menu-bar dictation app: hold a key, speak, release — cleaned-up
-text appears at the cursor of whatever app you're in. Local-first (on-device
-Whisper by default), with optional cloud STT and an LLM formatting pass.
+text appears at the cursor of whatever app you're in. OpenRouter speech-to-text
+is the default; Apple Silicon users can explicitly download local Whisper.
+The LLM formatting pass is optional.
 It runs as an accessory app (no Dock icon) with a status-bar chakra icon.
 
 ## Controls
@@ -72,12 +73,13 @@ samples for the benchmark harness; copy or symlink them into `samples/`.
 
 ## Models
 
-- **Local (default)**: `mlx-community/whisper-large-v3-turbo` on-device via
-  mlx-whisper. Free, private, ~1.5 GB one-time download.
-- **Cloud via OpenRouter**: 9 curated transcription ids (in
+- **Cloud via OpenRouter (default)**: 9 curated transcription ids (in
   `dictate/openrouter.py`, verified against the live API) — default
   `deepgram/nova-3`; also qwen3-asr, chirp-3, parakeet, voxtral-mini-transcribe,
   mai-transcribe, whisper-1, gpt-4o(-mini)-transcribe.
+- **Local (optional, Apple Silicon)**: `mlx-community/whisper-large-v3-turbo`
+  on-device via mlx-whisper. The ~1.5 GB weights download only after the user
+  explicitly clicks **Download local (~1.5 GB)**; dictation never starts it silently.
 - **Benchmark on your voice**: `python -m dictate.bench record NAME` (mic
   until Enter → `samples/NAME.wav` + draft `.txt`), then
   `python -m dictate.bench run [--models a,b] [--verbose]` — table of
@@ -146,7 +148,8 @@ providers and text reads independently.
 The status item shows the golos chakra glyph (a template image that adapts
 to light/dark menu bars; SF Symbol fallback if the file is missing).
 
-- **General**: STT backend (mlx / openrouter), STT + formatter models
+- **General**: STT backend (OpenRouter cloud-first / optional local MLX),
+  explicit local-model download/status, STT + formatter models
   (combo, "Fetch models" refreshes from OpenRouter), **Languages** (comma-
   separated, e.g. `en, uk`), API key field, bubble style, **Hold-to-talk
   key** popup (fn / Right Option / Right Command / F5), **Input sensitivity**
@@ -178,8 +181,10 @@ at startup and in the Permissions submenu.
 ## Installing (until notarization)
 
 ```sh
-./build_app.sh                      # py2app -> dist/golos.app (~280 MB)
-./make_dmg.sh                       # -> dist/golos-0.2.0.dmg (~126 MB)
+./build_app.sh                      # Apple Silicon -> dist/golos.app
+./make_dmg.sh 0.3.0-apple-silicon
+./build_intel_app.sh                # Intel cloud-only -> dist/golos.app
+./make_dmg.sh 0.3.0-intel
 ```
 
 **Install from the DMG**: open it, drag **golos** onto **Applications**,
@@ -227,7 +232,7 @@ Build notes: requires `setuptools<80`; `build_app.sh` temporarily hides
 |---|---|---|
 | `[hotkey] hold_key` | `"fn"` | or `"right_option"` |
 | `[hotkey] toggle_combo` | `"fn+space"` | or `"double_fn"` |
-| `[stt] backend` | `"mlx"` | `mlx` / `openrouter` / `openai_compatible` / `deepgram` |
+| `[stt] backend` | `"openrouter"` | `openrouter` / `mlx` / `openai_compatible` / `deepgram` |
 | `[stt] languages` | `[]` | e.g. `["en", "uk"]`; empty = auto-detect |
 | `[stt] mlx_model` | `whisper-large-v3-turbo` | local model repo |
 | `[stt] language` | `""` | empty = auto |
