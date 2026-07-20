@@ -22,7 +22,7 @@ A minimal macOS push-to-talk dictation app, in Python + PyObjC
 - **`fn` + Space** toggles a hands-free "locked" recording mode (press again to stop).
 - Notch-style floating bubble (Dynamic Island look: hugs the camera notch, expands
   with a live waveform while recording) or a draggable corner pill.
-- Menu-bar icon with Settings (General / Prompt / Learning / Dictionary / History) — no dock icon.
+- Menu-bar icon with Settings (History first, then General / Prompt / Learning / Dictionary) — no dock icon.
 - OpenRouter cloud STT works without downloading a local model; Apple Silicon
   users can optionally download the ~1.5 GB MLX model for on-device STT.
 
@@ -102,10 +102,10 @@ the bench harness).
 ```sh
 # Apple Silicon edition (install requirements-local.txt first):
 ./build_app.sh
-./make_dmg.sh 0.3.0-apple-silicon
+./make_dmg.sh 0.3.1-apple-silicon
 # Intel/cloud-only edition (requires an x86_64 Python 3.11+):
 ./build_intel_app.sh
-./make_dmg.sh 0.3.0-intel
+./make_dmg.sh 0.3.1-intel
 ```
 
 Requires `py2app` and `setuptools<80` (in the requirements files). The bundle is
@@ -197,8 +197,15 @@ Click the mic icon in the menu bar → **Settings…**. The menu also has:
   matching System Settings pane. The same three checks run at startup and log
   loud ⚠ warnings with deep links for anything missing.
 
-Four tabs (General, Prompt, Dictionary, History):
+Five tabs (History is first and opens by default):
 
+- **History** — home dashboard: newest-first table of past dictations
+  (resizable columns, Raw → Final takes the spare width); select a row for
+  raw/final/context/error detail. **Copy text** takes the best available
+  final/raw result, **Retry** appends a new recovery attempt without silently
+  inserting into the Settings window, and **Show audio** reveals a retained
+  WAV in Finder. Suggestions still support promote/dismiss; Check for edits
+  and Refresh remain in the header.
 - **General** — STT backend (`openrouter` cloud-first, or `mlx` on-device),
   an explicit **Download local (~1.5 GB)** button on supported Apple Silicon Macs, STT model,
   **Languages** (comma-separated, e.g. `en, uk`; empty = auto-detect),
@@ -218,12 +225,11 @@ Four tabs (General, Prompt, Dictionary, History):
   for listing, and the combo boxes keep your current values if the fetch fails.
   **Save** writes `config.toml` and rebuilds the STT/formatter pipeline live.
   Bubble style applies after restart.
+- **Learning** — optional OpenRouter reviewer after you edit an insert
+  (never auto-promotes; approve in History or the live cue).
 - **Dictionary** — edit terms and corrections as tables (+/− to add/remove
   rows, double-click to edit inline); Save applies them to the running
   pipeline immediately. File comments (`#` lines) are preserved on save.
-- **History** — newest-first table of past dictations (resizable columns,
-  Raw → Final takes the spare width); click a row for the full text plus the
-  context the formatter received.
 
 ## OpenRouter
 
@@ -305,7 +311,9 @@ the paste are considered, and only while the same app is frontmost (the
 app-switch trigger reads the old app's field via its pid as a best effort).
 The anchor matching is scroll-tolerant: when the input field has scrolled
 and only shows the tail of a long insertion, coverage is measured against
-the visible overlap instead of the whole insertion.
+the visible overlap instead of the whole insertion. Short proper-name
+fixes (e.g. Mercy→Mercey) in long fields are captured even when surrounding
+UI/signature text would otherwise inflate the replace span.
 
 ## App context
 
@@ -324,17 +332,24 @@ context from the frontmost app:
 The formatter is instructed to output real paths/URLs/names **from the
 context only**, formatted to fit the target app (markdown link in chat/notes,
 plain path in editors/terminals), and to never invent references. It also
-receives up to 500 chars of **text before the cursor** (to continue your
-sentence naturally) and up to 1500 chars of **visible text** — when your
-dictation comments on something you're reading, the formatter begins the
-output with a short verbatim `> quote` of the referenced part, then your
-comment. It never quotes text that isn't verbatim on screen.
+receives three separate text roles (each toggleable under Settings → Prompt):
 
-Privacy note: nearby typed text (`text_before_cursor`), the visible text,
-and page/workspace context leave the machine **only** when LLM formatting is
-enabled — set `[formatting] enabled = false` (or uncheck "Format with LLM"
-in Settings → General) for fully-local raw insertion; `[context] enabled =
-false` turns the providers/AX reads off independently.
+- **text before the cursor** (≤500 chars) — precise continuation placement
+- **focused field text** (≤4000 chars) — full accessible text of the input
+  you are composing in (what you are producing)
+- **visible text** (≤4000 chars) — surrounding/on-screen **reading** context
+  only; never a silent reuse of the focused field. Empty when inaccessible.
+
+When your dictation comments on something in the visible text, the formatter
+begins the output with a short verbatim `> quote` of the referenced part,
+then your comment. It never quotes text that isn't verbatim in that
+surrounding context.
+
+Privacy note: nearby typed text (`text_before_cursor`), focused field text,
+visible text, and page/workspace context leave the machine **only** when LLM
+formatting is enabled — set `[formatting] enabled = false` (or uncheck
+"Format with LLM" in Settings → General) for fully-local raw insertion;
+`[context] enabled = false` turns the providers/AX reads off independently.
 
 Note: the first use of a browser/Finder provider may pop a macOS **Automation
 consent** dialog per app — that's expected; denying simply disables that
@@ -399,7 +414,8 @@ has a hard 1.5 s timeout — a stuck app can't stall dictation.
   and `debug = false`. Set `debug = true` to log the **complete system prompt
   and user message** (the full context the model receives: app, window title,
   page URL, workspace files, …) at INFO before every formatting call.
-- `[bubble]` — `style = "notch" | "corner"`.
+- `[bubble]` — `style = "notch" | "corner"`, waveform `sensitivity`, and
+  `show_text = true | false` (status words or animation-only).
 - `[insert]` — `method = "auto" | "type" | "paste"`. Auto types single-line
   text as synthetic keystrokes (no clipboard race) and uses clipboard paste
   only for multi-line text; the pasteboard keeps the transcript afterwards

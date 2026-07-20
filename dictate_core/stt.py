@@ -110,6 +110,21 @@ def write_wav(path: str, audio: np.ndarray, sample_rate: int = SAMPLE_RATE) -> N
         wf.writeframes(pcm.tobytes())
 
 
+def load_wav(path: str, sample_rate: int = SAMPLE_RATE) -> np.ndarray:
+    """Read a mono 16-bit PCM WAV into float32 samples in [-1, 1].
+
+    Used by recovery retry when a retained recording path exists. Raises
+    ValueError if channels/rate do not match the capture contract.
+    """
+    with wave.open(str(path), "rb") as wf:
+        if wf.getnchannels() != 1 or wf.getframerate() != sample_rate:
+            raise ValueError(
+                f"{path}: need {sample_rate} Hz mono wav "
+                f"(got {wf.getframerate()} Hz x {wf.getnchannels()}ch)")
+        return (np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)
+                .astype(np.float32) / 32768.0)
+
+
 def wav_bytes(audio: np.ndarray, sample_rate: int = SAMPLE_RATE) -> bytes:
     """In-memory 16-bit PCM WAV (same encoding as write_wav)."""
     buf = io.BytesIO()

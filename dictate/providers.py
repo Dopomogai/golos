@@ -210,11 +210,15 @@ def gather_context(app_name: str, bundle_id: str, window_title: str,
                    include_visible: bool = True,
                    flags: dict | None = None) -> dict:
     """Base context + whatever the app's provider can contribute +
-    text before the cursor (continuation) + visible text (citation mode).
+    text before the cursor (continuation) + focused field text (draft) +
+    visible text (surrounding / citation mode).
 
     `flags` = the [context] config section; every sub-flag defaults to true
     (missing key = on). include_visible=False skips the AX text reads (used
-    when LLM formatting is disabled — nothing should leave the machine)."""
+    when LLM formatting is disabled — nothing should leave the machine).
+
+    focused_field_text, text_before_cursor, and visible_text are separate
+    keys: the focused input is never silently reused as visible_text."""
     flags = flags or {}
     on = lambda name: bool(flags.get(name, True))
 
@@ -223,7 +227,9 @@ def gather_context(app_name: str, bundle_id: str, window_title: str,
         ctx = {"app_name": app_name, "bundle_id": bundle_id,
                "window_title": window_title}
     if include_visible:
-        from .context import text_before_cursor, visible_text
+        from .context import (
+            focused_field_text, text_before_cursor, visible_text,
+        )
         if on("text_before_cursor"):
             try:
                 tbc = text_before_cursor()
@@ -231,6 +237,13 @@ def gather_context(app_name: str, bundle_id: str, window_title: str,
                     ctx["text_before_cursor"] = tbc
             except Exception as e:
                 log.info("text_before_cursor failed: %s", e)
+        if on("focused_field_text"):
+            try:
+                fft = focused_field_text()
+                if fft:
+                    ctx["focused_field_text"] = fft
+            except Exception as e:
+                log.info("focused_field_text failed: %s", e)
         if on("visible_text"):
             try:
                 vt = visible_text()

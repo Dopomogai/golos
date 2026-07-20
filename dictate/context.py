@@ -5,11 +5,23 @@ missing. Privacy: `pid` is local bookkeeping only (edit capture after app
 switch) and must never be sent to the formatter. App identity and scraped
 field/window text leave the Mac only when the formatter is enabled and the
 matching [context] toggles allow them — see AppController._prepare_context.
+
+Text roles for the formatter (kept separate on purpose):
+  focused_field_text  — full AXValue of the focused input (what the user
+                        is composing), capped
+  text_before_cursor  — slice of that field before the caret (continuation)
+  visible_text        — surrounding/on-screen reading context, never a
+                        silent reuse of the focused field
 """
 
 import logging
 
 log = logging.getLogger(__name__)
+
+# Caps keep formatter payloads bounded (no PID; text only).
+_FOCUSED_FIELD_MAX = 4000
+_VISIBLE_TEXT_MAX = 4000
+_TEXT_BEFORE_CURSOR_MAX = 500
 
 
 def frontmost_context() -> dict:
@@ -48,7 +60,7 @@ def frontmost_context() -> dict:
     return ctx
 
 
-def text_before_cursor(max_chars: int = 500) -> str:
+def text_before_cursor(max_chars: int = _TEXT_BEFORE_CURSOR_MAX) -> str:
     """Up to `max_chars` of text immediately before the cursor in the focused
     field (AXValue + AXSelectedTextRange). "" on any failure — this is a
     best-effort formatter nicety, never a blocker."""
@@ -85,24 +97,58 @@ def text_before_cursor(max_chars: int = 500) -> str:
 from dictate_core.learning import normalize_visible  # noqa: F401,E402
 
 
-def visible_text(max_chars: int = 4000) -> str:
-    """Text the user is looking at (for citation mode): the focused element's
-    AXValue; if that's short (< 200 chars), the focused window's first
-    AXTextArea/AXScrollArea child's AXValue. Normalized, LAST max_chars.
-    "" on any failure."""
+def focused_field_text(max_chars: int = _FOCUSED_FIELD_MAX) -> str:
+    """Full accessible text of the currently focused input/control (what the
+    user is producing). Last `max_chars` when longer. "" on any failure —
+    best-effort; never blocks dictation."""
     try:
         from ApplicationServices import (
             AXUIElementCreateSystemWide, AXUIElementCopyAttributeValue,
         )
         system = AXUIElementCreateSystemWide()
-        err, focused = AXUIElementCopyAttributeValue(system, "AXFocusedUIElement", None)
+        err, focused = AXUIElementCopyAttributeValue(
+            system, "AXFocusedUIElement", None)
         if err != 0 or focused is None:
             return ""
         err, value = AXUIElementCopyAttributeValue(focused, "AXValue", None)
-        if err == 0 and isinstance(value, str) and len(value) >= 200:
-            return normalize_visible(value)[-max_chars:]
+        if err != 0 or not isinstance(value, str) or not value:
+            return ""
+        if len(value) > max_chars:
+            return value[-max_chars:]
+        return value
+    except Exception as e:
+        log.info("Could not read focused field text: %s", e)
+        return ""
 
-        # Fallback: dig a text area out of the focused window.
+
+def _ax_elements_equal(a, b) -> bool:
+    """Best-effort AXUIElement identity; False when comparison is impossible."""
+    if a is None or b is None:
+        return False
+    try:
+        return bool(a == b)
+    except Exception:
+        return False
+
+
+def visible_text(max_chars: int = _VISIBLE_TEXT_MAX) -> str:
+    """Surrounding / on-screen reading context for citation mode.
+
+    Never silently reuses the focused field's AXValue — that belongs in
+    focused_field_text. Best-effort: first suitable AXTextArea/AXScrollArea
+    under the focused window, skipping the focused element itself.
+    Normalized, LAST max_chars. Empty string when inaccessible is fine.
+    """
+    try:
+        from ApplicationServices import (
+            AXUIElementCreateSystemWide, AXUIElementCopyAttributeValue,
+        )
+        system = AXUIElementCreateSystemWide()
+        err, focused = AXUIElementCopyAttributeValue(
+            system, "AXFocusedUIElement", None)
+        if err != 0 or focused is None:
+            return ""
+
         err, window = AXUIElementCopyAttributeValue(focused, "AXWindow", None)
         if err != 0 or window is None:
             return ""
@@ -111,6 +157,8 @@ def visible_text(max_chars: int = 4000) -> str:
             return ""
         for child in children:
             try:
+                if _ax_elements_equal(child, focused):
+                    continue
                 err, role = AXUIElementCopyAttributeValue(child, "AXRole", None)
                 if err != 0 or role not in ("AXTextArea", "AXScrollArea"):
                     continue

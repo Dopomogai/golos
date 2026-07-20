@@ -225,6 +225,33 @@ Avoid generic "smash that like button" energy; keep it peer-to-peer.
 
 ## 9. Recording checklist
 
+### Pickup checklist for the master already recorded
+
+Use this as the quick gap check before handing footage to editing agents. A
+single clean take of each checked item is enough:
+
+- [ ] Generic hook: useful voice input, but you wanted transparency and control.
+- [ ] Reusable Andrii / Dopomogai introduction (§3).
+- [ ] The build story: usable in ~1.5 hours; polished through two days of real use.
+- [ ] One clean hold → speak → release → insert, with the full top animation visible.
+- [ ] One immediate-repeat take started during the green success state.
+- [ ] One hands-free lock take (`fn`+Space) and one Esc-cancel take.
+- [ ] Raw versus LLM-formatted result; say that Fast mode skips the formatter.
+- [ ] Audio-assisted formatter: optional audio goes to Golos's formatter, not
+  to the destination app; use an audio-capable model.
+- [ ] Context take: focused-field draft versus surrounding visible reading
+  context, with a real successful continuation or citation on screen.
+- [ ] Correction take: hand-fix a name, show the suggestion animation, then
+  explicitly approve it; Golos never silently promotes a correction.
+- [ ] Settings glance: languages, model choice, hold key, status words on/off,
+  OpenRouter default, optional local model download.
+- [ ] Open-source proof: public repo, readable files, `~/.golos` ownership.
+- [ ] Compatibility truth: macOS 13+; Apple Silicon cloud/local; Intel cloud-only;
+  current beta is unsigned, so Gatekeeper friction is disclosed.
+- [ ] Website/download pickup after `/golos` is live, or use the GitHub v0.3
+  release as the current public download.
+- [ ] Clean subscribe outro (§8), plus 2–3 seconds of silence for the edit.
+
 - [ ] **Clean desktop** — hide personal files, tidy Dock, neutral wallpaper, large UI font in Notes.
 - [ ] **Notifications off** — Focus mode; mute Slack/email banners; calendar alerts off.
 - [ ] **Fresh app restart** — `./dictate.sh restart` or quit/relaunch `golos.app`; one instance only.

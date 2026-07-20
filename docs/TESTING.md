@@ -19,7 +19,8 @@ golos (`dictate` + `dictate_core`). It does **not** claim full coverage.
 | **Hotkey matrix** | fn/right modifiers, F5, Space swallow, tap recovery, monitor fallback | Input Monitoring permission, real CGEventTap on hardware |
 | **Bubble model** | Collapse generation, stale callback rejection, success→recording visibility | Real NSPanel/CoreAnimation drawing |
 | **Persistence** | Config heal/normalize, history JSONL, dict/corrections on **temp paths** | Live `~/.golos` migration on a user machine |
-| **Pipeline contracts** | Success, formatter passthrough/failure, cancel, insert/history failure (all mocked) | Live OpenRouter/Deepgram, Accessibility insert, clipboard |
+| **Recovery** | Failed-run JSONL (STT/format/insert), legacy load compat, retry w/wo audio, copy-ready, no auto-insert; home grouping by `run_id`; busy retry vs live coordination | Real Settings UI retry buttons, live paste into apps |
+| **Pipeline contracts** | Success, formatter passthrough/failure, cancel, insert/history failure (all mocked); partial success → `✓ inserted raw` | Live OpenRouter/Deepgram, Accessibility insert, clipboard |
 | **Soak / adversarial** | ≥250 rapid state/event cycles: no stuck held key, no stale timer forcing a newer recording idle | Long-running production soak under load |
 
 Legacy focused scripts under `scripts/` remain available and must keep passing;
@@ -106,7 +107,7 @@ metrics, plus the manual smoke checklist for ship confidence.
 
 ## Current baseline (measured)
 
-**Date:** 2026-07-20
+**Date:** 2026-07-21 (233 tests)
 **Command:**
 
 ```sh
@@ -115,9 +116,9 @@ metrics, plus the manual smoke checklist for ship confidence.
 
 | Scope | Branch-aware cover | Notes |
 |---|---|---|
-| **`dictate` + `dictate_core` (combined)** | **~25%** | Honest baseline; `fail_under` set ≤ this |
-| **`dictate_core` only** | **~73%** | Includes 0% on `recorder.py` (PortAudio/mic) |
-| **`dictate_core` excluding `recorder.py`** | **~80%+** (estimated from per-file) | Pure learning/formatter/dict/STT helpers |
+| **`dictate` + `dictate_core` (combined)** | **34.19%** | Honest branch-aware baseline; `fail_under=24` stays conservative |
+| **`dictate_core` only** | **75%** | Includes 0% on `recorder.py` (PortAudio/mic) |
+| **`dictate_core` excluding `recorder.py`** | **~81%** (estimated from per-file) | Pure learning/formatter/dict/STT helpers |
 
 Illustrative per-package hotspots (same run; exact lines shift with code changes):
 
@@ -126,14 +127,14 @@ Illustrative per-package hotspots (same run; exact lines shift with code changes
 | `dictate_core/dictionary.py` | 100% | Covered |
 | `dictate_core/learning.py` | ~90% | Covered |
 | `dictate_core/learning_reviewer.py` | high | Payload/parse/validate/fallback (mocked HTTP) |
-| `dictate_core/formatter.py` | ~81% | Prompt/local; live HTTP mocked |
-| `dictate_core/stt.py` | ~72% | Helpers + mocked backends; no mlx/live |
+| `dictate_core/formatter.py` | 82% | Prompt/local; live HTTP mocked |
+| `dictate_core/stt.py` | 69% | Helpers + mocked backends; no mlx/live |
 | `dictate_core/recorder.py` | 0% | Needs mic / sounddevice |
-| `dictate/history.py` | 100% | Temp-path tests |
-| `dictate/config.py` | ~89% | Temp-path migrate/load/update |
+| `dictate/history.py` | 86% | Temp-path tests |
+| `dictate/config.py` | 87% | Temp-path migrate/load/update |
 | `dictate/hotkeys.py` | ~61% | Decision matrix; no real tap install |
-| `dictate/app.py` | ~42% | State + pipeline contracts; not `run_app` |
-| `dictate/bubble.py` | ~17% | State model only; not ObjC views |
+| `dictate/app.py` | 53% | State + pipeline contracts; not `run_app` |
+| `dictate/bubble.py` | 21% | State model only; not ObjC views |
 | `dictate/settings.py`, `onboarding.py`, `providers.py`, `context.py`, `insert.py`, `permissions.py`, … | ~0% | macOS integration |
 
 Re-measure after large refactors and update this section (date + numbers).
@@ -145,7 +146,8 @@ Re-measure after large refactors and update this section (date + numbers).
 ### 1. Pure unit (`dictate_core`)
 
 - Learning: short whole-field near-miss, embedded refusal, anchors 8/12,
-  scroll tolerance, plausibility, logging
+  long-field short proper-name (Mercy→Mercey), scroll tolerance,
+  plausibility, logging
 - Dictionary / corrections loaders (temp files)
 - Formatter: `apply_literal_corrections`, context block/rules rendering,
   system prompt modes (transcribe vs answer), disabled/empty passthrough,
@@ -184,15 +186,27 @@ Re-measure after large refactors and update this section (date + numbers).
 - `load_config` absolute path preserve + char-array heal
 - `update_config` on temp file
 - `append_history` JSONL; dictionary/corrections roundtrip
+- recovery: STT/insert failure writes, formatter fallback, legacy normalize,
+  retry with/without retained WAV, attempt immutability, copy-ready
+- history home grouping: one latest row per `run_id`; legacy rows stay single;
+  `attempts_count` on merged views; JSONL unchanged
+- busy coordination: retry during live processing / live ownership →
+  `busy=True` and no attempt line; hotkey during history-retry ownership
+  does not record (notice only); immediate re-press after success unchanged
+- processing-stage Esc → schema-v2 `status=cancelled` / `stage=insert` with
+  retained raw/final/audio/fast/fallback; no insert; copy-ready still works
+- recording-stage Esc remains abort/discard with no history line
 
 ### 6. Pipeline contracts (all deps mocked)
 
 - success path (insert + history + success state)
 - formatter disabled / HTTP failure passthrough
-- cancellation discards insert
+- formatter raise / soft fallback + insert → `status=partial` and success
+  label `✓ inserted raw` (lifecycle and `show_text=false` preserved)
+- cancellation discards insert (returns idle; cancelled recovery in recovery tests)
 - insertion failure → idle
 - history failure still inserts
-- short audio tap, empty transcript, missing STT, STT exception
+- short audio tap ignored; empty transcript / missing STT / STT exception persisted as failures
 - fast mode local corrections skip stage 2
 
 ### 7. Soak / adversarial

@@ -46,6 +46,25 @@ def test_toggle_during_success_starts_locked_recording():
     assert started == ["locked"]
 
 
+def test_press_during_history_retry_does_not_record():
+    """Immediate-repeat after success stays OK; only history_retry blocks."""
+    controller = _controller()
+    started = []
+    controller._begin_recording = started.append
+    # Free pipeline + success: normal immediate re-press.
+    controller._set_state("success")
+    controller.on_press()
+    assert started == ["recording"]
+    started.clear()
+    controller._set_state("idle")
+    assert controller.try_acquire_pipeline(controller.PIPELINE_HISTORY_RETRY)
+    controller.on_press()
+    assert started == []
+    assert controller.bubble.notices
+    assert "History retry is still running" in controller.bubble.notices[-1][0]
+    controller.release_pipeline(controller.PIPELINE_HISTORY_RETRY)
+
+
 def test_old_success_timer_cannot_cancel_new_recording():
     controller = _controller()
     success_gen = controller._set_state("success")

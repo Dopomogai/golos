@@ -35,7 +35,12 @@ def tmp_data_dir(tmp_path) -> Path:
 
 
 class FakeBubble:
-    """Minimal bubble stand-in for AppController tests."""
+    """Minimal bubble stand-in for AppController tests.
+
+    Mirrors real Bubble.notice idle-only guard so recovery notices must
+    transition through idle (via AppController._idle_then_notice) to stick.
+    Accepts optional ``success_label`` like the real Bubble (partial insert).
+    """
 
     def __init__(self):
         self.states: list[str] = []
@@ -43,11 +48,26 @@ class FakeBubble:
         self.cues: list[tuple] = []
         self.suggestions_ready: list[tuple] = []
         self.sensitivity: float | None = None
+        self.show_text: bool | None = None
+        self.success_labels: list[str | None] = []
+        self._state = "idle"
+        self._success_label: str | None = None
 
-    def set_state(self, state):
+    def set_state(self, state, *, success_label=None):
         self.states.append(state)
+        self._state = state
+        if state == "success":
+            label = success_label or "✓ inserted"
+            self._success_label = label
+            self.success_labels.append(label)
+        else:
+            self._success_label = None
+            self.success_labels.append(None)
 
     def notice(self, text, kind="success", seconds=1.5):
+        # Real Bubble: notices only while idle (success also blocks).
+        if self._state != "idle":
+            return
         self.notices.append((text, kind, seconds))
 
     def cue(self, wrong, right, seconds, on_accept):
@@ -58,6 +78,9 @@ class FakeBubble:
 
     def set_sensitivity(self, value):
         self.sensitivity = value
+
+    def set_show_text(self, value):
+        self.show_text = bool(value)
 
 
 class FakeRecorder:

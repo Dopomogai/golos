@@ -170,6 +170,7 @@ def _bubble_classes():
             self._label_override = None
             self._notice_rgb = None
             self._on_click = None
+            self._show_text = True
             self._processing_timer = None
             self._processing_start = 0.0
             self._tick_count = 0
@@ -194,6 +195,8 @@ def _bubble_classes():
                 self._draw_label()
 
         def _draw_label(self):
+            if not self._show_text and self._state in STATES:
+                return
             h = self.bounds().size.height
             label = self._label_override or STATES[self._state][0]
             attrs = NSDictionary.dictionaryWithObjects_forKeys_(
@@ -339,7 +342,9 @@ def _bubble_classes():
             self._mode_start = 0.0
             self._notice_text = ""
             self._notice_kind = "info"
+            self._success_label = "✓ inserted"  # partial success may override
             self._sensitivity = 1.0    # display gain multiplier for the waveform
+            self._show_text = True
             self.setWantsLayer_(True)
             self.layer().setShadowOpacity_(0.6)
             self.layer().setShadowRadius_(6.0)
@@ -375,6 +380,11 @@ def _bubble_classes():
             if self._shimmer_timer is not None:
                 self._shimmer_timer.invalidate()
                 self._shimmer_timer = None
+            if self._collapse_timer is not None:
+                self._collapse_timer.invalidate()
+                self._collapse_timer = None
+            self._collapse = 0.0
+            self._on_collapse_done = None
 
         def shimmerTick_(self, timer):
             self._shimmer_phase += (1 / 30) * 14.0  # ~14 bars/s travel speed
@@ -407,7 +417,9 @@ def _bubble_classes():
                 return WING_W - 2 - i * WING_BAR_STEP - WING_BAR_W
             return WING_W + notch_w + 2 + i * WING_BAR_STEP
 
-        def _draw_gap_label(self, text, color):
+        def _draw_gap_label(self, text, color, force=False):
+            if not self._show_text and not force:
+                return
             w = self.bounds().size.width
             h = self.bounds().size.height
             notch_w = w - 2 * WING_W
@@ -506,7 +518,7 @@ def _bubble_classes():
         def _draw_success_strip(self):
             # Green hill that recedes: tallest at the notch, tapering to short
             # at both outer ends (envelope), and the whole arc ebbs to ~0 over
-            # the ~1.2s display (label stays for the full duration).
+            # the ~1.2s display; the optional label follows the same fade.
             w = self.bounds().size.width
             h = self.bounds().size.height
             notch_w = w - 2 * WING_W
@@ -525,8 +537,9 @@ def _bubble_classes():
                         NSMakeRect(self._bar_x(side, i, notch_w),
                                    mid_y - bar_h / 2, WING_BAR_W, bar_h),
                         WING_BAR_W / 2, WING_BAR_W / 2).fill()
-            self._draw_gap_label("✓ inserted", NSColor.colorWithCalibratedRed_green_blue_alpha_(
-                0.6, 1.0, 0.7, 1.0))
+            label = getattr(self, "_success_label", None) or "✓ inserted"
+            self._draw_gap_label(label, NSColor.colorWithCalibratedRed_green_blue_alpha_(
+                0.6, 1.0, 0.7, decay))
 
         def _draw_suggestion_strip(self):
             # Violet/amber inward pulse: energy sweeps from the outer ends
@@ -559,7 +572,7 @@ def _bubble_classes():
             self._draw_gap_label(
                 "suggestion ready",
                 NSColor.colorWithCalibratedRed_green_blue_alpha_(
-                    0.85, 0.7, 1.0, 1.0))
+                    0.85, 0.7, 1.0, 1.0), force=True)
 
         def _draw_notice(self):
             # Faint bars + gap text — a lightweight "something was learned" flash.
@@ -582,7 +595,7 @@ def _bubble_classes():
                        self._notice_kind, (0.9, 0.9, 0.9))
             self._draw_gap_label(self._notice_text,
                                  NSColor.colorWithCalibratedRed_green_blue_alpha_(
-                                     *rgb, 1.0))
+                                     *rgb, 1.0), force=True)
 
         # -- collapse sweep (recording -> processing handoff) -------------------
 
@@ -695,6 +708,7 @@ class Bubble:
         self._notice_surface = "pill"
         self.wings_view = None
         self._sensitivity = 1.0
+        self._show_text = True
 
         # NonactivatingPanel: the cue pill is clickable WITHOUT stealing focus.
         self._pill_style_mask = (NSWindowStyleMaskBorderless
@@ -715,6 +729,7 @@ class Bubble:
         self.view = BubbleView.alloc().initWithFrame_(NSMakeRect(0, 0, w, h))
         self.view._is_notch = self.is_notch
         self.view._levels = self._levels
+        self.view._show_text = self._show_text
         self.view.setAutoresizingMask_(NSViewWidthSizable)
         self.panel.setContentView_(self.view)
         # idle means hidden: the bubble only appears in non-idle states.
@@ -760,6 +775,7 @@ class Bubble:
             NSMakeRect(0, 0, rect.size.width, rect.size.height))
         self.wings_view._levels = self._levels
         self.wings_view._sensitivity = self._sensitivity
+        self.wings_view._show_text = self._show_text
         self.wings.setContentView_(self.wings_view)
         self.wings.setAlphaValue_(0.0)
 
@@ -769,6 +785,19 @@ class Bubble:
         self._sensitivity = max(0.5, min(2.5, float(value)))
         if self.wings_view is not None:
             self.wings_view._sensitivity = self._sensitivity
+
+    def set_show_text(self, value: bool) -> None:
+        """Show processing/success words; animations remain visible when off.
+
+        Learning notices and correction cues always retain their actionable
+        text even when ordinary status labels are disabled.
+        """
+        self._show_text = bool(value)
+        self.view._show_text = self._show_text
+        self.view.setNeedsDisplay_(True)
+        if self.wings_view is not None:
+            self.wings_view._show_text = self._show_text
+            self.wings_view.setNeedsDisplay_(True)
 
     # -- visibility (DETERMINISTIC — animations are cosmetic only) ------------
     #
@@ -791,9 +820,7 @@ class Bubble:
                               and self._notice_surface == "wings")
                           or (self._state == "suggestion"
                               and self._notice_surface == "wings")
-                          or (self._collapse > 0.0
-                              and self.wings is not None
-                              and self.wings.isVisible()))
+                          )
             show_pill = ((self._state == "notice"
                           and self._notice_surface == "pill")
                          or (self._state == "suggestion"
@@ -842,13 +869,18 @@ class Bubble:
         self._show_wings_mode("processing")
         self._enforce_visibility()
 
-    def set_state(self, state: str) -> None:
+    def set_state(self, state: str, *, success_label: str | None = None) -> None:
         """Main thread only. Drive bubble/wings from the controller state name.
 
         Self-healing: every path ends in _enforce_visibility(), which is the
         sole authority for panel orderFront/orderOut. Collapse animations and
         notice timers are generation-guarded so a stale completion cannot hide
         a panel a newer state just showed (or leave the strip permanently blank).
+
+        ``success_label`` optionally overrides the green success text (default
+        "✓ inserted"). Use "✓ inserted raw" when format fell back but insert
+        succeeded. When ``show_text`` is false the label is still suppressed
+        (animation/fade lifecycle unchanged).
         """
         if state not in STATES:
             return
@@ -863,6 +895,18 @@ class Bubble:
             self._levels.clear()
             self._ema = 0.0
         self.view.setState_(state)
+        # Success label: default "✓ inserted"; partial success may pass
+        # "✓ inserted raw". Corner pill uses label_override; notch strip uses
+        # wings_view._success_label. Cleared on non-success states.
+        label = success_label if (
+            state == "success" and success_label) else None
+        if state == "success":
+            text = label or "✓ inserted"
+            self.view._label_override = text
+            if self.wings_view is not None:
+                self.wings_view._success_label = text
+        elif self.wings_view is not None:
+            self.wings_view._success_label = "✓ inserted"
 
         if self._geometry is not None:
             # Notch machines: the strip is the single status surface; the
@@ -881,6 +925,8 @@ class Bubble:
                 else:
                     self._show_wings_mode("processing")
             elif state == "success":
+                if self.wings_view is not None:
+                    self.wings_view._success_label = label or "✓ inserted"
                 self._show_wings_mode("success")
         # Corner style / no aux areas: the pill handles everything (wings are
         # only ever created with notch geometry, so this path is pill-only).

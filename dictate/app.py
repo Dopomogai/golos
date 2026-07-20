@@ -23,7 +23,16 @@ class AppController:
     and edit capture on daemon workers, the full pipeline on another worker.
     `self._lock` only protects state transitions at hotkey boundaries — the
     pipeline itself does not hold it across network I/O.
+
+    Pipeline ownership (`_pipeline_coord` / `_pipeline_owner`) coordinates the
+    shared STT + formatter between the live dictation worker and History
+    retries. Acquisition is a short critical section only — never held across
+    network I/O. Values: None | ``"live"`` | ``"history_retry"``.
     """
+
+    # Owners for the shared STT/formatter pipeline (see try_acquire_pipeline).
+    PIPELINE_LIVE = "live"
+    PIPELINE_HISTORY_RETRY = "history_retry"
 
     def __init__(self, cfg, recorder, stt_backend, formatter, bubble,
                  dictionary_terms, corrections, history_path):
@@ -38,6 +47,9 @@ class AppController:
         self.state = "idle"          # idle | recording | locked | processing | success
         self._state_gen = 0           # invalidates delayed callbacks from older states
         self._lock = threading.Lock()
+        # Short critical sections only — never hold across STT/format I/O.
+        self._pipeline_coord = threading.Lock()
+        self._pipeline_owner = None   # None | "live" | "history_retry"
         self._context = {"app_name": "", "bundle_id": "", "window_title": ""}
         self._fmt_context = {}           # formatter-facing, toggle-filtered
         self._settings = None        # settings window controller, built lazily
@@ -52,13 +64,58 @@ class AppController:
         self._fmt_context_ready = threading.Event()
         self._fmt_context_ready.set()
 
+    # -- pipeline ownership (STT/formatter mutual exclusion) ---------------
+
+    def try_acquire_pipeline(self, owner: str) -> bool:
+        """Claim exclusive use of shared STT/formatter. Short lock only.
+
+        Never hold this across network I/O — set the owner flag and return.
+        History retries also refuse when live dictation is mid-recording or
+        mid-processing. The state lock is acquired before the ownership lock,
+        matching hotkey handlers, so a retry cannot slip into the tiny window
+        between an idle hotkey check and the recording state transition.
+        """
+        with self._lock:
+            with self._pipeline_coord:
+                if self._pipeline_owner is not None:
+                    return False
+                if owner == self.PIPELINE_HISTORY_RETRY:
+                    if self.state in ("recording", "locked", "processing"):
+                        return False
+                self._pipeline_owner = owner
+                return True
+
+    def release_pipeline(self, owner: str) -> None:
+        """Release ownership if still held by ``owner`` (idempotent)."""
+        with self._pipeline_coord:
+            if self._pipeline_owner == owner:
+                self._pipeline_owner = None
+
+    def pipeline_owner(self) -> str | None:
+        """Current pipeline owner, or None when free."""
+        with self._pipeline_coord:
+            return self._pipeline_owner
+
+    def _history_retry_blocks_hotkey(self) -> bool:
+        """True when a History retry owns STT/formatter (idle-safe check)."""
+        with self._pipeline_coord:
+            return self._pipeline_owner == self.PIPELINE_HISTORY_RETRY
+
     # -- UI state helper -------------------------------------------------
 
-    def _set_state(self, state):
-        """Main thread: flip controller + bubble state and mirror callbacks."""
+    def _set_state(self, state, *, success_label=None):
+        """Main thread: flip controller + bubble state and mirror callbacks.
+
+        ``success_label`` optionally overrides the green success strip/pill
+        text (e.g. "✓ inserted raw" for format-fallback partial success).
+        """
         self._state_gen += 1
         self.state = state
-        self.bubble.set_state(state)
+        try:
+            self.bubble.set_state(state, success_label=success_label)
+        except TypeError:
+            # Older / fake bubbles that only accept the state name.
+            self.bubble.set_state(state)
         log.info("State: %s", state)
         if self.on_state_change is not None:
             try:
@@ -73,6 +130,16 @@ class AppController:
             return
         self._set_state("idle")
 
+    def _idle_then_notice(self, text, kind="warn", seconds=1.5):
+        """Main thread: ensure idle, then show a notice.
+
+        Real Bubble.notice is idle-only — calling it while still processing
+        drops the message. One transition (processing→idle) then notice.
+        """
+        if self.state != "idle":
+            self._set_state("idle")
+        self.bubble.notice(text, kind, seconds)
+
     # -- hotkey callbacks (main thread) ----------------------------------
 
     def on_press(self):
@@ -81,14 +148,28 @@ class AppController:
         if handler is not None:
             handler("press")
             return
+        blocked_by_retry = False
         with self._lock:
             if self.state in ("idle", "success"):
-                self._begin_recording("recording")
+                # History retry owns STT/formatter — do not start recording.
+                # Owner check is a separate short lock; never held across I/O.
+                if self._history_retry_blocks_hotkey():
+                    blocked_by_retry = True
+                else:
+                    self._begin_recording("recording")
+                    return
+            elif self.state != "locked":
                 return
-            if self.state != "locked":
-                return
-        # locked recording: a single fn press ends it (Wispr Flow behavior)
-        self._finish_recording()
+            else:
+                # locked recording: a single fn press ends it (Wispr Flow)
+                pass
+        if blocked_by_retry:
+            # Idle-safe: transition through idle so Bubble.notice is not dropped.
+            self._idle_then_notice(
+                "History retry is still running", "warn", 1.5)
+            return
+        if self.state == "locked":
+            self._finish_recording()
 
     def on_release(self):
         """Hold-key up (main thread). Ends hold-to-talk; locked mode ignores it."""
@@ -103,16 +184,25 @@ class AppController:
 
     def on_toggle(self):
         """fn+Space (or double-tap): lock hold, start locked, or finish locked."""
+        blocked_by_retry = False
         with self._lock:
             if self.state == "recording":
                 self._set_state("locked")
                 return
             if self.state in ("idle", "success"):
-                self._begin_recording("locked")
+                if self._history_retry_blocks_hotkey():
+                    blocked_by_retry = True
+                else:
+                    self._begin_recording("locked")
+                    return
+            elif self.state != "locked":
                 return
-            if self.state != "locked":
-                return
-        self._finish_recording()
+        if blocked_by_retry:
+            self._idle_then_notice(
+                "History retry is still running", "warn", 1.5)
+            return
+        if self.state == "locked":
+            self._finish_recording()
 
     # -- settings / live reload -------------------------------------------
 
@@ -239,6 +329,8 @@ class AppController:
         self.formatter.configure(self.cfg, self.dictionary_terms, self.corrections)
         self.bubble.set_sensitivity(
             self.cfg.get("bubble", {}).get("sensitivity", 1.0))
+        self.bubble.set_show_text(
+            self.cfg.get("bubble", {}).get("show_text", True))
         if self._hotkey_monitor is not None:
             self._hotkey_monitor.reconfigure(self.cfg)  # live hold-key rebind
         log.info("Settings applied: stt.backend=%s",
@@ -345,7 +437,7 @@ class AppController:
         threading.Thread(target=self._pipeline, daemon=True).start()
 
     def _save_recording(self, audio) -> str | None:
-        """Write the captured wav to ~/.dictate/recordings/YYYY-MM-DD/ (raw
+        """Write the captured wav to ~/.golos/recordings/YYYY-MM-DD/ (raw
         material for python -m dictate.bench). None when disabled/failed."""
         if not self.cfg.get("audio", {}).get("keep_recordings", True):
             return None
@@ -373,10 +465,50 @@ class AppController:
         if [formatting] send_audio is true (formatter multimodal path). The
         raw transcript leaves for stage-2 LLM formatting when enabled.
         self._fmt_context is already filtered by [context] toggles.
+
+        Recovery: each run gets a stable run_id. Failures at STT / format /
+        insert are written to history.jsonl with enough state to retry later.
+        Esc during processing (after STT/formatting produced text) appends
+        status=cancelled at stage=insert and never inserts. Esc while still
+        recording remains a pure abort with no history. Success history is
+        written only after insert confirms (not when scheduled). Retries
+        never rewrite the original failure line.
         """
         from PyObjCTools import AppHelper
         from .insert import insert_text
-        from .history import append_history
+        from .history import (
+            STAGE_FORMAT, STAGE_INSERT, STAGE_STT, STAGE_COMPLETE,
+            STATUS_CANCELLED, STATUS_PARTIAL, STATUS_SUCCESS,
+            append_failure, append_history, new_run_id,
+        )
+
+        # Exclusive live ownership for shared STT/formatter. Short acquire
+        # only — release in finally; never hold _pipeline_coord across I/O.
+        if not self.try_acquire_pipeline(self.PIPELINE_LIVE):
+            log.info("Live pipeline deferred: shared STT/formatter busy (%s).",
+                     self.pipeline_owner())
+            # Still stop the mic so we do not leave the stream open.
+            try:
+                self.recorder.stop()
+            except Exception as e:
+                log.info("stop after busy: %s", e)
+            AppHelper.callAfter(
+                self._idle_then_notice,
+                "History retry is still running", "warn")
+            return
+
+        try:
+            self._pipeline_body(AppHelper, insert_text)
+        finally:
+            self.release_pipeline(self.PIPELINE_LIVE)
+
+    def _pipeline_body(self, AppHelper, insert_text):
+        """Live pipeline body after ownership is acquired (worker thread)."""
+        from .history import (
+            STAGE_FORMAT, STAGE_INSERT, STAGE_STT, STAGE_COMPLETE,
+            STATUS_CANCELLED, STATUS_PARTIAL, STATUS_SUCCESS,
+            append_failure, append_history, new_run_id,
+        )
 
         # Wait (bounded) for the context worker — formatting wants app context,
         # but never stall the pipeline more than 3 s over it.
@@ -393,22 +525,73 @@ class AppController:
 
         raw = final = ""
         audio_path = self._save_recording(audio)
+        run_id = new_run_id()
+        fast = False
+        format_fallback = False
         insert_scheduled = False
+        # True when a failure path already scheduled idle+notice (skip finally).
+        idle_noticed = False
+        app_name = self._context.get("app_name", "")
+        bundle_id = self._context.get("bundle_id", "")
+        hist_ctx = _history_context(self._fmt_context)
+
+        def _write_failure(stage, error, raw_text=None, final_text=None,
+                           fmt_fallback=False):
+            try:
+                append_failure(
+                    self.history_path,
+                    stage=stage,
+                    error=error,
+                    app_name=app_name,
+                    bundle_id=bundle_id,
+                    raw_text=raw_text if raw_text is not None else raw,
+                    final_text=final_text if final_text is not None else final,
+                    context=hist_ctx,
+                    audio=audio_path,
+                    fast=fast,
+                    run_id=run_id,
+                    attempt=0,
+                    format_fallback=fmt_fallback,
+                )
+            except Exception as e:
+                log.warning("Could not write failure history: %s", e)
+
+        def _fail_visible(message, kind="warn"):
+            """Schedule idle→notice once; finally must not re-idle."""
+            nonlocal idle_noticed
+            idle_noticed = True
+            AppHelper.callAfter(self._idle_then_notice, message, kind)
+
         try:
             if self.stt is None:
                 log.error("No STT backend available.")
-                AppHelper.callAfter(
-                    self.bubble.notice,
-                    "connect OpenRouter or download local STT", "warn")
+                _write_failure(STAGE_STT, "no STT backend available")
+                _fail_visible("connect OpenRouter or download local STT")
                 return
             prompt = ", ".join(self.dictionary_terms)
-            raw = self.stt.transcribe(audio, prompt=prompt)
+            try:
+                raw = self.stt.transcribe(audio, prompt=prompt)
+            except Exception as e:
+                log.exception("STT failed: %s", e)
+                _write_failure(STAGE_STT, f"stt: {e}", raw_text="", final_text="")
+                _fail_visible(
+                    "speech recognition failed — open History for details")
+                return
             log.info("Raw transcript: %r", raw)
             if not raw:
+                # A >0.3s capture reached STT but produced nothing. Persist it:
+                # this can be genuine silence, but it can also be a provider
+                # failure and a retained WAV makes it recoverable.
+                _write_failure(
+                    STAGE_STT,
+                    "stt returned empty transcript",
+                    raw_text="",
+                    final_text="",
+                )
+                _fail_visible("couldn't hear that — open History to retry")
                 return
             # Fast mode: short single-line dictations skip stage 2 entirely;
             # literal corrections are applied locally instead of by the LLM.
-            fast = False
             fmt_cfg = self.cfg.get("formatting", {})
             if (fmt_cfg.get("fast_mode") and "\n" not in raw
                     and len(raw.split()) <= fmt_cfg.get("fast_mode_max_words", 10)):
@@ -423,73 +606,545 @@ class AppController:
                     # model can un-garble STT from what it hears. Off by default.
                     from .stt import wav_bytes
                     audio_wav = wav_bytes(audio)
-                final = self.formatter.format(raw, self._fmt_context,
-                                              audio_wav=audio_wav)
+                try:
+                    final = self.formatter.format(raw, self._fmt_context,
+                                                  audio_wav=audio_wav)
+                except Exception as e:
+                    # Real Formatter returns raw on API failure; a raising
+                    # formatter is treated the same: keep raw, mark fallback.
+                    log.warning("Formatting raised (%s); using raw transcript.", e)
+                    final = raw
+                    format_fallback = True
+                else:
+                    # Formatter contract: failure returns raw. Detect soft
+                    # fallback when enabled formatter returns unchanged raw
+                    # after an internal error is already logged there.
+                    if (final == raw and getattr(self.formatter, "enabled", True)
+                            and not fast):
+                        # Soft fallback is normal (disabled path or clean raw).
+                        # Only flag when formatter explicitly signals failure
+                        # via attribute; default is success with raw=final.
+                        format_fallback = bool(
+                            getattr(self.formatter, "last_fallback", False))
             if final != raw:
                 log.info("Formatted: %r", final)
 
             if self._cancel_requested:
+                # Processing-stage Esc: STT/format already ran; persist a
+                # recoverable cancelled record (same run_id) and never insert.
+                # Recording-stage Esc still aborts with no history.
                 log.info("Insertion cancelled by user; result discarded.")
+                try:
+                    append_history(
+                        self.history_path,
+                        app_name,
+                        bundle_id,
+                        raw,
+                        final,
+                        context=hist_ctx,
+                        audio=audio_path,
+                        fast=fast,
+                        run_id=run_id,
+                        attempt=0,
+                        stage=STAGE_INSERT,
+                        status=STATUS_CANCELLED,
+                        format_fallback=format_fallback,
+                    )
+                except Exception as e:
+                    log.warning("Could not write cancelled history: %s", e)
                 return
+
+            # Close over immutable snapshot for the main-thread insert path.
+            snap = {
+                "raw": raw,
+                "final": final,
+                "audio_path": audio_path,
+                "fast": fast,
+                "format_fallback": format_fallback,
+                "run_id": run_id,
+                "app_name": app_name,
+                "bundle_id": bundle_id,
+                "context": hist_ctx,
+            }
 
             def insert_and_flash():
                 ins_cfg = self.cfg.get("insert", {})
-                if insert_text(final,
-                               method=ins_cfg.get("method", "auto"),
-                               restore_clipboard=ins_cfg.get(
-                                   "restore_clipboard", False)):
+                ok = insert_text(
+                    snap["final"],
+                    method=ins_cfg.get("method", "auto"),
+                    restore_clipboard=ins_cfg.get("restore_clipboard", False),
+                )
+                if ok:
                     import time as _time
                     self.last_insertion = {
                         "ts": _time.time(),
-                        "app_name": self._context.get("app_name", ""),
-                        "bundle_id": self._context.get("bundle_id", ""),
+                        "app_name": snap["app_name"],
+                        "bundle_id": snap["bundle_id"],
                         "pid": self._context.get("pid"),
-                        "raw": raw,
-                        "final": final,
+                        "raw": snap["raw"],
+                        "final": snap["final"],
                         # Retained WAV path only when [audio] keep_recordings
                         # saved one; never store raw audio bytes here.
-                        "audio_path": audio_path,
+                        "audio_path": snap["audio_path"],
+                        "run_id": snap["run_id"],
                     }
+                    try:
+                        append_history(
+                            self.history_path,
+                            snap["app_name"],
+                            snap["bundle_id"],
+                            snap["raw"],
+                            snap["final"],
+                            context=snap["context"],
+                            audio=snap["audio_path"],
+                            fast=snap["fast"],
+                            run_id=snap["run_id"],
+                            attempt=0,
+                            stage=STAGE_COMPLETE,
+                            status=(STATUS_PARTIAL if snap["format_fallback"]
+                                    else STATUS_SUCCESS),
+                            format_fallback=snap["format_fallback"],
+                        )
+                    except Exception as e:
+                        log.warning("Could not write history: %s", e)
                     # Fallback edit-capture: if the insertion is still pending
                     # in 45s (no new recording, no app switch), check now.
                     AppHelper.callLater(45, self._capture_pending_edit)
                     # Live edit cues: watch the field for manual corrections.
                     if self._watcher is not None:
                         self._watcher.start()
-                    success_gen = self._set_state("success")
+                    # Partial (format fell back to raw, insert ok): keep the
+                    # success animation/fade lifecycle, but label truthfully.
+                    success_label = (
+                        "✓ inserted raw" if snap["format_fallback"] else None)
+                    success_gen = self._set_state(
+                        "success", success_label=success_label)
                     AppHelper.callLater(1.2, self._finish_success, success_gen)
                 else:
-                    self._set_state("idle")
+                    try:
+                        append_failure(
+                            self.history_path,
+                            stage=STAGE_INSERT,
+                            error="insertion failed",
+                            app_name=snap["app_name"],
+                            bundle_id=snap["bundle_id"],
+                            raw_text=snap["raw"],
+                            final_text=snap["final"],
+                            context=snap["context"],
+                            audio=snap["audio_path"],
+                            fast=snap["fast"],
+                            run_id=snap["run_id"],
+                            attempt=0,
+                            format_fallback=snap["format_fallback"],
+                        )
+                    except Exception as e:
+                        log.warning("Could not write insert-failure history: %s", e)
+                    self._idle_then_notice(
+                        "couldn't insert — open History to copy", "warn")
 
             AppHelper.callAfter(insert_and_flash)
             insert_scheduled = True
-            try:
-                append_history(
-                    self.history_path,
-                    self._context.get("app_name", ""),
-                    self._context.get("bundle_id", ""),
-                    raw, final,
-                    context=_history_context(self._fmt_context),
-                    audio=audio_path,
-                    fast=fast,
-                )
-            except Exception as e:
-                log.warning("Could not write history: %s", e)
         except Exception as e:
             log.exception("Pipeline failed: %s", e)
+            stage = STAGE_FORMAT if raw else STAGE_STT
+            _write_failure(stage, f"pipeline: {e}",
+                           raw_text=raw, final_text=final)
         finally:
             self._cancel_requested = False
-            if not insert_scheduled:
+            if not insert_scheduled and not idle_noticed:
                 AppHelper.callAfter(self._set_state, "idle")
+
+    # -- recovery: copy-ready + retry (no auto-insert) ---------------------
+
+    def copy_ready_for_record(self, record: dict) -> dict:
+        """Best available text for History copy. Never inserts into any app.
+
+        Returns the dict from history.copy_ready (text, source, available, …).
+        """
+        from .history import copy_ready
+        return copy_ready(record)
+
+    def retry_capabilities_for_record(self, record: dict) -> dict:
+        """What the Settings UI may offer for a history/recovery row."""
+        from .history import retry_capabilities
+        return retry_capabilities(record)
+
+    def retry_failed_stage(self, record: dict, *,
+                           stage: str | None = None,
+                           insert: bool = False) -> dict:
+        """Regenerate text for a failed (or re-formatable) history record.
+
+        Contract for a later Settings UI:
+        - Retries append a new attempt line; the original failure is kept.
+        - STT retry requires a retained WAV still on disk (privacy: we never
+          invent or secretly keep audio).
+        - Format retry uses stored raw (+ optional WAV if send_audio).
+        - insert=False (default): never pastes into the frontmost app —
+          returns regenerated text for the UI to copy or insert explicitly.
+        - insert=True: only then call insert_text with the regenerated text
+          into the *current* focus (documented explicit UI action). Callers
+          must not pass insert=True for background/automatic retries.
+        - While a live dictation owns the shared STT/formatter (or is mid
+          recording/processing), returns ``busy=True`` and appends **no**
+          attempt line. Ownership is a short flag only — never held across
+          network I/O.
+
+        Returns a result dict:
+          ok, stage, text, source, record (new attempt), error, audio_retained,
+          inserted (bool), busy (bool).
+        """
+        from pathlib import Path
+        from .history import (
+            STAGE_FORMAT, STAGE_INSERT, STAGE_STT, STAGE_COMPLETE,
+            STATUS_PARTIAL, STATUS_SUCCESS,
+            append_failure, append_history, copy_ready, next_attempt_number,
+            normalize_record, retry_capabilities,
+        )
+
+        def _busy_result(stage_val=None):
+            return {
+                "ok": False,
+                "busy": True,
+                "stage": stage_val if stage_val is not None else stage,
+                "text": None,
+                "source": None,
+                "record": None,
+                "error": "busy",
+                "audio_retained": False,
+                "inserted": False,
+            }
+
+        # Coordinate with live pipeline before any STT/format work. No history
+        # append on the busy path (avoids a misleading attempt line).
+        if not self.try_acquire_pipeline(self.PIPELINE_HISTORY_RETRY):
+            log.info("History retry busy: owner=%s state=%s",
+                     self.pipeline_owner(), self.state)
+            return _busy_result()
+
+        try:
+            return self._retry_failed_stage_body(
+                record, stage=stage, insert=insert)
+        finally:
+            self.release_pipeline(self.PIPELINE_HISTORY_RETRY)
+
+    def _retry_failed_stage_body(self, record: dict, *,
+                                 stage: str | None = None,
+                                 insert: bool = False) -> dict:
+        """Retry body after history_retry ownership is held."""
+        from pathlib import Path
+        from .history import (
+            STAGE_FORMAT, STAGE_INSERT, STAGE_STT, STAGE_COMPLETE,
+            STATUS_PARTIAL, STATUS_SUCCESS,
+            append_failure, append_history, copy_ready, next_attempt_number,
+            normalize_record, retry_capabilities,
+        )
+
+        norm = normalize_record(record)
+        if not norm:
+            return {
+                "ok": False,
+                "busy": False,
+                "stage": stage,
+                "text": None,
+                "source": None,
+                "record": None,
+                "error": "invalid record",
+                "audio_retained": False,
+                "inserted": False,
+            }
+
+        caps = retry_capabilities(norm)
+        # Default priority: STT → INSERT → FORMAT. Insert-stage failures with
+        # final text must reuse stored text (no formatter / no model tokens).
+        target = stage or (
+            STAGE_STT if caps["can_retry_stt"]
+            else STAGE_INSERT if caps["can_retry_insert"]
+            else STAGE_FORMAT if caps.get("can_retry_format")
+            else None
+        )
+        run_id = norm.get("run_id") or None
+        attempt_n = next_attempt_number(self.history_path, run_id)
+        app_name = norm.get("app") or ""
+        bundle_id = norm.get("bundle_id") or ""
+        context = norm.get("context") or {}
+        audio_path = norm.get("audio") if caps.get("has_audio") else None
+        # Honest: only report retained if path exists (not merely was logged).
+        audio_retained = bool(audio_path and Path(str(audio_path)).is_file())
+        if norm.get("audio") and not audio_retained:
+            log.info("Retry: recorded audio path missing on disk: %s",
+                     norm.get("audio"))
+
+        raw = (norm.get("raw") or "") or ""
+        final = (norm.get("final") or "") or ""
+        fast = False
+        format_fallback = False
+        error = None
+        result_stage = target or STAGE_FORMAT
+
+        try:
+            if target == STAGE_STT:
+                if not audio_retained:
+                    error = ("audio not retained; cannot re-run STT "
+                             "(privacy: WAV only kept when keep_recordings)")
+                    rec = append_failure(
+                        self.history_path,
+                        stage=STAGE_STT,
+                        error=error,
+                        app_name=app_name,
+                        bundle_id=bundle_id,
+                        raw_text=raw,
+                        final_text=final,
+                        context=context,
+                        audio=None,
+                        run_id=run_id,
+                        attempt=attempt_n,
+                        kind="attempt",
+                    )
+                    return {
+                        "ok": False,
+                        "stage": STAGE_STT,
+                        "text": copy_ready(norm).get("text"),
+                        "source": copy_ready(norm).get("source"),
+                        "record": rec,
+                        "error": error,
+                        "audio_retained": False,
+                        "inserted": False,
+                    }
+                if self.stt is None:
+                    error = "no STT backend available"
+                    rec = append_failure(
+                        self.history_path,
+                        stage=STAGE_STT,
+                        error=error,
+                        app_name=app_name,
+                        bundle_id=bundle_id,
+                        raw_text=raw,
+                        final_text=final,
+                        context=context,
+                        audio=audio_path,
+                        run_id=run_id,
+                        attempt=attempt_n,
+                        kind="attempt",
+                    )
+                    return {
+                        "ok": False,
+                        "stage": STAGE_STT,
+                        "text": None,
+                        "source": None,
+                        "record": rec,
+                        "error": error,
+                        "audio_retained": True,
+                        "inserted": False,
+                    }
+                from .stt import load_wav
+                audio = load_wav(str(audio_path))
+                prompt = ", ".join(self.dictionary_terms)
+                raw = self.stt.transcribe(audio, prompt=prompt) or ""
+                if not raw:
+                    error = "stt returned empty transcript"
+                    rec = append_failure(
+                        self.history_path,
+                        stage=STAGE_STT,
+                        error=error,
+                        app_name=app_name,
+                        bundle_id=bundle_id,
+                        raw_text="",
+                        final_text="",
+                        context=context,
+                        audio=audio_path,
+                        run_id=run_id,
+                        attempt=attempt_n,
+                        kind="attempt",
+                    )
+                    return {
+                        "ok": False,
+                        "stage": STAGE_STT,
+                        "text": None,
+                        "source": None,
+                        "record": rec,
+                        "error": error,
+                        "audio_retained": True,
+                        "inserted": False,
+                    }
+                # After STT, also format so copy-ready has best text.
+                target = STAGE_FORMAT
+                result_stage = STAGE_STT
+
+            if target in (STAGE_FORMAT, STAGE_STT) and raw:
+                fmt_cfg = self.cfg.get("formatting", {})
+                if (fmt_cfg.get("fast_mode") and "\n" not in raw
+                        and len(raw.split()) <= fmt_cfg.get(
+                            "fast_mode_max_words", 10)):
+                    from dictate_core.formatter import apply_literal_corrections
+                    final = apply_literal_corrections(raw, self.corrections)
+                    fast = True
+                else:
+                    audio_wav = None
+                    if fmt_cfg.get("send_audio") and audio_retained:
+                        from .stt import wav_bytes, load_wav
+                        try:
+                            audio_wav = wav_bytes(load_wav(str(audio_path)))
+                        except Exception as e:
+                            log.info("Retry: could not load wav for format: %s", e)
+                    try:
+                        final = self.formatter.format(
+                            raw, context, audio_wav=audio_wav)
+                    except Exception as e:
+                        log.warning("Retry format raised (%s); using raw.", e)
+                        final = raw
+                        format_fallback = True
+                    else:
+                        format_fallback = bool(
+                            getattr(self.formatter, "last_fallback", False))
+                result_stage = STAGE_FORMAT if target == STAGE_FORMAT else result_stage
+
+            elif target == STAGE_INSERT:
+                # Re-use best stored text; no regeneration required.
+                final = final or raw
+                if not (final or "").strip():
+                    error = "no text available to insert/copy"
+                    rec = append_failure(
+                        self.history_path,
+                        stage=STAGE_INSERT,
+                        error=error,
+                        app_name=app_name,
+                        bundle_id=bundle_id,
+                        raw_text=raw,
+                        final_text=final,
+                        context=context,
+                        audio=audio_path if audio_retained else None,
+                        run_id=run_id,
+                        attempt=attempt_n,
+                        kind="attempt",
+                    )
+                    return {
+                        "ok": False,
+                        "stage": STAGE_INSERT,
+                        "text": None,
+                        "source": None,
+                        "record": rec,
+                        "error": error,
+                        "audio_retained": audio_retained,
+                        "inserted": False,
+                    }
+                result_stage = STAGE_INSERT
+
+            text = (final or raw or "").strip() and (final or raw)
+            source = "final" if (final or "").strip() else (
+                "raw" if (raw or "").strip() else None)
+
+            inserted = False
+            if insert and text:
+                # Explicit UI-only path: paste into *current* focus — never
+                # auto-target the original app from the record.
+                from .insert import insert_text
+                ins_cfg = self.cfg.get("insert", {})
+                inserted = bool(insert_text(
+                    text,
+                    method=ins_cfg.get("method", "auto"),
+                    restore_clipboard=ins_cfg.get("restore_clipboard", False),
+                ))
+                if not inserted:
+                    rec = append_failure(
+                        self.history_path,
+                        stage=STAGE_INSERT,
+                        error="insertion failed on explicit retry",
+                        app_name=app_name,
+                        bundle_id=bundle_id,
+                        raw_text=raw,
+                        final_text=final,
+                        context=context,
+                        audio=audio_path if audio_retained else None,
+                        fast=fast,
+                        run_id=run_id,
+                        attempt=attempt_n,
+                        format_fallback=format_fallback,
+                        kind="attempt",
+                    )
+                    return {
+                        "ok": False,
+                        "stage": STAGE_INSERT,
+                        "text": text,
+                        "source": source,
+                        "record": rec,
+                        "error": "insertion failed",
+                        "audio_retained": audio_retained,
+                        "inserted": False,
+                    }
+
+            status = STATUS_PARTIAL if format_fallback else STATUS_SUCCESS
+            out_stage = STAGE_COMPLETE if (
+                insert and inserted) else (result_stage or STAGE_FORMAT)
+            if insert and inserted:
+                out_stage = STAGE_COMPLETE
+            elif not insert:
+                # Regenerated for copy; mark success of the retry stage.
+                status = STATUS_PARTIAL if format_fallback else STATUS_SUCCESS
+                out_stage = result_stage or STAGE_FORMAT
+
+            rec = append_history(
+                self.history_path,
+                app_name,
+                bundle_id,
+                raw,
+                final or raw,
+                context=context,
+                audio=audio_path if audio_retained else None,
+                fast=fast,
+                run_id=run_id,
+                attempt=attempt_n,
+                stage=out_stage,
+                status=status,
+                format_fallback=format_fallback,
+                kind="attempt",
+            )
+            return {
+                "ok": True,
+                "stage": out_stage,
+                "text": text,
+                "source": source,
+                "record": rec,
+                "error": None,
+                "audio_retained": audio_retained,
+                "inserted": inserted,
+            }
+        except Exception as e:
+            log.exception("retry_failed_stage failed: %s", e)
+            try:
+                rec = append_failure(
+                    self.history_path,
+                    stage=target or STAGE_STT,
+                    error=str(e),
+                    app_name=app_name,
+                    bundle_id=bundle_id,
+                    raw_text=raw,
+                    final_text=final,
+                    context=context,
+                    audio=audio_path if audio_retained else None,
+                    run_id=run_id,
+                    attempt=attempt_n,
+                    kind="attempt",
+                )
+            except Exception as write_e:
+                log.warning("Could not write retry failure: %s", write_e)
+                rec = None
+            fallback_text = final or raw or None
+            return {
+                "ok": False,
+                "stage": target,
+                "text": fallback_text if fallback_text else None,
+                "source": "final" if final else ("raw" if raw else None),
+                "record": rec,
+                "error": str(e),
+                "audio_retained": audio_retained,
+                "inserted": False,
+            }
 
 
 def _history_context(context: dict) -> dict:
     """Context dict for history.jsonl: workspace_files truncated to 50 lines."""
-    ctx = dict(context)
-    files = ctx.get("workspace_files")
-    if isinstance(files, str) and files.count("\n") > 50:
-        ctx["workspace_files"] = "\n".join(files.splitlines()[:50]) + "\n…"
-    return ctx
+    from .history import _truncate_context
+    return _truncate_context(context)
 
 
 def _acquire_instance_lock(lock_path):
@@ -614,6 +1269,7 @@ def run_app(cfg):
     bubble_style = cfg.get("bubble", {}).get("style", "notch")
     bubble = Bubble(style=bubble_style)
     bubble.set_sensitivity(cfg.get("bubble", {}).get("sensitivity", 1.0))
+    bubble.set_show_text(cfg.get("bubble", {}).get("show_text", True))
 
     device = cfg.get("audio", {}).get("device", 0) or None
     recorder = Recorder(
