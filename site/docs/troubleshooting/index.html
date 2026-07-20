@@ -36,6 +36,7 @@
       <p class="docs-sidebar-title">Help Center</p>
       <nav>
         <ul>
+          <li><a href="../">Overview</a></li>
           <li><a href="../getting-started/">Getting started</a></li>
           <li><a href="../settings/">Settings</a></li>
           <li><a href="../workflows/">Workflows</a></li>
@@ -211,8 +212,10 @@
           </li>
           <li>
             <strong>Double-tap hold key</strong> — only if
-            <code>toggle_combo = "double_fn"</code> in config. Accidental double-taps
-            can toggle lock unexpectedly; change the combo in Settings if needed.
+            <code>[hotkey] toggle_combo = "double_fn"</code> in
+            <code>~/.golos/config.toml</code> (config-only; there is no Settings control).
+            Accidental double-taps can toggle lock unexpectedly; edit or remove that
+            config value if needed.
           </li>
         </ul>
         <p>
@@ -399,7 +402,7 @@
           <strong>Terminal / iTerm</strong> (or other launcher) as
           <strong>separate identities</strong>. Grants to one do not apply to the other.
         </p>
-        <div class="comparison-table-wrap">
+        <div class="table-wrap">
           <table class="comparison-table">
             <thead>
               <tr>

@@ -36,6 +36,7 @@
       <p class="docs-sidebar-title">Help Center</p>
       <nav>
         <ul>
+          <li><a href="../">Overview</a></li>
           <li><a href="../getting-started/">Getting started</a></li>
           <li><a href="../settings/">Settings</a></li>
           <li><a href="./" aria-current="page">Workflows</a></li>
@@ -160,7 +161,11 @@
         </ol>
 
         <div class="callout callout--tip">
-          <p>If Settings → General has <strong>toggle combo</strong> set to double-tap (<code>double_fn</code> style), a quick double-tap of the hold key also toggles lock. Hold key + Space always works as the combo path.</p>
+          <p>Lock mode is always available via <strong>hold key + Space</strong>. Optionally set
+          <code>[hotkey] toggle_combo = "double_fn"</code> in
+          <code>~/.golos/config.toml</code> so a quick double-tap of the hold key also
+          toggles lock — there is no Settings UI control for this; it is config-only.
+          Hold key + Space always works as the combo path.</p>
         </div>
 
         <h3>Expected feedback</h3>
@@ -539,15 +544,21 @@
         </a>
       </nav>
 
-      <footer class="docs-article-footer">
-        <p>
-          <a href="../">Golos Help Center</a>
-          · <a href="https://github.com/Dopomogai/golos">Source</a>
-          · <a href="https://github.com/Dopomogai/golos/releases/latest">v0.3.1 releases</a>
-        </p>
-      </footer>
     </main>
   </div>
+
+  <footer class="docs-footer">
+    <a class="brand" href="https://golos.dopomogai.com/">
+      <img class="brand-mark" src="../../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
+      <span>golos</span>
+    </a>
+    <p>Open-source macOS dictation · Help Center · v0.3.1 beta</p>
+    <div class="docs-footer-links">
+      <a href="../">Docs home</a>
+      <a href="https://golos.dopomogai.com/#download">Download</a>
+      <a href="https://github.com/Dopomogai/golos">GitHub</a>
+    </div>
+  </footer>
 
   <script src="../docs.js" defer></script>
 </body>

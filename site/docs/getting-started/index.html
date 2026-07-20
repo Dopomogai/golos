@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Install golos v0.3.1 on macOS: pick Apple Silicon or Intel, grant permissions, finish onboarding, and dictate your first words.">
   <meta name="theme-color" content="#080b12">
+  <meta property="og:title" content="Getting started — golos Help">
+  <meta property="og:description" content="Install golos v0.3.1 on macOS: pick Apple Silicon or Intel, grant permissions, finish onboarding, and dictate your first words.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://golos.dopomogai.com/docs/getting-started/">
   <title>Getting started — golos Help</title>
   <link rel="canonical" href="https://golos.dopomogai.com/docs/getting-started/">
   <link rel="icon" type="image/svg+xml" sizes="any" href="../../golos-mark.svg">
@@ -13,27 +17,26 @@
 <body class="docs-page">
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <header class="docs-header">
-    <nav class="docs-nav" aria-label="Primary">
+  <header class="docs-nav-shell">
+    <nav class="docs-nav" aria-label="Primary navigation">
       <a class="brand" href="https://golos.dopomogai.com/" aria-label="golos home">
-        <img class="brand-mark" src="../../golos-mark.svg" width="29" height="29" alt="" aria-hidden="true">
+        <img class="brand-mark" src="../../golos-mark.svg" width="28" height="28" alt="" aria-hidden="true">
         <span>golos</span>
       </a>
       <div class="docs-nav-links">
         <a href="https://golos.dopomogai.com/">Home</a>
-        <a href="../index.html" aria-current="true">Docs</a>
-        <a href="https://golos.dopomogai.com/#download">Download</a>
+        <a href="../" aria-current="page">Docs</a>
+        <a class="button button-small" href="https://golos.dopomogai.com/#download">Download</a>
       </div>
-      <a class="button button-small" href="https://github.com/Dopomogai/golos/releases/latest">Releases</a>
     </nav>
   </header>
 
-  <div class="docs-shell">
+  <div class="docs-shell docs-shell--with-sidebar">
     <aside class="docs-sidebar" aria-label="Help topics">
-      <p class="docs-sidebar-label">Help center</p>
+      <p class="docs-sidebar-title">Help center</p>
       <nav>
         <ul>
-          <li><a href="../index.html">Overview</a></li>
+          <li><a href="../">Overview</a></li>
           <li><a href="./" aria-current="page">Getting started</a></li>
           <li><a href="../settings/">Settings</a></li>
           <li><a href="../workflows/">Workflows</a></li>
@@ -42,7 +45,7 @@
           <li><a href="../troubleshooting/">Troubleshooting</a></li>
         </ul>
       </nav>
-      <p class="docs-sidebar-label">On this page</p>
+      <p class="docs-sidebar-title">On this page</p>
       <nav aria-label="On this page">
         <ul class="toc">
           <li><a href="#pick-build">Pick your build</a></li>
@@ -70,7 +73,7 @@
         </p>
       </header>
 
-      <div class="callout callout-info" role="note">
+      <div class="callout callout--note" role="note">
         <strong>Beta, unsigned builds.</strong>
         v0.3.1 ships as unsigned DMGs. First launch is
         <strong>right-click → Open</strong>. This release is
@@ -83,12 +86,12 @@
         <p>
           golos requires <strong>macOS 13+</strong>. There are two installers —
           pick the one that matches your Mac. Apple menu →
-          <strong>About This Mac</strong>: “Chip” means Apple Silicon (M1–M4);
+          <strong>About This Mac</strong>: “Chip” means Apple Silicon;
           “Processor” with Intel means the Intel edition.
         </p>
 
-        <div class="compare-table-wrap">
-          <table class="compare-table">
+        <div class="table-wrap">
+          <table class="comparison-table">
             <thead>
               <tr>
                 <th scope="col">Edition</th>
@@ -180,7 +183,7 @@
           <li>Choose <strong>Open</strong>.</li>
           <li>Confirm <strong>Open</strong> in the dialog if macOS asks again.</li>
         </ol>
-        <div class="callout callout-warn" role="note">
+        <div class="callout callout--warning" role="note">
           <strong>Do not expect a signed or notarized installer yet.</strong>
           Signing and notarization are planned distribution work, not part of
           this beta. Right-click → Open is the supported path for v0.3.1.
@@ -197,8 +200,8 @@
           the onboarding wizard / menu-bar <strong>Permissions</strong> submenu.
         </p>
 
-        <div class="compare-table-wrap">
-          <table class="compare-table">
+        <div class="table-wrap">
+          <table class="comparison-table">
             <thead>
               <tr>
                 <th scope="col">Permission</th>
@@ -385,7 +388,7 @@
           previous insert.
         </p>
 
-        <div class="callout callout-info" role="note">
+        <div class="callout callout--note" role="note">
           <strong>Success means insertion was posted</strong> to the focused
           app’s input path — not a guarantee every app accepted every character.
           If text is missing, use menu-bar → Permissions, Test insertion, and
@@ -459,14 +462,14 @@
         </p>
       </section>
 
-      <nav class="docs-pager" aria-label="Article pagination">
-        <a class="docs-pager-prev" href="../index.html">
-          <span class="docs-pager-label">Previous</span>
-          <span class="docs-pager-title">Help center</span>
+      <nav class="docs-pager" aria-label="Previous and next guides">
+        <a class="pager-link" href="../">
+          <span class="pager-dir">Previous</span>
+          <span class="pager-title">Help center</span>
         </a>
-        <a class="docs-pager-next" href="../settings/">
-          <span class="docs-pager-label">Next</span>
-          <span class="docs-pager-title">Settings</span>
+        <a class="pager-link pager-link--next" href="../settings/">
+          <span class="pager-dir">Next</span>
+          <span class="pager-title">Settings</span>
         </a>
       </nav>
     </main>
@@ -474,18 +477,18 @@
 
   <footer class="docs-footer">
     <a class="brand" href="https://golos.dopomogai.com/">
-      <img class="brand-mark" src="../../golos-mark.svg" width="24" height="24" alt="" aria-hidden="true">
+      <img class="brand-mark" src="../../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
       <span>golos</span>
     </a>
     <p>Open-source push-to-talk dictation for macOS · Help for v0.3.1</p>
     <div class="docs-footer-links">
-      <a href="../index.html">Help center</a>
+      <a href="../">Help center</a>
       <a href="https://golos.dopomogai.com/#download">Download</a>
       <a href="https://github.com/Dopomogai/golos">GitHub</a>
       <a href="https://github.com/Dopomogai/golos/releases/latest">Releases</a>
     </div>
   </footer>
 
-  <script src="../docs.js"></script>
+  <script src="../docs.js" defer></script>
 </body>
 </html>

@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Complete guide to golos Settings: History, General, Prompt, Learning, Dictionary, and config-only options.">
   <meta name="theme-color" content="#080b12">
+  <meta property="og:title" content="Settings — Golos Help Center">
+  <meta property="og:description" content="Complete guide to golos Settings: History, General, Prompt, Learning, Dictionary, and config-only options.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://golos.dopomogai.com/docs/settings/">
   <title>Settings — Golos Help Center</title>
   <link rel="canonical" href="https://golos.dopomogai.com/docs/settings/">
   <link rel="icon" type="image/svg+xml" sizes="any" href="../../golos-mark.svg">
@@ -13,43 +17,46 @@
 <body class="docs-page" data-docs-page="settings">
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <header class="docs-header">
+  <header class="docs-nav-shell">
     <nav class="docs-nav" aria-label="Primary navigation">
       <a class="brand" href="https://golos.dopomogai.com/" aria-label="golos home">
-        <img class="brand-mark" src="../../golos-mark.svg" width="29" height="29" alt="" aria-hidden="true">
+        <img class="brand-mark" src="../../golos-mark.svg" width="28" height="28" alt="" aria-hidden="true">
         <span>golos</span>
       </a>
-      <div class="nav-links">
+      <div class="docs-nav-links">
         <a href="https://golos.dopomogai.com/">Home</a>
         <a href="../" aria-current="page">Docs</a>
-        <a href="https://golos.dopomogai.com/#download">Download</a>
+        <a class="button button-small" href="https://golos.dopomogai.com/#download">Download</a>
       </div>
-      <a class="button button-small" href="https://github.com/Dopomogai/golos/releases/latest">Releases</a>
     </nav>
   </header>
 
-  <div class="docs-shell">
+  <div class="docs-shell docs-shell--with-sidebar">
     <aside class="docs-sidebar" aria-label="Help topics">
-      <p class="sidebar-kicker">Help Center</p>
-      <nav class="sidebar-nav">
-        <a href="../">Overview</a>
-        <a href="../getting-started/">Getting started</a>
-        <a href="./" aria-current="page">Settings</a>
-        <a href="../workflows/">Workflows</a>
-        <a href="../better-results/">Better results</a>
-        <a href="../privacy/">Privacy &amp; data</a>
-        <a href="../troubleshooting/">Troubleshooting</a>
+      <p class="docs-sidebar-title">Help center</p>
+      <nav>
+        <ul>
+          <li><a href="../">Overview</a></li>
+          <li><a href="../getting-started/">Getting started</a></li>
+          <li><a href="./" aria-current="page">Settings</a></li>
+          <li><a href="../workflows/">Workflows</a></li>
+          <li><a href="../better-results/">Better results</a></li>
+          <li><a href="../privacy/">Privacy &amp; data</a></li>
+          <li><a href="../troubleshooting/">Troubleshooting</a></li>
+        </ul>
       </nav>
-      <nav class="sidebar-toc" aria-label="On this page">
-        <p class="sidebar-kicker">On this page</p>
-        <a href="#open">Open Settings</a>
-        <a href="#history">History</a>
-        <a href="#general">General</a>
-        <a href="#prompt">Prompt</a>
-        <a href="#learning">Learning</a>
-        <a href="#dictionary">Dictionary</a>
-        <a href="#config-only">Config-only settings</a>
-        <a href="#privacy-notes">Privacy &amp; truth notes</a>
+      <p class="docs-sidebar-title">On this page</p>
+      <nav aria-label="On this page">
+        <ul>
+          <li><a href="#open">Open Settings</a></li>
+          <li><a href="#history">History</a></li>
+          <li><a href="#general">General</a></li>
+          <li><a href="#prompt">Prompt</a></li>
+          <li><a href="#learning">Learning</a></li>
+          <li><a href="#dictionary">Dictionary</a></li>
+          <li><a href="#config-only">Config-only settings</a></li>
+          <li><a href="#privacy-notes">Privacy &amp; truth notes</a></li>
+        </ul>
       </nav>
     </aside>
 
@@ -74,7 +81,7 @@
           <li>The window titled <strong>golos Settings</strong> opens with five tabs.
             <strong>History</strong> is first and selected by default each time you open it.</li>
         </ol>
-        <div class="callout callout-info">
+        <div class="callout callout--note">
           <p><strong>Accessory app.</strong> golos has no Dock icon. Closing Settings returns
           focus to the previous app; the menu-bar item stays available.</p>
         </div>
@@ -142,7 +149,7 @@
           <li><strong>Meta flags</strong> when relevant: fast mode, format fallback,
             audio retained, multi-attempt count.</li>
         </ul>
-        <div class="callout callout-warn">
+        <div class="callout callout--warning">
           <p><strong>What “success” means.</strong> A successful history line means golos
           <em>posted</em> the insertion (typed or pasted into the frontmost field). It does
           <strong>not</strong> verify that the target app accepted or displayed the text.
@@ -150,6 +157,7 @@
         </div>
 
         <h3 id="history-actions">Copy, Retry, Show audio</h3>
+        <div class="table-wrap">
         <table class="comparison-table">
           <thead>
             <tr>
@@ -194,6 +202,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
 
         <h3 id="history-suggestions">Suggestions approval</h3>
         <p>
@@ -214,7 +223,7 @@
           <li><strong>Dismiss</strong> — records the pair as dismissed without teaching
             the dictionary or corrections files.</li>
         </ul>
-        <div class="callout callout-info">
+        <div class="callout callout--note">
           <p><strong>Human gate.</strong> Nothing is learned automatically. Live cue
           pills and History suggestions both require an explicit accept or promote
           action. You can also use the menu item
@@ -243,6 +252,7 @@
         </figure>
 
         <h3 id="general-stt">Speech recognition</h3>
+        <div class="table-wrap">
         <table class="comparison-table">
           <thead>
             <tr>
@@ -288,18 +298,20 @@
             </tr>
           </tbody>
         </table>
+        </div>
 
         <h3 id="general-formatting">Formatting</h3>
         <ul>
           <li><strong>Formatter model</strong> — chat model used for cleanup (OpenRouter by
             default). <strong>Fetch models</strong> refreshes listings from OpenRouter
             when a key is available.</li>
-          <li><strong>Format with LLM</strong> — when unchecked, golos inserts the raw
-            transcript (fastest path; no formatting network call). Corrections may still
-            apply depending on pipeline path; full LLM cleanup is off.</li>
+          <li><strong>Format with LLM</strong> — when unchecked, golos inserts the pure
+            raw transcript (fastest path; no formatting network call and no local
+            corrections). Full LLM cleanup is off.</li>
           <li><strong>Fast mode</strong> — skips LLM cleanup for short dictations so short
-            inserts feel instant; local corrections still apply. Word threshold is
-            config-only (<code>fast_mode_max_words</code>, default 10).</li>
+            inserts feel instant; the Fast mode short path can still apply local
+            corrections. Word threshold is config-only
+            (<code>fast_mode_max_words</code>, default 10).</li>
         </ul>
 
         <h3 id="general-api">OpenRouter API key</h3>
@@ -309,7 +321,7 @@
           <code>~/.golos/</code> (file mode restricted). Environment variable
           <code>OPENROUTER_API_KEY</code> wins over the file when set.
         </p>
-        <div class="callout callout-warn">
+        <div class="callout callout--warning">
           <p><strong>Redact before sharing.</strong> Never paste your API key, full
           <code>config.toml</code>, personal audio, or history excerpts into bug reports,
           screenshots for support, or public issues. Prefer “key is set / not set” and
@@ -358,6 +370,7 @@
         </figure>
 
         <h3 id="prompt-context">Context toggles</h3>
+        <div class="table-wrap">
         <table class="comparison-table">
           <thead>
             <tr>
@@ -406,7 +419,8 @@
             </tr>
           </tbody>
         </table>
-        <div class="callout callout-info">
+        </div>
+        <div class="callout callout--note">
           <p><strong>Focused draft vs surrounding text.</strong> These are separate
           roles. Focused field text is what you are writing; visible text is surrounding
           on-screen reading context only. Context is permission- and provider-dependent —
@@ -474,6 +488,7 @@
         </figure>
 
         <h3 id="learning-controls">Reviewer controls</h3>
+        <div class="table-wrap">
         <table class="comparison-table">
           <thead>
             <tr>
@@ -513,6 +528,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
 
         <h3 id="learning-approval">Human approval only</h3>
         <ul>
@@ -526,7 +542,7 @@
           <li>At most one reviewer attempt is intended per insertion; failures fall back
             to the offline text-diff path.</li>
         </ul>
-        <div class="callout callout-warn">
+        <div class="callout callout--warning">
           <p><strong>Privacy &amp; cost.</strong> Enabling the reviewer sends bounded edit
           evidence (and optionally audio) to OpenRouter. That is separate from STT and
           formatter traffic. Keep it off for a privacy-minimal setup, together with local
@@ -596,6 +612,7 @@
           golos — use macOS Login Items yourself if you want that behavior.
         </p>
 
+        <div class="table-wrap">
         <table class="comparison-table">
           <thead>
             <tr>
@@ -682,6 +699,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </section>
 
       <!-- ========== PRIVACY / TRUTH ========== -->
@@ -707,26 +725,32 @@
         </ul>
       </section>
 
-      <nav class="docs-prev-next" aria-label="Adjacent guides">
-        <a class="prev" href="../getting-started/">
-          <span class="pn-label">Previous</span>
-          <span class="pn-title">Getting started</span>
+      <nav class="docs-pager" aria-label="Previous and next guides">
+        <a class="pager-link" href="../getting-started/">
+          <span class="pager-dir">Previous</span>
+          <span class="pager-title">Getting started</span>
         </a>
-        <a class="next" href="../workflows/">
-          <span class="pn-label">Next</span>
-          <span class="pn-title">Workflows</span>
+        <a class="pager-link pager-link--next" href="../workflows/">
+          <span class="pager-dir">Next</span>
+          <span class="pager-title">Workflows</span>
         </a>
       </nav>
-
-      <footer class="docs-article-footer">
-        <p>
-          <a href="../">Golos Help Center</a>
-          · <a href="https://github.com/Dopomogai/golos">Source</a>
-          · <a href="https://github.com/Dopomogai/golos/releases/latest">v0.3.1 releases</a>
-        </p>
-      </footer>
     </main>
   </div>
+
+  <footer class="docs-footer">
+    <a class="brand" href="https://golos.dopomogai.com/">
+      <img class="brand-mark" src="../../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
+      <span>golos</span>
+    </a>
+    <p>Open-source macOS dictation · Help Center · v0.3.1 beta</p>
+    <div class="docs-footer-links">
+      <a href="../">Docs home</a>
+      <a href="https://golos.dopomogai.com/#download">Download</a>
+      <a href="https://github.com/Dopomogai/golos">GitHub</a>
+      <a href="https://github.com/Dopomogai/golos/releases/latest">Releases</a>
+    </div>
+  </footer>
 
   <script src="../docs.js" defer></script>
 </body>

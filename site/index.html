@@ -27,6 +27,7 @@
         <a href="#privacy">Privacy</a>
         <a href="#roadmap">Roadmap</a>
         <a href="#faq">FAQ</a>
+        <a href="docs/">Docs</a>
       </div>
       <a class="button button-small" href="#download">Download beta</a>
     </nav>
@@ -98,9 +99,9 @@
         </article>
         <article class="feature-card">
           <div class="feature-icon quote-icon" aria-hidden="true">“</div>
-          <p class="card-index">05 / Real citations</p>
+          <p class="card-index">05 / Context citations</p>
           <h3>Comment in context.</h3>
-          <p>Talk about text on screen and golos quotes the exact line before adding your take.</p>
+          <p>Talk about text on screen and golos can quote a matching line before adding your take — best-effort from Accessibility context, not a universal guarantee in every app.</p>
         </article>
         <article class="feature-card feature-wide accent-card">
           <div class="speed-switch" aria-hidden="true"><span>Raw</span><i></i><span>Polished</span></div>
@@ -220,7 +221,7 @@
       <div class="section-heading"><p class="kicker">Questions, answered</p><h2>The details.</h2></div>
       <div class="accordion">
         <details open><summary>Is my audio stored?<span></span></summary><p>By default, each dictation is retained locally as a WAV under <code>~/.golos/recordings/</code> for benchmarking and troubleshooting. Turn off keep-recordings to discard it after processing. Text history stays in a local JSONL file you own.</p></details>
-        <details><summary>What does it cost?<span></span></summary><p>golos is free and open-source. Local speech-to-text costs nothing. Optional cloud transcription costs fractions of a cent per minute, and the built-in benchmark lets you compare supported models using your own voice.</p></details>
+        <details><summary>What does it cost?<span></span></summary><p>golos is free and open-source. Local speech-to-text costs nothing. Optional cloud transcription and formatting are provider-billed and vary by model and usage; the built-in benchmark lets you compare supported models using your own voice.</p></details>
         <details><summary>Why does it need permissions?<span></span></summary><p>Microphone lets golos hear you, Input Monitoring sees the global <kbd>fn</kbd> key, and Accessibility inserts text and reads permitted context. Without Accessibility it can still transcribe, but cannot paste for you.</p></details>
         <details><summary>Which platforms are available?<span></span></summary><p>macOS is supported today (Apple Silicon and Intel). Windows desktop and mobile are in the pipeline; they require separate native work and have no announced date.</p></details>
         <details><summary>How does the dictionary learn?<span></span></summary><p>When you edit inserted text, golos notices the near-match and suggests a correction. Promote it to your dictionary with a single confirmation or dismiss it. Nothing is learned without your approval.</p></details>
@@ -237,7 +238,7 @@
         <a class="download-card" href="https://github.com/Dopomogai/golos/releases/download/v0.3.1/golos-0.3.1-apple-silicon.dmg">
           <span class="download-arch">Apple Silicon</span>
           <strong>Download DMG</strong>
-          <span class="download-meta">M1–M4 · Cloud + optional local MLX</span>
+          <span class="download-meta">Apple Silicon · Cloud + optional local MLX</span>
         </a>
         <a class="download-card" href="https://github.com/Dopomogai/golos/releases/download/v0.3.1/golos-0.3.1-intel.dmg">
           <span class="download-arch">Intel</span>
@@ -269,6 +270,7 @@
     <p>Made in Ukraine. Your voice, in your words.</p>
     <div>
       <a href="#download">Download</a>
+      <a href="docs/">Docs</a>
       <a href="#roadmap">Roadmap</a>
       <a href="https://github.com/Dopomogai/golos/blob/main/docs/ROADMAP.md">docs/ROADMAP.md</a>
       <a href="https://github.com/Dopomogai/golos">GitHub</a>
