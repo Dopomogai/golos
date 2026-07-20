@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Scenario-first Golos workflows: hold-to-talk, hands-free lock, draft continuation, citations, learning, History recovery, writing modes, languages, and corner mode.">
+  <meta name="theme-color" content="#080b12">
+  <meta property="og:title" content="Workflows — Golos Help Center">
+  <meta property="og:description" content="Day-to-day Golos dictation scenarios with expected feedback and recovery paths.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://golos.dopomogai.com/docs/workflows/">
+  <title>Workflows — Golos Help Center</title>
+  <link rel="canonical" href="https://golos.dopomogai.com/docs/workflows/">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="../../golos-mark.svg">
+  <link rel="stylesheet" href="../docs.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="docs-nav-shell">
+    <nav class="docs-nav" aria-label="Primary navigation">
+      <a class="brand" href="https://golos.dopomogai.com/" aria-label="golos home">
+        <img class="brand-mark" src="../../golos-mark.svg" width="28" height="28" alt="" aria-hidden="true">
+        <span>golos</span>
+      </a>
+      <div class="docs-nav-links">
+        <a href="https://golos.dopomogai.com/">Home</a>
+        <a href="../" aria-current="page">Docs</a>
+        <a class="button button-small" href="https://golos.dopomogai.com/#download">Download</a>
+      </div>
+    </nav>
+  </header>
+
+  <div class="docs-shell docs-shell--with-sidebar">
+    <aside class="docs-sidebar" aria-label="Help topics">
+      <p class="docs-sidebar-title">Help Center</p>
+      <nav>
+        <ul>
+          <li><a href="../getting-started/">Getting started</a></li>
+          <li><a href="../settings/">Settings</a></li>
+          <li><a href="./" aria-current="page">Workflows</a></li>
+          <li><a href="../better-results/">Better results</a></li>
+          <li><a href="../privacy/">Privacy &amp; data</a></li>
+          <li><a href="../troubleshooting/">Troubleshooting</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-group">
+        <span>More</span>
+        <nav aria-label="Project links">
+          <ul>
+            <li><a href="https://github.com/Dopomogai/golos">GitHub</a></li>
+            <li><a href="https://github.com/Dopomogai/golos/blob/main/docs/ROADMAP.md">Roadmap</a></li>
+            <li><a href="https://github.com/Dopomogai/golos/releases/latest">Releases</a></li>
+          </ul>
+        </nav>
+      </div>
+    </aside>
+
+    <main id="main" class="docs-article">
+      <header class="page-hero">
+        <p class="kicker">Workflows</p>
+        <h1>Scenario guides for real dictation</h1>
+        <p class="lede">
+          Each workflow is a full path: what to do, what you should see, and how to recover when
+          something fails. Your hold key may be <kbd>fn</kbd> (default), Right&nbsp;⌥, Right&nbsp;⌘, or&nbsp;F5 —
+          Settings → General rebinds it live. Examples below say “hold key.”
+        </p>
+        <div class="page-hero-meta">
+          <span class="version-badge" title="Documentation applies to this public beta">Applies to v0.3.1</span>
+          <span class="muted" style="font-size:13px">macOS 13+ · open source · unsigned beta</span>
+        </div>
+      </header>
+
+      <nav aria-label="On this page">
+        <p class="docs-sidebar-title">On this page</p>
+        <ul>
+          <li><a href="#quick-sentence">Quick sentence (hold / release)</a></li>
+          <li><a href="#hands-free">Hands-free long thought</a></li>
+          <li><a href="#continue-draft">Continue an existing draft</a></li>
+          <li><a href="#comment-visible">Comment on visible content</a></li>
+          <li><a href="#teach-name">Teach a proper name</a></li>
+          <li><a href="#recover-history">Recover a failed dictation</a></li>
+          <li><a href="#writing-modes">Raw, fast, and formatted</a></li>
+          <li><a href="#languages">English and Ukrainian</a></li>
+          <li><a href="#corner-mode">Corner mode (no notch)</a></li>
+        </ul>
+      </nav>
+
+      <div class="callout callout--warning" role="note">
+        <p><strong>Honest limits.</strong> Context capture is permission-, provider-, and app-dependent (best-effort).
+        Captures shorter than about <strong>0.3&nbsp;s</strong> are treated as accidental taps and discarded with no history line.
+        History <strong>Retry never silently inserts</strong> — it regenerates text for you to copy.
+        A green success flash means insertion was <em>posted</em> to macOS, not that the target app verified delivery.
+        macOS can drop synthetic key/paste events in some fields.</p>
+      </div>
+
+      <!-- 1. Quick sentence -->
+      <section class="docs-section" id="quick-sentence" aria-labelledby="quick-sentence-title">
+        <h2 id="quick-sentence-title">Quick sentence via hold / release</h2>
+        <p>Use this for short notes, chat replies, and anything you finish in one breath.</p>
+
+        <ol class="step-list">
+          <li>
+            <strong>Focus a text field</strong> where a cursor can blink (Notes, Mail, Slack, a browser form, and most standard macOS inputs).
+          </li>
+          <li>
+            <strong>Hold your hold key</strong> (default <kbd>fn</kbd>). Keep it down while you speak.
+          </li>
+          <li>
+            <strong>Speak the sentence</strong> naturally. Pause only if you mean to leave silence in the audio.
+          </li>
+          <li>
+            <strong>Release the hold key</strong> to stop capture and start the pipeline.
+          </li>
+        </ol>
+
+        <h3>Expected feedback</h3>
+        <ul>
+          <li><strong>Recording:</strong> red→orange waveform (notch wings, or the corner pill if you use corner mode). Idle shows <em>nothing</em> — silence is normal when you are not dictating.</li>
+          <li><strong>Processing:</strong> wings collapse, then a blue shimmer with a <code>processing…</code> label (elapsed seconds after a few seconds).</li>
+          <li><strong>Success:</strong> a green <code>✓ inserted</code> hill that fades (~1.2&nbsp;s). If formatting fell back to raw, the label may read <code>✓ inserted raw</code>.</li>
+        </ul>
+
+        <h3>Recovery</h3>
+        <ul>
+          <li><strong>Nothing appeared and no processing flash:</strong> the capture may have been under the ~0.3&nbsp;s accidental-tap threshold — hold longer and speak again. Or the hold key is stolen by macOS (System Settings → Keyboard → “Press 🌐/fn key to” → <strong>Do Nothing</strong>).</li>
+          <li><strong>Processing then a warning notice:</strong> open the menu-bar chakra → Settings → <strong>History</strong>. Use Copy / Retry / Show audio as needed (see <a href="#recover-history">recover a failed dictation</a>).</li>
+          <li><strong>Green flash but empty field:</strong> insertion was posted, not verified. Click into the field, use History → <strong>Copy text</strong>, and paste manually. Check Accessibility for <strong>golos.app</strong>.</li>
+          <li><strong>Cancel mid-recording:</strong> press <kbd>Esc</kbd> — audio is discarded, no transcription, no history line.</li>
+        </ul>
+      </section>
+
+      <!-- 2. Hands-free -->
+      <section class="docs-section" id="hands-free" aria-labelledby="hands-free-title">
+        <h2 id="hands-free-title">Hands-free long thought</h2>
+        <p>Lock recording so you can walk around a long idea without holding the key down.</p>
+
+        <ol class="step-list">
+          <li>
+            <strong>Focus the target field</strong> and place the caret where the text should land.
+          </li>
+          <li>
+            <strong>Press hold key + Space</strong> (e.g. <kbd>fn</kbd>+<kbd>Space</kbd>) to start <strong>locked</strong> recording.
+            With Input Monitoring granted, Space is swallowed so you do not type a space into the field.
+          </li>
+          <li>
+            <strong>Speak freely</strong> for as long as you need. The waveform stays in the recording state.
+          </li>
+          <li>
+            <strong>End cleanly</strong> with either:
+            <ul>
+              <li>a <strong>single press</strong> of the hold key, or</li>
+              <li><strong>hold key + Space</strong> again.</li>
+            </ul>
+            Both stop locked mode, run STT (+ optional formatting), and insert.
+          </li>
+          <li>
+            <strong>Or cancel</strong> with <kbd>Esc</kbd> while still recording — audio is discarded, nothing is inserted.
+          </li>
+        </ol>
+
+        <div class="callout callout--tip">
+          <p>If Settings → General has <strong>toggle combo</strong> set to double-tap (<code>double_fn</code> style), a quick double-tap of the hold key also toggles lock. Hold key + Space always works as the combo path.</p>
+        </div>
+
+        <h3>Expected feedback</h3>
+        <ul>
+          <li>Entering lock: same recording waveform as hold-to-talk, but release of the hold key does <em>not</em> stop capture.</li>
+          <li>Ending lock: same processing → success path as a normal release.</li>
+          <li>Cancel: brief <code>cancelled</code> notice; back to idle with no bubble.</li>
+          <li>During processing, <kbd>Esc</kbd> discards the result <em>before</em> insert if it has not started yet; a cancelled processing run may still appear in History for recovery.</li>
+        </ul>
+
+        <h3>Recovery</h3>
+        <ul>
+          <li><strong>Space characters appear while locking:</strong> Input Monitoring is missing or the event tap failed — grant Input Monitoring to <strong>golos.app</strong>, then restart golos. See <a href="../troubleshooting/">Troubleshooting</a>.</li>
+          <li><strong>Lock ends immediately:</strong> you may have pressed the hold key alone (that ends lock by design). Use hold+Space only to start, then leave the hold key alone until you mean to stop.</li>
+          <li><strong>History retry is running:</strong> live lock/hold may show a busy warning. Wait for the retry to finish, or cancel other work first.</li>
+        </ul>
+      </section>
+
+      <!-- 3. Continue draft -->
+      <section class="docs-section" id="continue-draft" aria-labelledby="continue-draft-title">
+        <h2 id="continue-draft-title">Continue an existing draft</h2>
+        <p>
+          When formatting is on and context is allowed, golos can see the focused input so new dictation
+          continues the draft instead of starting from a blank slate.
+        </p>
+
+        <ol class="step-list">
+          <li>
+            <strong>Confirm formatting</strong> is enabled (Settings → General → <strong>Format with LLM</strong>).
+            Raw mode never sends draft text to the formatter.
+          </li>
+          <li>
+            <strong>Confirm context toggles</strong> under Settings → Prompt: at least
+            <strong>focused field text</strong> and, for mid-sentence joins, <strong>text before cursor</strong>
+            (defaults are on when context is enabled).
+          </li>
+          <li>
+            <strong>Click into the draft</strong> and place the caret where the new words should go
+            (end of paragraph, mid-sentence, empty line for a new section).
+          </li>
+          <li>
+            <strong>Dictate</strong> with hold/release or hands-free lock. Speak the <em>continuation</em>
+            (“…and the deadline moves to Friday”), not a full rewrite, unless you want one.
+          </li>
+        </ol>
+
+        <h3>Expected feedback</h3>
+        <ul>
+          <li>Same recording → processing → success UI as any other run.</li>
+          <li>With a good focused-field read, the formatter may match tone, avoid re-introducing the opening, and place the new prose as a continuation.</li>
+          <li>History detail for the run may include a truncated context snapshot when context was collected.</li>
+        </ul>
+
+        <h3>Caveats (best-effort)</h3>
+        <ul>
+          <li>Requires Accessibility and a field that exposes text via macOS accessibility APIs. Some web apps and custom controls return empty focused text.</li>
+          <li>Focused field text is capped (on the order of a few thousand characters). Very long documents only contribute a recent slice.</li>
+          <li>Text before the cursor is a short slice for placement, not the whole document.</li>
+          <li>If context gather times out (~3&nbsp;s), the pipeline continues with empty context — you still get a transcript, just less draft-aware cleanup.</li>
+        </ul>
+
+        <h3>Recovery</h3>
+        <ul>
+          <li>If the insert ignores the draft tone: check Prompt toggles, Accessibility, and that the caret is in the field you think it is.</li>
+          <li>Use History → Copy and paste the final text where you want it if the app swallowed the synthetic insert.</li>
+        </ul>
+      </section>
+
+      <!-- 4. Comment on visible content -->
+      <section class="docs-section" id="comment-visible" aria-labelledby="comment-visible-title">
+        <h2 id="comment-visible-title">Comment on visible content</h2>
+        <p>
+          Citation-style wording is a <strong>best-effort</strong> formatter feature: when surrounding on-screen
+          text is available, comments about that text may start with a short verbatim blockquote, then your take.
+        </p>
+
+        <ol class="step-list">
+          <li>
+            <strong>Open content you can read on screen</strong> (document, article, long message thread)
+            and focus a place where your comment should be typed (reply box, notes pane, empty line).
+          </li>
+          <li>
+            Keep <strong>Format with LLM</strong> on. In Settings → Prompt, leave
+            <strong>visible text</strong> enabled (surrounding / reading context — not the same as the focused draft).
+          </li>
+          <li>
+            <strong>Dictate a comment that refers to the text</strong>, e.g.
+            “This paragraph about the API timeout is too vague — ask for the actual SLA.”
+          </li>
+          <li>
+            Release or end lock. Review the insert: when context worked, you may see a leading
+            <code>&gt; …</code> quote drawn from the visible text, then your comment.
+          </li>
+        </ol>
+
+        <h3>Expected feedback</h3>
+        <ul>
+          <li>Normal processing UI; no special “citation mode” indicator.</li>
+          <li>When visible text was readable, the formatter is instructed to quote only text that appears in that surrounding context — it should not invent quotes.</li>
+          <li>When visible text is empty (common in locked-down web UIs), you still get a normal comment without a forced quote.</li>
+        </ul>
+
+        <div class="callout callout--warning">
+          <p><strong>No guarantees.</strong> Visible text is scraped best-effort from accessibility trees, normalized, and capped. Browser tabs may also contribute title/URL via providers when enabled. Never assume every app exposes reading context. Do not treat quoted lines as a legal or audit trail.</p>
+        </div>
+
+        <h3>Recovery</h3>
+        <ul>
+          <li>No quote appeared: expected when visible text was inaccessible — paste the passage yourself or switch to an app that exposes text.</li>
+          <li>Wrong quote: dismiss and re-dictate with a clearer reference, or edit by hand; teaching corrections is covered next.</li>
+        </ul>
+      </section>
+
+      <!-- 5. Teach a proper name -->
+      <section class="docs-section" id="teach-name" aria-labelledby="teach-name-title">
+        <h2 id="teach-name-title">Teach a proper name</h2>
+        <p>
+          Fix a misspelled name once in place. Golos can surface a live cue and a History suggestion —
+          nothing is learned until you approve.
+        </p>
+
+        <ol class="step-list">
+          <li>
+            <strong>Dictate</strong> a sentence that includes the name (for example “Meet Mercey at noon”).
+            Wait for the green success flash.
+          </li>
+          <li>
+            <strong>Edit the inserted text by hand</strong> in the same field — change the wrong spelling
+            to the right one (<code>Mercey</code> → <code>Mercy</code>). Short proper names are valid learning targets.
+          </li>
+          <li>
+            <strong>Pause typing</strong> for a moment. With live cues enabled (default), the edit watcher
+            polls the field for up to ~3 minutes and only fires after the text is stable between polls.
+          </li>
+          <li>
+            When a cue pill appears (<code>wrong → right ✓?</code>), <strong>click it</strong> to keep the
+            correction immediately. Focus is not stolen by the cue.
+          </li>
+          <li>
+            Or open Settings → <strong>History</strong> → Suggestions and choose
+            <strong>Add to corrections</strong>, <strong>Add to dictionary</strong>, or <strong>Dismiss</strong>.
+          </li>
+        </ol>
+
+        <h3>Expected feedback</h3>
+        <ul>
+          <li>Cue only after a stable pause — mid-typing should not spam suggestions.</li>
+          <li>Accepting a cue promotes the pair into corrections (and related bookkeeping) so future runs can apply it.</li>
+          <li>Optional learning reviewer (Settings → Learning, off by default) may re-check a stable edit with another model; suggestions still need your click.</li>
+        </ul>
+
+        <h3>Recovery</h3>
+        <ul>
+          <li><strong>No cue:</strong> stay in the same app a few seconds after editing; use History → <strong>Check for edits</strong>; confirm learning is enabled; confirm Accessibility can read the field.</li>
+          <li><strong>App switch right after the fix:</strong> a pending local pair may flush on focus loss so quick edit-then-switch is not always lost.</li>
+          <li><strong>Wrong suggestion:</strong> Dismiss permanently from Suggestions, or ignore the cue.</li>
+          <li><strong>Teach without an edit:</strong> select the correct spelling → menu-bar → <strong>Add selection to dictionary</strong>.</li>
+        </ul>
+      </section>
+
+      <!-- 6. Recover failed dictation -->
+      <section class="docs-section" id="recover-history" aria-labelledby="recover-history-title">
+        <h2 id="recover-history-title">Recover a failed dictation via History</h2>
+        <p>
+          Every durable run (success, failure, or cancelled-after-processing) can land in
+          Settings → History. Failed stages keep enough state for recovery when audio or text was retained.
+        </p>
+
+        <ol class="step-list">
+          <li>
+            Open the menu-bar chakra → <strong>Settings…</strong> (History is the first tab).
+          </li>
+          <li>
+            Select the run (newest first). Read status/error badges and the raw / final / context detail pane.
+          </li>
+          <li>
+            Choose an action:
+            <ul>
+              <li><strong>Copy text</strong> — copies the best available text (prefers final, falls back to raw) to the pasteboard. Does not change focus or insert into an app.</li>
+              <li><strong>Retry</strong> — re-runs the recoverable stage on a worker. <strong>Never auto-inserts</strong> into the frontmost app. On success the status reads along the lines of “Retry saved — ready to copy.”</li>
+              <li><strong>Show audio</strong> — reveals the retained WAV in Finder when <code>[audio] keep_recordings</code> left a file on disk (default on).</li>
+            </ul>
+          </li>
+          <li>
+            After a successful Retry, select the new attempt if needed, <strong>Copy text</strong>, click the target field, and paste.
+          </li>
+        </ol>
+
+        <h3>What Retry can do</h3>
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Situation</th>
+                <th>Needs</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>STT failed</td>
+                <td>WAV still on disk</td>
+                <td>New transcript attempt (no silent insert)</td>
+              </tr>
+              <tr>
+                <td>Format failed / re-format</td>
+                <td>Stored raw text</td>
+                <td>New final text for copy</td>
+              </tr>
+              <tr>
+                <td>Insert failed</td>
+                <td>Stored final or raw</td>
+                <td>Text ready to copy; you paste deliberately</td>
+              </tr>
+              <tr>
+                <td>Accidental tap (&lt; ~0.3&nbsp;s)</td>
+                <td>—</td>
+                <td>No history line; nothing to retry — dictate again</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Expected feedback</h3>
+        <ul>
+          <li>Live notices after a bad run often point you here (“open History…”, “couldn’t insert — open History to copy”).</li>
+          <li>If a live dictation is in progress, Retry may report busy and append no attempt line.</li>
+          <li>Original failure lines are kept; retries append linked attempts.</li>
+        </ul>
+
+        <h3>Recovery of recovery</h3>
+        <ul>
+          <li><strong>No retained audio:</strong> STT cannot be re-run (privacy: golos does not invent audio). Re-speak, or enable keep recordings for next time.</li>
+          <li><strong>No text to copy:</strong> empty STT with no recoverable audio — re-dictate.</li>
+          <li><strong>Show audio disabled path:</strong> status “No retained audio” when the file is missing or retention was off.</li>
+        </ul>
+      </section>
+
+      <!-- 7. Writing modes -->
+      <section class="docs-section" id="writing-modes" aria-labelledby="writing-modes-title">
+        <h2 id="writing-modes-title">Switch between raw, fast, and formatted</h2>
+        <p>Three useful speeds — all controlled from Settings → General (Save applies live).</p>
+
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Mode</th>
+                <th>How to enable</th>
+                <th>What happens</th>
+                <th>Best for</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Raw</strong></td>
+                <td>Uncheck <strong>Format with LLM</strong></td>
+                <td>STT only; transcript inserts as recognized. Formatter and context sharing for formatting are skipped.</td>
+                <td>Maximum speed, minimal cloud text sharing after STT</td>
+              </tr>
+              <tr>
+                <td><strong>Fast</strong></td>
+                <td>Format on + check <strong>Fast mode</strong></td>
+                <td>Short single-line dictations (default ≤&nbsp;10 words) skip the LLM; literal corrections still apply locally. Longer lines still format.</td>
+                <td>Quick replies with occasional polish on longer takes</td>
+              </tr>
+              <tr>
+                <td><strong>Formatted</strong></td>
+                <td>Format on; Fast off (or speak longer than the fast threshold)</td>
+                <td>LLM cleanup: fillers, punctuation, lists, corrections, tone/context when allowed</td>
+                <td>Email, docs, structured thoughts</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ol class="step-list">
+          <li>Open Settings → <strong>General</strong>.</li>
+          <li>Toggle <strong>Format with LLM</strong> and/or <strong>Fast mode</strong>.</li>
+          <li>Save, then run a quick test sentence into a scratch field.</li>
+        </ol>
+
+        <h3>Expected feedback</h3>
+        <ul>
+          <li>Raw and fast paths usually feel snappier; full format adds roughly a second or more depending on network and model.</li>
+          <li>History rows can carry a <code>fast</code> flag when the short-path skipped the LLM.</li>
+          <li>Cloud STT still sends audio when you use an OpenRouter (or other cloud) backend — turning formatting off does not make cloud STT local.</li>
+        </ul>
+
+        <h3>Recovery</h3>
+        <ul>
+          <li>Over-aggressive cleanup: switch to raw or fast for that app, or fix by hand and teach a correction.</li>
+          <li>Format errors that still insert: you may see <code>✓ inserted raw</code> when the pipeline fell back after a format problem.</li>
+        </ul>
+      </section>
+
+      <!-- 8. Languages -->
+      <section class="docs-section" id="languages" aria-labelledby="languages-title">
+        <h2 id="languages-title">Dictate English and Ukrainian</h2>
+        <p>
+          Golos accepts a comma-separated language list for STT. Bilingual EN/UK is a common setup;
+          exact recognition quality depends on the selected model and backend.
+        </p>
+
+        <ol class="step-list">
+          <li>Open Settings → <strong>General</strong>.</li>
+          <li>In <strong>Languages</strong>, enter <code>en, uk</code> (placeholder text matches this pattern). Leave empty for model auto-detect when the backend supports it.</li>
+          <li>Save. Dictate a short English phrase, then a short Ukrainian phrase, into a test field.</li>
+          <li>If one language is consistently weak, try another STT model from the curated OpenRouter list, or (Apple Silicon) an on-device model after an explicit local download — then re-test on <em>your</em> voice.</li>
+        </ol>
+
+        <h3>Expected feedback</h3>
+        <ul>
+          <li>No separate language indicator in the notch/pill — quality shows up in the transcript.</li>
+          <li>Dictionary terms still bias recognition for names and domain words across languages you use.</li>
+        </ul>
+
+        <h3>Recovery</h3>
+        <ul>
+          <li>Mixed-language garble: set explicit <code>en, uk</code> instead of empty auto-detect, or dictate one language per run.</li>
+          <li>Ukrainian punctuation or transliteration issues: keep formatting on for cleanup, teach corrections for proper nouns, see <a href="../better-results/">Better results</a>.</li>
+          <li>Do not assume every listed model treats every language equally — compare with History retries and, if you like, the local benchmark harness on your own samples.</li>
+        </ul>
+      </section>
+
+      <!-- 9. Corner mode -->
+      <section class="docs-section" id="corner-mode" aria-labelledby="corner-mode-title">
+        <h2 id="corner-mode-title">Corner mode on a Mac without a notch</h2>
+        <p>
+          Notch wings need a camera notch. On older displays — or any time you prefer a pill —
+          use corner mode: a small draggable status pill (bottom-right by default).
+        </p>
+
+        <ol class="step-list">
+          <li>Open Settings → <strong>General</strong>.</li>
+          <li>Set <strong>bubble style</strong> to <code>corner</code> (options: <code>notch</code>, <code>corner</code>).</li>
+          <li>Save. <strong>Restart golos</strong> so the bubble style applies (style is read at bubble creation).</li>
+          <li>Dictate once: the pill should appear only while recording / processing / success, then hide when idle.</li>
+          <li>Optionally drag the pill to a comfortable corner; it is movable by the window background in corner style.</li>
+        </ol>
+
+        <h3>Expected feedback</h3>
+        <ul>
+          <li>Same state colors as notch mode: recording waveform, processing treatment, success confirmation, idle hidden.</li>
+          <li>If you leave style on <code>notch</code> on a non-notched Mac, golos falls back to the corner pill automatically.</li>
+          <li>Edit-learning cue pills remain clickable without stealing keyboard focus.</li>
+        </ul>
+
+        <h3>Recovery</h3>
+        <ul>
+          <li><strong>Never see a bubble:</strong> idle is intentionally empty. Start a hold recording. Confirm “status words” / show-text is on if you want labels on the animation.</li>
+          <li><strong>Style change did nothing:</strong> fully quit from the menu-bar icon and reopen (not only Settings Save).</li>
+          <li><strong>Fullscreen apps:</strong> the panel is configured to join spaces / fullscreen auxiliary — if you still see nothing, check <a href="../troubleshooting/">Troubleshooting</a>.</li>
+        </ul>
+      </section>
+
+      <section class="docs-section" id="related" aria-labelledby="related-title">
+        <h2 id="related-title">Related</h2>
+        <ul>
+          <li><a href="../getting-started/">Getting started</a> — install, permissions, first dictation</li>
+          <li><a href="../settings/">Settings</a> — History, General, Prompt, Learning, Dictionary</li>
+          <li><a href="../better-results/">Better results</a> — models, dictionary craft, profiles</li>
+          <li><a href="../privacy/">Privacy &amp; data</a> — what leaves the Mac and what stays in <code>~/.golos</code></li>
+          <li><a href="../troubleshooting/">Troubleshooting</a> — symptom-led fixes</li>
+        </ul>
+      </section>
+
+      <nav class="docs-pager" aria-label="Adjacent help topics">
+        <a class="pager-link" href="../settings/">
+          <span class="pager-dir">Previous</span>
+          <span class="pager-title">Settings</span>
+        </a>
+        <a class="pager-link pager-link--next" href="../better-results/">
+          <span class="pager-dir">Next</span>
+          <span class="pager-title">Better results</span>
+        </a>
+      </nav>
+
+      <footer class="docs-article-footer">
+        <p>
+          <a href="../">Golos Help Center</a>
+          · <a href="https://github.com/Dopomogai/golos">Source</a>
+          · <a href="https://github.com/Dopomogai/golos/releases/latest">v0.3.1 releases</a>
+        </p>
+      </footer>
+    </main>
+  </div>
+
+  <script src="../docs.js" defer></script>
+</body>
+</html>
