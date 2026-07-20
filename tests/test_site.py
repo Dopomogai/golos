@@ -40,6 +40,12 @@ def test_favicon_identity_points_at_golos_mark():
     assert 'viewBox="0 0 1024 1024"' in mark
 
 
+def test_public_custom_domain_is_canonical():
+    html = _html()
+    assert '<link rel="canonical" href="https://golos.dopomogai.com/">' in html
+    assert '<meta property="og:url" content="https://golos.dopomogai.com/">' in html
+
+
 def test_direct_architecture_dmg_links():
     html = _html()
     assert APPLE_DMG in html
