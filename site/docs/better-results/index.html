@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tune Golos for cleaner dictation: cloud vs local STT, languages, formatting modes, dictionary, context, and recommended profiles.">
+  <meta name="theme-color" content="#080b12">
+  <meta property="og:title" content="Better results — Golos Help">
+  <meta property="og:description" content="An expert, practical guide to higher-quality Golos dictation without magic claims.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://golos.dopomogai.com/docs/better-results/">
+  <title>Better results — Golos Help</title>
+  <link rel="canonical" href="https://golos.dopomogai.com/docs/better-results/">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="../../golos-mark.svg">
+  <link rel="stylesheet" href="../docs.css">
+</head>
+<body class="docs-page">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="docs-nav-shell">
+    <nav class="docs-nav" aria-label="Primary navigation">
+      <a class="brand" href="https://golos.dopomogai.com/" aria-label="golos home">
+        <img class="brand-mark" src="../../golos-mark.svg" width="28" height="28" alt="" aria-hidden="true">
+        <span>golos</span>
+      </a>
+      <div class="docs-nav-links">
+        <a href="https://golos.dopomogai.com/">Home</a>
+        <a href="../">Docs</a>
+        <a href="https://golos.dopomogai.com/#download">Download</a>
+        <a class="button button-small" href="https://golos.dopomogai.com/#download">Download beta</a>
+      </div>
+    </nav>
+  </header>
+
+  <div class="docs-shell docs-shell--with-sidebar">
+    <aside class="docs-sidebar" aria-label="Help topics">
+      <p class="docs-sidebar-title">Help center</p>
+      <nav>
+        <ul>
+          <li><a href="../">Overview</a></li>
+          <li><a href="../getting-started/">Getting started</a></li>
+          <li><a href="../settings/">Settings</a></li>
+          <li><a href="../workflows/">Workflows</a></li>
+          <li><a href="./" aria-current="page">Better results</a></li>
+          <li><a href="../privacy/">Privacy &amp; data</a></li>
+          <li><a href="../troubleshooting/">Troubleshooting</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-group">
+        <span>Also</span>
+        <ul>
+          <li><a href="https://github.com/Dopomogai/golos">GitHub</a></li>
+          <li><a href="https://github.com/Dopomogai/golos/blob/main/docs/ROADMAP.md">Roadmap</a></li>
+          <li><a href="https://github.com/Dopomogai/golos/releases/latest">Releases</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main id="main" class="docs-article">
+      <header class="page-hero">
+        <p class="kicker">Quality guide</p>
+        <p class="version-badge">Applies to v0.3.1</p>
+        <h1>Better results</h1>
+        <p class="lede">
+          Golos is a two-stage pipeline: speech-to-text, then an optional formatting pass.
+          The knobs below change accuracy, cleanup, privacy, and latency. None of them make
+          every model “best” for every voice — measure on your own recordings.
+        </p>
+      </header>
+
+      <nav class="toc" aria-label="On this page">
+        <p class="docs-sidebar-title">On this page</p>
+        <ol>
+          <li><a href="#cloud-vs-local">Cloud vs local STT</a></li>
+          <li><a href="#languages">Languages</a></li>
+          <li><a href="#modes">Raw, Fast, and formatted</a></li>
+          <li><a href="#formatter-audio">Formatter audio recovery</a></li>
+          <li><a href="#dictionary">Dictionary vs corrections</a></li>
+          <li><a href="#context">Focused draft vs reading context</a></li>
+          <li><a href="#sensitivity">Sensitivity and speaking habits</a></li>
+          <li><a href="#benchmark">Benchmark on your voice</a></li>
+          <li><a href="#profiles">Recommended profiles</a></li>
+        </ol>
+      </nav>
+
+      <section id="cloud-vs-local" class="docs-section" aria-labelledby="cloud-vs-local-title">
+        <h2 id="cloud-vs-local-title">Choose cloud vs local by goal</h2>
+        <p>
+          Settings → <strong>General</strong> picks the speech-to-text backend.
+          Default is cloud via OpenRouter. On Apple Silicon you can also download an
+          optional on-device Whisper model (~1.5&nbsp;GB) and switch the backend to local MLX.
+          Weights never download silently — only after you click
+          <strong>Download local (~1.5&nbsp;GB)</strong>.
+        </p>
+
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th scope="col">Goal</th>
+                <th scope="col">Prefer</th>
+                <th scope="col">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Fast setup, no model download</td>
+                <td>Cloud STT (OpenRouter)</td>
+                <td>Needs an API key. Every dictation uploads audio for transcription.</td>
+              </tr>
+              <tr>
+                <td>Keep mic audio on-device for STT</td>
+                <td>Local MLX (Apple Silicon)</td>
+                <td>Requires a supported Apple Silicon build plus an explicit local download.</td>
+              </tr>
+              <tr>
+                <td>Intel Mac</td>
+                <td>Cloud only</td>
+                <td>The Intel beta build is cloud-only; local MLX is not available there.</td>
+              </tr>
+              <tr>
+                <td>Fully local end-to-end</td>
+                <td>Local MLX + formatting off + learning reviewer off</td>
+                <td>See the callout below — “formatting off” alone is not enough if STT is cloud.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout callout--warning" role="note">
+          <div class="callout-body">
+            <p class="callout-title">Critical privacy truth</p>
+            <p>
+              “Fully local” means: Apple Silicon local MLX for STT,
+              <strong>Format with LLM</strong> off, and the optional learning reviewer off.
+              Cloud STT still sends audio for every dictation even when formatting is off.
+              Formatting off only stops the second-stage transcript/context (and optional
+              formatter audio) from leaving the Mac.
+            </p>
+          </div>
+        </div>
+
+        <p>
+          Cloud and local quality vary by speaker, mic, language, and ambient noise.
+          Treat default model choices as starting points, not guarantees. Latency and
+          availability also change with your network and provider status — Golos does not
+          promise fixed response times or permanent model catalogs.
+        </p>
+      </section>
+
+      <section id="languages" class="docs-section" aria-labelledby="languages-title">
+        <h2 id="languages-title">Languages: <code>en</code>, <code>uk</code>, or empty auto-detect</h2>
+        <p>
+          In Settings → General, set <strong>Languages</strong> as a comma-separated list
+          of ISO-style codes (for example <code>en</code>, <code>uk</code>, or
+          <code>en, uk</code>). Leave the field empty for auto-detect.
+        </p>
+        <ul>
+          <li><strong>Empty</strong> — the backend auto-detects language when it can.</li>
+          <li><strong>One code</strong> (e.g. <code>en</code> or <code>uk</code>) — pin recognition when you mostly speak that language.</li>
+          <li><strong>Several codes</strong> (e.g. <code>en, uk</code>) — bias toward those languages; behavior is model-specific.</li>
+        </ul>
+
+        <div class="callout callout--note" role="note">
+          <div class="callout-body">
+            <p class="callout-title">Model-specific caveats (not universal promises)</p>
+            <p>How language lists are applied differs by family:</p>
+            <ul>
+              <li>Some Deepgram-style cloud models accept a multi-language mode when more than one code is set.</li>
+              <li>Whisper-style cloud models typically take a single language code; multi-language lists may only become a prompt hint.</li>
+              <li>Local MLX uses one language when exactly one code is set; a multi-language list falls back to auto-detect.</li>
+              <li>Individual model ids can be stronger or weaker for Ukrainian, English, or code-switching. Do not assume every curated id supports every language equally.</li>
+            </ul>
+            <p>
+              If results look like the wrong language, try pinning a single code, switching model,
+              or benchmarking on your own samples rather than trusting a universal language-support claim.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="modes" class="docs-section" aria-labelledby="modes-title">
+        <h2 id="modes-title">Raw vs Fast vs formatted</h2>
+        <p>
+          Stage 1 always produces a transcript. Stage 2 is optional LLM cleanup controlled
+          by <strong>Format with LLM</strong> and <strong>Fast mode</strong> in Settings → General.
+        </p>
+
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th scope="col"></th>
+                <th scope="col">Raw</th>
+                <th scope="col">Fast mode</th>
+                <th scope="col">Formatted (full)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">When</th>
+                <td><strong>Format with LLM</strong> off</td>
+                <td>Formatting on + Fast mode; short single-line dictations (default ≤&nbsp;10 words)</td>
+                <td>Formatting on; Fast mode off, or dictation is longer / multi-line</td>
+              </tr>
+              <tr>
+                <th scope="row">What runs</th>
+                <td>STT only</td>
+                <td>STT + local literal corrections; skips the LLM call</td>
+                <td>STT + LLM cleanup (fillers, punctuation, lists, corrections, context)</td>
+              </tr>
+              <tr>
+                <th scope="row">Feel</th>
+                <td>Lowest overhead after STT</td>
+                <td>Short inserts stay snappy; long ones still go through the LLM</td>
+                <td>Most polished prose and structure</td>
+              </tr>
+              <tr>
+                <th scope="row">Context / citations</th>
+                <td>Not used for formatting</td>
+                <td>Not used on the short/fast path</td>
+                <td>May use enabled context (app, draft, visible text)</td>
+              </tr>
+              <tr>
+                <th scope="row">Cloud STT audio</th>
+                <td>Still leaves the Mac if STT is cloud</td>
+                <td>Same</td>
+                <td>Same, plus transcript (and optional formatter audio) to the chat model</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Fast mode’s word limit is config-backed (<code>fast_mode_max_words</code>, default
+          <code>10</code>). Multi-line raw transcripts always take the full formatter path
+          when formatting is enabled. If the formatter fails or has no key, Golos inserts
+          the raw transcript instead of blocking you.
+        </p>
+      </section>
+
+      <section id="formatter-audio" class="docs-section" aria-labelledby="formatter-audio-title">
+        <h2 id="formatter-audio-title">When formatter audio helps — and what it costs</h2>
+        <p>
+          Settings → <strong>Prompt</strong> includes
+          <strong>Also send the audio to the formatter</strong>
+          (<code>[formatting] send_audio</code>, off by default).
+        </p>
+        <p>
+          When this is on, the original WAV rides along with the transcript so an
+          audio-capable formatter model can repair garbled, incomplete, or obviously wrong
+          STT before insertion. That is a second-stage recovery path — separate from cloud
+          STT uploading audio for transcription.
+        </p>
+        <ul>
+          <li><strong>Helpful when</strong> names, code identifiers, or noisy rooms regularly garble stage&nbsp;1.</li>
+          <li><strong>Tradeoff</strong> — more of the original audio leaves the Mac on every formatted dictation; cost and latency are higher than text-only formatting. Exact prices depend on your provider and model.</li>
+          <li><strong>Requirement</strong> — the formatter model must accept audio input. If it cannot, the app logs a warning; leave the toggle off until you pick a capable model.</li>
+        </ul>
+        <div class="callout callout--tip" role="note">
+          <div class="callout-body">
+            <p>
+              Prefer fixing systematic misspellings with dictionary terms and correction
+              pairs first. Turn on formatter audio when residual STT damage still hurts
+              and you accept the extra privacy/cost surface.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="dictionary" class="docs-section" aria-labelledby="dictionary-title">
+        <h2 id="dictionary-title">Dictionary terms vs correction pairs</h2>
+        <p>
+          Settings → <strong>Dictionary</strong> edits two different tools. Both save live
+          into the running pipeline.
+        </p>
+
+        <div class="card-grid">
+          <article class="content-card">
+            <h3>Dictionary terms</h3>
+            <p>
+              One term per line. Fed to STT as a biasing prompt
+              <em>and</em> listed for the formatter so spelling stays stable.
+            </p>
+            <p><strong>Use for:</strong> product names, people, tech, brand casing you want recognized up front.</p>
+            <pre><code>golos
+Wispr Flow
+PyObjC
+mlx-whisper
+Dopomogai</code></pre>
+          </article>
+          <article class="content-card">
+            <h3>Correction pairs</h3>
+            <p>
+              <code>wrong → right</code> rows (stored as TSV). The full formatter applies
+              them exactly; Fast mode applies the same pairs locally as literal,
+              case-insensitive, word-boundary replacements.
+            </p>
+            <p><strong>Use for:</strong> recurring STT mistakes you have already observed.</p>
+            <pre><code>wisper flow → Wispr Flow
+teh → the
+open router → OpenRouter
+mac os → macOS</code></pre>
+          </article>
+        </div>
+
+        <div class="callout callout--note" role="note">
+          <div class="callout-body">
+            <p>
+              <strong>Rule of thumb:</strong> put the ideal spelling in the dictionary so
+              recognition starts closer; add a correction pair only after you see a stable
+              wrong form. Hand-edits can also surface as Suggestions (History) or live cue
+              pills — promote only what you trust; nothing auto-learns.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="context" class="docs-section" aria-labelledby="context-title">
+        <h2 id="context-title">Focused draft vs surrounding reading context</h2>
+        <p>
+          When formatting is enabled and context is on, Golos can send separate text roles
+          to the formatter (each toggleable under Settings → Prompt). They are not the same thing.
+        </p>
+
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th scope="col">Role</th>
+                <th scope="col">What it is</th>
+                <th scope="col">How it changes output</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Focused field text</strong></td>
+                <td>Full accessible text of the input you are composing in (your draft)</td>
+                <td>Guides tone, topic, and draft structure. The model should not re-dump the whole field — only the cleaned new dictation.</td>
+              </tr>
+              <tr>
+                <td><strong>Text before cursor</strong></td>
+                <td>Short slice of that same field before the caret</td>
+                <td>Continuation: mid-sentence inserts keep flowing; new sentences capitalize/break sensibly.</td>
+              </tr>
+              <tr>
+                <td><strong>Visible text</strong></td>
+                <td>Surrounding / on-screen <em>reading</em> context only — never a silent copy of the focused field</td>
+                <td>When you explicitly refer to something on screen, the formatter may lead with a short verbatim <code>&gt; quote</code>, then your comment. It should not invent quotes from outside that context.</td>
+              </tr>
+              <tr>
+                <td>App providers</td>
+                <td>Browser tab title/URL, VS Code workspace files, Finder selection, etc.</td>
+                <td>Spoken filenames and “this page” references can resolve to real paths or URLs present in context — not invented ones.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Practical effect: dictating into a half-written email with focused draft on
+          produces continuity; commenting on a browser article with visible text on can
+          produce a short quote + take. If context is wrong or noisy, turn off the specific
+          toggle (or all context) rather than disabling formatting entirely.
+        </p>
+        <p>
+          Context and transcripts leave the Mac only when LLM formatting is enabled.
+          Accessibility coverage varies by app — empty visible or focused text is normal
+          when the OS cannot expose it. Do not expect universal citations or perfect
+          field reads in every application.
+        </p>
+      </section>
+
+      <section id="sensitivity" class="docs-section" aria-labelledby="sensitivity-title">
+        <h2 id="sensitivity-title">Input sensitivity and speaking habits</h2>
+        <p>
+          The <strong>Input sensitivity</strong> slider (Settings → General, range about
+          0.5–2.5, default 1.0) is <em>display gain for the recording waveform</em>, not a
+          guaranteed mic preamp for the STT engine. Raise it if the notch/pill looks too
+          quiet while you speak clearly; lower it if silent noise looks like shouting.
+          If recognition is still weak, check System Settings microphone input level and
+          which device Golos is using before chasing models.
+        </p>
+
+        <h3>Habits that usually help</h3>
+        <ol class="step-list">
+          <li>
+            <strong class="step-title">Hold, then speak.</strong>
+            Start after recording has begun so the first word is not clipped; release after the last word finishes.
+          </li>
+          <li>
+            <strong class="step-title">One thought at a time for hard names.</strong>
+            Short, deliberate phrases beat mumbled lists when teaching dictionary terms.
+          </li>
+          <li>
+            <strong class="step-title">Say structure out loud when you want lists.</strong>
+            “First… second… third…” or clear parallel items give the full formatter material for real bullets or numbers.
+          </li>
+          <li>
+            <strong class="step-title">Use lock mode for long takes.</strong>
+            <kbd>fn</kbd>+Space (or your hold key + Space) keeps recording hands-free; Esc cancels without inserting.
+          </li>
+          <li>
+            <strong class="step-title">Fix once, promote once.</strong>
+            Hand-correct a persistent misspelling, accept the suggestion, and stop re-teaching the same pair.
+          </li>
+        </ol>
+      </section>
+
+      <section id="benchmark" class="docs-section" aria-labelledby="benchmark-title">
+        <h2 id="benchmark-title">Benchmark models on your own voice</h2>
+        <p>
+          Curated cloud model lists and the local MLX option are starting points.
+          <strong>Never assume one model is always best</strong> — accent, bilingual mix,
+          mic, and domain vocabulary move the ranking.
+        </p>
+        <p>
+          From a source checkout with your usual environment, use the built-in harness:
+        </p>
+        <pre><code># Record a sample of your voice (Enter to stop)
+python -m dictate.bench record myvoice
+
+# Edit samples/myvoice.txt so it matches what you actually said
+# Then compare models (optionally restrict with --models)
+python -m dictate.bench run
+python -m dictate.bench run --models deepgram/nova-3,openai/whisper-1 --verbose</code></pre>
+        <p>
+          The table reports word error rate and latency per model on your samples.
+          You can also copy retained dictation WAVs from
+          <code>~/.golos/recordings/</code> into <code>samples/</code> when recording
+          retention is enabled. Cloud runs use your API key and incur normal provider usage;
+          treat cost as variable, not a fixed price list.
+        </p>
+        <div class="callout callout--tip" role="note">
+          <div class="callout-body">
+            <p>
+              Pick the model that wins on <em>your</em> WER and the latency you can live with,
+              then lock it in Settings. Re-run after changing mics, languages, or dictionary
+              density.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="profiles" class="docs-section" aria-labelledby="profiles-title">
+        <h2 id="profiles-title">Recommended profiles</h2>
+        <p>
+          These are practical starting stacks for v0.3.1 — adjust after a short bench and a
+          day of real use. Paths point at Settings unless noted.
+        </p>
+
+        <div class="card-grid">
+          <article class="content-card" id="profile-latency">
+            <h3>Lowest latency</h3>
+            <ul>
+              <li><strong>Format with LLM:</strong> off for pure speed, or keep it on with <strong>Fast mode</strong> if short inserts should skip the LLM.</li>
+              <li><strong>STT:</strong> whichever backend/model your bench shows is quick enough on your machine and network.</li>
+              <li><strong>Formatter audio:</strong> off.</li>
+              <li><strong>Context:</strong> optional to turn down if you keep formatting for longer takes only.</li>
+            </ul>
+            <p>Raw mode removes stage&nbsp;2 entirely after STT. Cloud STT still uploads audio.</p>
+          </article>
+
+          <article class="content-card" id="profile-cleanup">
+            <h3>Best cleanup</h3>
+            <ul>
+              <li><strong>Format with LLM:</strong> on; <strong>Fast mode:</strong> off.</li>
+              <li><strong>Dictionary + corrections:</strong> dense with your real vocabulary and observed mistakes.</li>
+              <li><strong>Context:</strong> on (focused field + before-cursor; visible text if you comment on screen content).</li>
+              <li><strong>Formatter audio:</strong> on only if STT still mangles and you accept the privacy/cost tradeoff.</li>
+            </ul>
+            <p>Choose STT by bench WER first; formatting cannot invent clarity that never entered the transcript.</p>
+          </article>
+
+          <article class="content-card" id="profile-privacy">
+            <h3>Privacy-minimal</h3>
+            <ul>
+              <li><strong>STT:</strong> local MLX on Apple Silicon (explicit download).</li>
+              <li><strong>Format with LLM:</strong> off.</li>
+              <li><strong>Learning reviewer:</strong> off (default).</li>
+              <li><strong>Recordings:</strong> keep or disable under config/preferences based on whether you want local WAV history.</li>
+            </ul>
+            <p>This is the fully local stack. Intel builds cannot use local MLX. Cloud STT is never privacy-minimal for audio.</p>
+          </article>
+
+          <article class="content-card" id="profile-bilingual">
+            <h3>Bilingual (e.g. English + Ukrainian)</h3>
+            <ul>
+              <li><strong>Languages:</strong> <code>en, uk</code> if you code-switch often; or leave empty for auto-detect; pin a single code for monolingual sessions.</li>
+              <li><strong>STT model:</strong> pick by bench on mixed samples of <em>your</em> voice — do not trust a universal ranking.</li>
+              <li><strong>Dictionary:</strong> include proper names in both languages as you actually spell them.</li>
+              <li><strong>Formatting:</strong> on if you want punctuation/lists; the formatter is instructed to keep the input language (not translate).</li>
+            </ul>
+            <p>Local MLX multi-code lists fall back to auto-detect; cloud backends differ. Re-test after model changes.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="docs-section" aria-labelledby="related-title">
+        <h2 id="related-title">Related</h2>
+        <ul>
+          <li><a href="../settings/">Settings</a> — every toggle mentioned here</li>
+          <li><a href="../privacy/">Privacy &amp; data</a> — full data-flow matrix</li>
+          <li><a href="../workflows/">Workflows</a> — day-to-day dictation patterns</li>
+          <li><a href="../troubleshooting/">Troubleshooting</a> — when nothing inserts or quality collapses</li>
+        </ul>
+      </section>
+
+      <nav class="docs-pager" aria-label="Previous and next guides">
+        <a class="pager-link" href="../workflows/">
+          <span class="pager-dir">Previous</span>
+          <span class="pager-title">Workflows</span>
+        </a>
+        <a class="pager-link pager-link--next" href="../privacy/">
+          <span class="pager-dir">Next</span>
+          <span class="pager-title">Privacy &amp; data</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="docs-footer">
+    <a class="brand" href="https://golos.dopomogai.com/">
+      <img class="brand-mark" src="../../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
+      <span>golos</span>
+    </a>
+    <p>Open-source macOS dictation · Help Center · v0.3.1 beta</p>
+    <div class="docs-footer-links">
+      <a href="../">Docs home</a>
+      <a href="https://golos.dopomogai.com/#download">Download</a>
+      <a href="https://github.com/Dopomogai/golos">GitHub</a>
+    </div>
+  </footer>
+
+  <script src="../docs.js" defer></script>
+</body>
+</html>
