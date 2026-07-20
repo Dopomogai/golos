@@ -1,5 +1,5 @@
 ---
-@purpose: "Recording and editing blueprint for a founder-led golos launch video: long master, ~5 min cut, and vertical shorts."
+@purpose: "Recording and editing blueprint for a founder-led golos launch video: long master, ~12 min medium cut, and vertical shorts."
 @why: "One practical production kit so demo, story, claims, and assets stay consistent with product truth and release status."
 @role: reference
 @stability: evolving
@@ -10,7 +10,7 @@ related_docs: [docs/PRODUCT.md, docs/PRODUCT_PAGE.md, docs/GUIDE.md, docs/VISION
 # golos — founder video production kit
 
 Practical blueprint for one natural master recording that edits into a polished
-~5 minute story and several ~1 minute vertical/short cuts. Tone: founder-
+~12 minute story and several ~1 minute vertical/short cuts. Tone: founder-
 authentic, energetic, transparent, technically credible — not overproduced.
 Only the hook, reusable introduction, important truth disclosures, and outro
 are written lines. Everything else is a speaking bullet: use your own words.
@@ -140,25 +140,41 @@ Do these live in the master. Each row is a discrete edit island.
 
 ---
 
-## 6. Five-minute edited story structure
+## 6. Twelve-minute edited story structure
 
-Target **~4:30–5:30**. Timecodes are edit targets, not master clock.
+Target **~11:30–12:30**. Timecodes are edit targets, not master clock. The
+existing 41:22 chronological footage is sufficient; this cut should preserve
+the build-in-public documentary character while reaching product proof early.
 
 | TC | Section | Content | Sources from master |
 |---|---|---|---|
-| **0:00–0:15** | **Hook** | Hook A or B; product motion under VO if face is weaker | §4 ch1 + 5.1 wings |
-| **0:15–0:45** | **Problem** | Credit Wispr Flow / the category; personal needs: transparency, ownership, flexibility — not an attack | §4 ch3 |
-| **0:45–1:30** | **Build story** | 1.5 h usable → two days polish → dogfood loop; notch UI + knobs | §4 ch4 |
-| **1:30–3:30** | **Proof / demo** | Must keep: hold-to-talk, top feedback/success, raw vs formatted. Pick one: lock, Esc, language, or a pre-verified context win. Do not force every control into two minutes | §5.1, 5.5, 5.6 + one optional beat |
-| **3:30–4:20** | **Transparency / control** | Learning with approval; privacy toggles; open files / open source | §5.11–5.14 |
-| **4:20–5:00** | **Invitation** | Status honesty (pre/post launch); try it / feedback; like/share; more build videos | §4 ch7–8 + §8 |
+| **0:00–0:20** | **Hook / proof** | Open with a clean hold-to-talk result and notch motion; then the generic problem: voice input is useful, but closed tools limit control | §5.1 + §4 ch1 |
+| **0:20–1:10** | **Who I am** | Short reusable Dopomogai introduction: building a company with AI; helping people and organizations improve real workflows | §2 |
+| **1:10–2:10** | **Origin / problem** | Credit Wispr Flow as inspiration; personal needs: transparency, ownership, flexibility — not an attack | §4 ch3 |
+| **2:10–3:10** | **Build story** | First useful version in ~1.5 h, then two days of dogfooding and polish; explain why open source matters | §4 ch4 |
+| **3:10–5:50** | **Core product proof** | Hold/release, fn+Space lock, Esc, processing→success, raw versus formatted, and the two OpenRouter calls | §5.1–5.6 |
+| **5:50–7:40** | **Context and control** | Focused-input versus surrounding-visible context, text before cursor, model choice, optional formatter audio, answer-from-context example | §5.7–5.10 |
+| **7:40–8:45** | **Fast mode / onboarding** | One normal formatted run, one short fast-mode run, then the best setup screens—avoid repeated tests | §5.5 + onboarding |
+| **8:45–10:00** | **Learning and honest failure** | Show correction learning intent; keep the Mercy/Mercey miss as build-in-public evidence and annotate the v0.3.1 hardening | §5.11–5.12 |
+| **10:00–10:50** | **History / recovery / transparency** | History-first Settings: Copy, Retry, Show audio; plain files, privacy toggles, open repository | §5.13–5.14 |
+| **10:50–11:35** | **Release result** | Public v0.3.1, Apple Silicon + Intel, optional local MLX, unsigned/not notarized first-launch disclosure | §9 release truth |
+| **11:35–12:00** | **Invitation / outro** | Ask viewers to try it, leave feedback, and subscribe for more practical AI builds | §8 |
 
 **Pacing notes**
 
-- Keep competitor mention to **one sentence**.
-- Cut failed takes; keep one small human imperfection if it builds trust.
+- Keep competitor mention brief and about your needs, not product criticism.
+- Keep the genuine learning/overlay discoveries; annotate their v0.3.1 status.
+- Cut OBS setup, agent waiting, repeated tests, duplicated context explanations,
+  Vercel authentication, and abandoned outro takes.
 - Captions: product words as spoken (`golos`, `fn`, Wispr Flow).
 - Music: light, low, under VO — optional; silence is fine.
+
+**Pickup rule:** no foundational rerecord. Optional additions are one 10–15 s
+History recovery capture and, only if the edit needs a resolved ending, one
+15–20 s successful approved correction. Use overlays for v0.3.1, unsigned /
+not-notarized status, formatter `send_audio` default-off, fixed prompt/fade
+bugs, and the exact MLX model id. Capture the live `/golos` page only after its
+deployment is verified; until then use GitHub Releases or the local PR preview.
 
 ---
 

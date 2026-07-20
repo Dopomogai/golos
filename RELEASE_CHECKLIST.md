@@ -133,7 +133,7 @@ wizard, this checklist.
 The production source of truth is [`docs/VIDEO_PRODUCTION.md`](docs/VIDEO_PRODUCTION.md).
 Record one natural 20–30 minute master, then hand it to the editing agent for:
 
-- one approximately five-minute 16:9 founder story and product walkthrough;
+- one approximately twelve-minute 16:9 founder story and product walkthrough;
 - four distinct 45–60 second 9:16 cuts;
 - captions, thumbnails, and a timestamped transcript.
 
