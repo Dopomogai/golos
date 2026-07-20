@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Symptom-led troubleshooting for golos: Gatekeeper, hotkeys, permissions, insertion, History recovery, local model, diagnostics, and safe bug reports.">
+  <meta name="theme-color" content="#080b12">
+  <meta property="og:title" content="Troubleshooting — Golos Help">
+  <meta property="og:description" content="Safe, symptom-led fixes for the golos macOS dictation beta.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://golos.dopomogai.com/docs/troubleshooting/">
+  <title>Troubleshooting — Golos Help</title>
+  <link rel="canonical" href="https://golos.dopomogai.com/docs/troubleshooting/">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="../../golos-mark.svg">
+  <link rel="stylesheet" href="../docs.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="docs-nav-shell">
+    <nav class="docs-nav" aria-label="Primary navigation">
+      <a class="brand" href="https://golos.dopomogai.com/" aria-label="golos home">
+        <img class="brand-mark" src="../../golos-mark.svg" width="28" height="28" alt="" aria-hidden="true">
+        <span>golos</span>
+      </a>
+      <div class="docs-nav-links">
+        <a href="https://golos.dopomogai.com/">Home</a>
+        <a href="../" aria-current="page">Docs</a>
+        <a class="button button-small" href="https://golos.dopomogai.com/#download">Download</a>
+      </div>
+    </nav>
+  </header>
+
+  <div class="docs-shell docs-shell--with-sidebar">
+    <aside class="docs-sidebar" aria-label="Help topics">
+      <p class="docs-sidebar-title">Help Center</p>
+      <nav>
+        <ul>
+          <li><a href="../getting-started/">Getting started</a></li>
+          <li><a href="../settings/">Settings</a></li>
+          <li><a href="../workflows/">Workflows</a></li>
+          <li><a href="../better-results/">Better results</a></li>
+          <li><a href="../privacy/">Privacy &amp; data</a></li>
+          <li><a href="./" aria-current="page">Troubleshooting</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-group">
+        <span>On this page</span>
+        <nav aria-label="On this page">
+          <ul>
+            <li><a href="#app-will-not-open">App will not open</a></li>
+            <li><a href="#hold-key-does-nothing">Hold key does nothing</a></li>
+            <li><a href="#fn-space-types-space">fn+Space types a space</a></li>
+            <li><a href="#no-animation">No animation / status words</a></li>
+            <li><a href="#processing-stuck">Processing stuck</a></li>
+            <li><a href="#transcription-fails">Transcription fails</a></li>
+            <li><a href="#success-no-text">Success, no text</a></li>
+            <li><a href="#history-recovery">History recovery</a></li>
+            <li><a href="#local-model">Local model</a></li>
+            <li><a href="#permissions-regrant">Permissions regrant</a></li>
+            <li><a href="#diagnostics">Diagnostics</a></li>
+            <li><a href="#bug-report">Safe bug report</a></li>
+          </ul>
+        </nav>
+      </div>
+      <div class="sidebar-group">
+        <span>More</span>
+        <nav aria-label="Project links">
+          <ul>
+            <li><a href="https://github.com/Dopomogai/golos">GitHub</a></li>
+            <li><a href="https://github.com/Dopomogai/golos/blob/main/docs/ROADMAP.md">Roadmap</a></li>
+            <li><a href="https://github.com/Dopomogai/golos/releases/latest">Releases</a></li>
+          </ul>
+        </nav>
+      </div>
+    </aside>
+
+    <main id="main" class="docs-article">
+      <header class="page-hero">
+        <p class="kicker">Troubleshooting</p>
+        <h1>Fix it by symptom</h1>
+        <p class="lede">
+          Safe, symptom-led checks for the golos v0.3.1 macOS beta. Prefer
+          re-granting permissions and History recovery over destructive cleanup.
+          Never paste API keys, private transcripts, or audio into public reports.
+        </p>
+        <div class="page-hero-meta">
+          <span class="version-badge" title="Documentation applies to this public beta">Applies to v0.3.1</span>
+          <span class="muted" style="font-size:13px">Unsigned beta · macOS 13+</span>
+        </div>
+      </header>
+
+      <aside class="callout callout--tip" aria-label="Tip">
+        <span class="callout-icon" aria-hidden="true">i</span>
+        <div class="callout-body">
+          <span class="callout-title">Quick triage</span>
+          <p>
+            Quit from the menu-bar chakra icon (not only by closing Settings),
+            focus a real text field, and open menu <strong>Permissions</strong>
+            for live ✓/✗. Reopen <strong>Welcome / Setup…</strong> anytime for
+            the wizard checks.
+          </p>
+        </div>
+      </aside>
+
+      <section id="app-will-not-open" class="docs-section">
+        <h2>App will not open (Gatekeeper)</h2>
+        <p>
+          Public v0.3.1 DMGs are an <strong>unsigned beta</strong>. macOS Gatekeeper
+          may block a normal double-click. Builds are not notarized; signing and a
+          trustworthy update path are roadmap work, not current claims.
+        </p>
+        <ol class="step-list">
+          <li>Open the DMG for your architecture and drag <strong>golos</strong> into <strong>Applications</strong>.</li>
+          <li>In Finder → Applications, <strong>right-click</strong> (or Control-click) <strong>golos</strong>, then choose <strong>Open</strong>.</li>
+          <li>Confirm the open prompt. After the first successful launch, normal opens usually work.</li>
+          <li>Complete onboarding: grant Microphone, Input Monitoring, and Accessibility to <strong>golos.app</strong> (not only Terminal).</li>
+        </ol>
+        <aside class="callout callout--warning" aria-label="Warning">
+          <span class="callout-icon" aria-hidden="true">!</span>
+          <div class="callout-body">
+            <span class="callout-title">Stay safe</span>
+            <p>
+              Do not disable Gatekeeper system-wide, run elevated quarantine commands
+              from random guides, or delete broad system folders. If the app still
+              will not open, note the exact dialog text and try the matching
+              architecture DMG (Apple Silicon vs Intel) from
+              <a href="https://github.com/Dopomogai/golos/releases/latest">GitHub Releases</a>.
+            </p>
+          </div>
+        </aside>
+        <p>
+          Source developers: a second start while one instance holds the lock exits
+          with a message that golos is already running. Quit from the menu, or for a
+          terminal-started process use <code>./dictate.sh quit</code> (or
+          <code>restart</code>). A Ctrl+Z-suspended process still holds the lock.
+        </p>
+      </section>
+
+      <section id="hold-key-does-nothing" class="docs-section">
+        <h2>Hold key does nothing</h2>
+        <p>
+          Default hold-to-talk is <kbd>fn</kbd> (globe). You can rebind live in
+          Settings → General to <strong>Right Option</strong>,
+          <strong>Right Command</strong>, or <strong>F5</strong> (no restart).
+          Left Option / left Command are never treated as the hold key.
+        </p>
+        <h3>Check these first</h3>
+        <ol class="step-list">
+          <li>
+            <strong>macOS fn/globe action.</strong> Open
+            <strong>System Settings → Keyboard</strong> and set
+            <strong>Press 🌐/fn key to</strong> → <strong>Do Nothing</strong>.
+            Otherwise macOS may steal fn for emoji, dictation, or another system action.
+          </li>
+          <li>
+            <strong>Input Monitoring.</strong> Without it, global hotkeys are not
+            seen while other apps are focused. Menu-bar icon →
+            <strong>Permissions</strong> → grant Input Monitoring to the same
+            identity that is running golos (<strong>golos.app</strong> or your
+            terminal), then restart golos.
+          </li>
+          <li>
+            <strong>Microphone.</strong> Hold may appear idle if capture cannot
+            start. Grant Microphone and retry.
+          </li>
+          <li>
+            <strong>History retry in progress.</strong> While a History Retry owns
+            the pipeline, hold/lock may show a short warning
+            (“History retry is still running”) instead of recording. Wait for
+            Retry to finish.
+          </li>
+          <li>
+            <strong>F5 as hold key.</strong> When F5 is selected, golos swallows
+            F5 via the event tap so it does not also act as a system key.
+            If the tap is unavailable, behavior is degraded — grant Input Monitoring.
+          </li>
+        </ol>
+        <aside class="callout callout--note" aria-label="Note">
+          <span class="callout-icon" aria-hidden="true">i</span>
+          <div class="callout-body">
+            <p>
+              Use <strong>Welcome / Setup…</strong> for the hold-key test pad, or
+              menu <strong>Test insertion</strong> after permissions look green, to
+              separate “hotkey not seen” from “insert not delivered.”
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      <section id="fn-space-types-space" class="docs-section">
+        <h2>fn+Space types a space or ends immediately</h2>
+        <p>
+          <kbd>fn</kbd>+<kbd>Space</kbd> (or your hold key + Space) toggles
+          hands-free locked recording. The Space is swallowed only when the
+          <strong>CGEventTap</strong> path is active.
+        </p>
+        <ul>
+          <li>
+            <strong>Space still types into the focused app</strong> — Input Monitoring
+            is missing or the event tap could not be created. Golos falls back to
+            observe-only monitors. Grant Input Monitoring to the running identity,
+            restart golos, and try again.
+          </li>
+          <li>
+            <strong>Lock ends almost immediately</strong> — a very short press can
+            be ignored as an accidental tap (&lt; ~0.3&nbsp;s of audio is discarded
+            without transcription). Hold a moment longer; for lock mode, press the
+            combo cleanly, speak, then end with a single hold-key press or the
+            combo again. <kbd>Esc</kbd> cancels without inserting.
+          </li>
+          <li>
+            <strong>Double-tap hold key</strong> — only if
+            <code>toggle_combo = "double_fn"</code> in config. Accidental double-taps
+            can toggle lock unexpectedly; change the combo in Settings if needed.
+          </li>
+        </ul>
+        <p>
+          Source runs log which path is active at startup:
+          <code>combo path: event tap (blocking)</code> vs
+          <code>monitor (observe-only)</code>. See
+          <a href="#diagnostics">Diagnostics</a>.
+        </p>
+      </section>
+
+      <section id="no-animation" class="docs-section">
+        <h2>Recording works but no animation / status words hidden</h2>
+        <p>
+          Idle is intentionally <strong>hidden</strong> — no bubble at rest. Status
+          UI appears only while recording, locked, processing, or briefly on success.
+        </p>
+        <ul>
+          <li>
+            <strong>Notch style</strong> (default on notched MacBooks): red→orange
+            waveform wings while recording; blue processing strip; green
+            <code>✓ inserted</code> success hill.
+          </li>
+          <li>
+            <strong>Corner style</strong>: Settings → General → bubble style
+            <strong>corner</strong> — a draggable bottom-right pill. Bubble style is
+            applied at startup; change style, save, then <strong>restart golos</strong>.
+            Machines without a notch fall back to corner even if “notch” is selected.
+          </li>
+          <li>
+            <strong>Status words hidden</strong>: General includes a control for
+            status text on the animation (<code>show_text</code>). If labels like
+            “processing…” or “✓ inserted” are missing but the waveform still moves,
+            turn status words back on and Save. Live apply covers show_text and
+            sensitivity; style still needs restart.
+          </li>
+          <li>
+            <strong>Flat / quiet waveform</strong>: raise <strong>Input sensitivity</strong>
+            in General (display gain only). Also confirm the correct mic is allowed
+            and that you are not muted at the system level.
+          </li>
+        </ul>
+      </section>
+
+      <section id="processing-stuck" class="docs-section">
+        <h2>Processing appears stuck or immediate-repeat fails</h2>
+        <p>
+          After release, the UI enters <strong>processing</strong> (blue shimmer /
+          elapsed label after a few seconds). Duration depends on network STT,
+          optional formatting LLM, and clip length — there is no fixed “always done
+          in N seconds” guarantee.
+        </p>
+        <ol class="step-list">
+          <li>Wait for success (<code>✓ inserted</code> or <code>✓ inserted raw</code>) or a warning notice. Do not force-quit mid-pipeline unless the app is frozen for a long time with no progress.</li>
+          <li><kbd>Esc</kbd> during processing requests cancel of the pending insert (if insertion has already started, it is too late to undo automatically).</li>
+          <li>Immediate re-hold while still processing does not start a second concurrent dictation; finish or cancel first.</li>
+          <li>If a History <strong>Retry</strong> is running, new recording is blocked until it finishes (busy coordination).</li>
+          <li>Cloud path: check network, OpenRouter key in Settings → General, and that the selected STT model id is still valid. Local path: see <a href="#local-model">local model</a>.</li>
+        </ol>
+        <p>
+          After success, you can dictate again as soon as the app is idle (success
+          auto-clears after about a second). If every run hangs, open
+          <a href="#history-recovery">History</a> for error badges and use
+          <a href="#diagnostics">diagnostics</a>.
+        </p>
+      </section>
+
+      <section id="transcription-fails" class="docs-section">
+        <h2>Transcription fails (cloud or local)</h2>
+        <p>
+          Failures surface as a short bubble notice and a durable History row when
+          possible. Typical notices include “connect OpenRouter or download local STT”,
+          “speech recognition failed — open History for details”, and
+          “couldn’t hear that — open History to retry”.
+        </p>
+        <h3>Cloud (OpenRouter, default)</h3>
+        <ul>
+          <li>Set a valid API key in Settings → General (or environment
+            <code>OPENROUTER_API_KEY</code> for source runs). The key is stored in
+            <code>~/.golos/config.toml</code> (mode 600) — never paste it into issues.</li>
+          <li>Backend should be <strong>openrouter</strong> unless you intentionally use local MLX.</li>
+          <li>Confirm network access. Provider outages and model availability change over time — switch model or retry later; this page does not promise prices or uptime.</li>
+          <li>Empty transcript on a real clip can be silence, wrong mic, or a provider result. Use History → <strong>Show audio</strong> if a WAV was retained, then <strong>Retry</strong>.</li>
+        </ul>
+        <h3>Local (MLX, optional)</h3>
+        <ul>
+          <li>Requires <strong>Apple Silicon</strong> and the Apple Silicon build (or a source install with the local extra). Intel / cloud-only builds show local model as unavailable.</li>
+          <li>Weights download only after you click <strong>Download local (~1.5&nbsp;GB)</strong> — never starts silently. Wait for <strong>Local model ✓ ready</strong> before selecting the mlx backend.</li>
+          <li>If download fails, check network/disk space and try again later. OpenRouter remains available without the download.</li>
+        </ul>
+        <aside class="callout callout--note" aria-label="Note">
+          <span class="callout-icon" aria-hidden="true">i</span>
+          <div class="callout-body">
+            <p>
+              Very short taps (&lt; ~0.3&nbsp;s) are ignored as accidental and do not
+              run STT. Speak a bit longer if you see no History entry at all.
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      <section id="success-no-text" class="docs-section">
+        <h2>Text was not inserted even though success appeared</h2>
+        <p>
+          The green success state means golos <strong>posted</strong> insert events
+          (typed keystrokes for single-line text, or clipboard + synthetic Cmd+V for
+          multi-line). It does <strong>not</strong> mean macOS verified that the
+          target app accepted the text.
+        </p>
+        <ol class="step-list">
+          <li><strong>Accessibility</strong> must be granted to the running identity. Without it, synthetic typing/paste can be dropped silently. Menu → Permissions → Accessibility → grant → restart golos.</li>
+          <li>Focus a normal text field (not a locked PDF, empty desktop, or some secure fields). Compatibility is best-effort for standard macOS text fields — not a universal guarantee.</li>
+          <li>Try menu <strong>Test insertion</strong> with a known-good field focused.</li>
+          <li>Open Settings → <strong>History</strong>: if raw/final text is present, use <strong>Copy text</strong> and paste manually. Retry regenerates text but does <strong>not</strong> auto-insert into the app.</li>
+          <li>If the wrong older clipboard appeared in an older build, current default keeps the transcript on the pasteboard after multi-line paste (restoring the previous clipboard is opt-in and can race slow apps).</li>
+        </ol>
+        <aside class="callout callout--warning" aria-label="Warning">
+          <span class="callout-icon" aria-hidden="true">!</span>
+          <div class="callout-body">
+            <span class="callout-title">Posted ≠ verified</span>
+            <p>
+              Partial success label <code>✓ inserted raw</code> means formatting fell
+              back to the raw transcript, but insert was still posted. Missing text in
+              the field is still an Accessibility/focus/delivery issue, not “STT failed.”
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      <section id="history-recovery" class="docs-section">
+        <h2>Recover via History (Copy / Retry / Show audio)</h2>
+        <p>
+          Settings opens on the <strong>History</strong> tab by default: newest
+          dictations first, with status/error detail, raw and final text when
+          available.
+        </p>
+        <ul>
+          <li>
+            <strong>Copy text</strong> — copies the best available text (final, else
+            raw) to the pasteboard without changing focus. Paste into your app.
+          </li>
+          <li>
+            <strong>Retry</strong> — starts a new attempt on a background worker
+            (re-run STT when a retained WAV exists; re-format when raw text exists).
+            It appends another History attempt and does <strong>not</strong>
+            automatically insert into the frontmost app. On success you get
+            “Retry saved — ready to copy.” If live dictation is running, you get
+            “Busy — live dictation running.”
+          </li>
+          <li>
+            <strong>Show audio</strong> — reveals a retained WAV in Finder when
+            recordings were kept on disk (default on). If recordings were disabled
+            or the file was removed, STT retry is not possible for that run.
+          </li>
+        </ul>
+        <p>
+          Failed pipelines write durable History rows (STT / format / insert stages)
+          so you can recover without re-speaking when audio or text was kept.
+          Original failure lines are preserved; retries add attempts under the same run.
+        </p>
+      </section>
+
+      <section id="local-model" class="docs-section">
+        <h2>Local model unavailable or download failed</h2>
+        <ul>
+          <li><strong>Intel Mac or cloud-only install:</strong> button shows
+            “Local model unavailable” — expected. Use OpenRouter cloud STT.</li>
+          <li><strong>Apple Silicon app without weights yet:</strong>
+            “Download local (~1.5&nbsp;GB)”. Click once; title becomes
+            “Downloading…”, then “Local model ✓ ready” when the cache has config +
+            weights. Only then select backend <strong>mlx</strong> and Save.</li>
+          <li><strong>Download failed:</strong> stay on OpenRouter, free disk space,
+            check network, retry the download later. Do not delete random cache
+            trees from third-party tips; use the in-app button again.</li>
+          <li><strong>“Fully local” product setup</strong> needs Apple Silicon local
+            MLX <em>and</em> formatting off <em>and</em> learning reviewer off.
+            Cloud STT still uploads audio even if formatting is disabled.</li>
+        </ul>
+      </section>
+
+      <section id="permissions-regrant" class="docs-section">
+        <h2>Permissions reset / regrant (golos.app vs Terminal)</h2>
+        <p>
+          macOS treats <strong>golos.app</strong> and your
+          <strong>Terminal / iTerm</strong> (or other launcher) as
+          <strong>separate identities</strong>. Grants to one do not apply to the other.
+        </p>
+        <div class="comparison-table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th scope="col">Permission</th>
+                <th scope="col">Why golos needs it</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Microphone</th>
+                <td>Audio capture for dictation</td>
+              </tr>
+              <tr>
+                <th scope="row">Input Monitoring</th>
+                <td>Global hold key and event tap (swallow Space / F5 when configured)</td>
+              </tr>
+              <tr>
+                <th scope="row">Accessibility</th>
+                <td>Synthetic insert (type / Cmd+V) and reading focused context</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ol class="step-list">
+          <li>Quit golos completely from the menu-bar icon.</li>
+          <li>Open <strong>System Settings → Privacy &amp; Security</strong>.</li>
+          <li>For each of Microphone, Input Monitoring, and Accessibility: find
+            <strong>golos</strong> (or your terminal if you run from source). If the
+            toggle is on but behavior is broken, turn it off, quit settings, turn it
+            on again, or remove the row and re-add on next launch.</li>
+          <li>Relaunch the same identity you granted (Applications → golos, or
+            <code>./dictate.sh</code>).</li>
+          <li>Confirm live ✓ in menu <strong>Permissions</strong> and finish
+            <strong>Welcome / Setup…</strong> if anything is still ✗.</li>
+          <li>Also set Keyboard → Press 🌐/fn key to → <strong>Do Nothing</strong>
+            when using fn as the hold key.</li>
+        </ol>
+        <aside class="callout callout--danger" aria-label="Do not">
+          <span class="callout-icon" aria-hidden="true">×</span>
+          <div class="callout-body">
+            <span class="callout-title">Do not</span>
+            <p>
+              Do not use elevated tools to rewrite TCC databases, and do not delete
+              broad home-library trees to “reset permissions.” That is unsafe and
+              unnecessary for normal regrant.
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      <section id="diagnostics" class="docs-section">
+        <h2>Where to find diagnostics</h2>
+        <p>
+          There is <strong>no durable packaged log file or export feature yet</strong>
+          in the beta app. Do not look for a made-up path under
+          <code>~/.golos/</code> for application logs — that directory holds config,
+          history, dictionary data, optional recordings, and the instance lock, not
+          a user-facing log export.
+        </p>
+        <h3>What you can use today</h3>
+        <ul>
+          <li>
+            <strong>Settings → History</strong> — status, stage, error text, raw/final
+            when stored, Copy / Retry / Show audio. Best first stop for failed runs.
+          </li>
+          <li>
+            <strong>Source / developer runs</strong> —
+            <code>./dictate.sh</code> configures standard logging to the terminal
+            (INFO). Look for permission warnings, hotkey combo path
+            (<code>event tap (blocking)</code> vs <code>monitor (observe-only)</code>),
+            STT exceptions, and “Insertion posted …” lines. Redirect that terminal
+            session yourself if you need to save output.
+          </li>
+          <li>
+            <strong>Console.app</strong> — macOS may show process messages for
+            <strong>golos</strong> while it is running. Filter by process name and
+            copy only <em>sanitized</em> lines (no keys, no transcript bodies, no
+            file paths that include private text).
+          </li>
+          <li>
+            <strong>Menu Permissions</strong> — live ✓/✗ plus deep links into System
+            Settings. Startup also logs missing permissions when running from source.
+          </li>
+        </ul>
+        <aside class="callout callout--note" aria-label="Note">
+          <span class="callout-icon" aria-hidden="true">i</span>
+          <div class="callout-body">
+            <p>
+              Optional formatter debug logging can include prompt content when enabled
+              in config — leave it off for normal use, and never share those logs
+              publicly.
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      <section id="bug-report" class="docs-section">
+        <h2>How to file a safe bug report</h2>
+        <p>
+          Use GitHub issues on
+          <a href="https://github.com/Dopomogai/golos/issues">Dopomogai/golos</a>
+          for product bugs. For security-sensitive findings, follow
+          <a href="https://github.com/Dopomogai/golos/blob/main/SECURITY.md">SECURITY.md</a>
+          (private vulnerability reporting) — do not post exploit detail publicly.
+        </p>
+        <h3>Include</h3>
+        <ul>
+          <li>Version (v0.3.1 or about string / commit if source-built)</li>
+          <li>Architecture (Apple Silicon or Intel) and macOS version</li>
+          <li>Whether you run <strong>golos.app</strong> or a terminal source launch</li>
+          <li>Hold key setting and Permissions ✓/✗ summary (three toggles)</li>
+          <li>Clear steps to reproduce and what you expected</li>
+          <li>Sanitized History stage/error strings (e.g. “stt returned empty transcript”) without the transcript text</li>
+          <li>Sanitized Console or terminal log snippets with secrets redacted</li>
+        </ul>
+        <h3>Never include</h3>
+        <ul>
+          <li>API keys, tokens, or a full <code>config.toml</code></li>
+          <li>Private dictation text, window titles that expose secrets, or personal names you care about</li>
+          <li>Audio files or links to personal recordings under <code>~/.golos/recordings/</code></li>
+          <li>Screenshots of Settings that show a filled-in key field</li>
+        </ul>
+        <p>
+          Contributions and PR expectations:
+          <a href="https://github.com/Dopomogai/golos/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.
+        </p>
+      </section>
+
+      <nav class="docs-pager" aria-label="Adjacent help topics">
+        <a class="pager-link" href="../privacy/">
+          <span class="pager-dir">Previous</span>
+          <span class="pager-title">Privacy &amp; data</span>
+        </a>
+        <a class="pager-link pager-link--next" href="../">
+          <span class="pager-dir">Next</span>
+          <span class="pager-title">Help Center home</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="docs-footer">
+    <a class="brand" href="https://golos.dopomogai.com/">
+      <img class="brand-mark" src="../../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
+      <span>golos</span>
+    </a>
+    <p>Help Center · Applies to v0.3.1 · Troubleshooting</p>
+    <div class="docs-footer-links">
+      <a href="../">Docs home</a>
+      <a href="https://golos.dopomogai.com/#download">Download</a>
+      <a href="https://github.com/Dopomogai/golos">GitHub</a>
+      <a href="https://github.com/Dopomogai/golos/issues">Issues</a>
+    </div>
+  </footer>
+
+  <script src="../docs.js"></script>
+</body>
+</html>
