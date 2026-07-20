@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Install golos v0.3.1 on macOS: pick Apple Silicon or Intel, grant permissions, finish onboarding, and dictate your first words.">
+  <meta name="theme-color" content="#080b12">
+  <title>Getting started — golos Help</title>
+  <link rel="canonical" href="https://golos.dopomogai.com/docs/getting-started/">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="../../golos-mark.svg">
+  <link rel="stylesheet" href="../docs.css">
+</head>
+<body class="docs-page">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="docs-header">
+    <nav class="docs-nav" aria-label="Primary">
+      <a class="brand" href="https://golos.dopomogai.com/" aria-label="golos home">
+        <img class="brand-mark" src="../../golos-mark.svg" width="29" height="29" alt="" aria-hidden="true">
+        <span>golos</span>
+      </a>
+      <div class="docs-nav-links">
+        <a href="https://golos.dopomogai.com/">Home</a>
+        <a href="../index.html" aria-current="true">Docs</a>
+        <a href="https://golos.dopomogai.com/#download">Download</a>
+      </div>
+      <a class="button button-small" href="https://github.com/Dopomogai/golos/releases/latest">Releases</a>
+    </nav>
+  </header>
+
+  <div class="docs-shell">
+    <aside class="docs-sidebar" aria-label="Help topics">
+      <p class="docs-sidebar-label">Help center</p>
+      <nav>
+        <ul>
+          <li><a href="../index.html">Overview</a></li>
+          <li><a href="./" aria-current="page">Getting started</a></li>
+          <li><a href="../settings/">Settings</a></li>
+          <li><a href="../workflows/">Workflows</a></li>
+          <li><a href="../better-results/">Better results</a></li>
+          <li><a href="../privacy/">Privacy &amp; data</a></li>
+          <li><a href="../troubleshooting/">Troubleshooting</a></li>
+        </ul>
+      </nav>
+      <p class="docs-sidebar-label">On this page</p>
+      <nav aria-label="On this page">
+        <ul class="toc">
+          <li><a href="#pick-build">Pick your build</a></li>
+          <li><a href="#install">Install</a></li>
+          <li><a href="#gatekeeper">First open (Gatekeeper)</a></li>
+          <li><a href="#permissions">Permissions</a></li>
+          <li><a href="#onboarding">Onboarding wizard</a></li>
+          <li><a href="#first-dictation">First dictation</a></li>
+          <li><a href="#compatibility">Where text inserts</a></li>
+          <li><a href="#updates">Manual updates</a></li>
+          <li><a href="#checklist">First five minutes</a></li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main id="main" class="docs-article">
+      <header class="page-hero">
+        <p class="kicker">Install &amp; first run</p>
+        <p class="version-badge">Applies to v0.3.1</p>
+        <h1>Getting started</h1>
+        <p class="lede">
+          Get golos from a DMG into Applications, open the unsigned beta safely,
+          grant three macOS permissions, finish the seven-page wizard, and
+          dictate your first sentence.
+        </p>
+      </header>
+
+      <div class="callout callout-info" role="note">
+        <strong>Beta, unsigned builds.</strong>
+        v0.3.1 ships as unsigned DMGs. First launch is
+        <strong>right-click → Open</strong>. This release is
+        <strong>not</strong> Developer ID signed or notarized, and updates are
+        manual via GitHub Releases — not automatic in-app replacement.
+      </div>
+
+      <section id="pick-build" aria-labelledby="pick-build-title">
+        <h2 id="pick-build-title">1. Choose Apple Silicon or Intel</h2>
+        <p>
+          golos requires <strong>macOS 13+</strong>. There are two installers —
+          pick the one that matches your Mac. Apple menu →
+          <strong>About This Mac</strong>: “Chip” means Apple Silicon (M1–M4);
+          “Processor” with Intel means the Intel edition.
+        </p>
+
+        <div class="compare-table-wrap">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th scope="col">Edition</th>
+                <th scope="col">Download</th>
+                <th scope="col">Transcription</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Apple Silicon</strong></td>
+                <td>
+                  <a href="https://github.com/Dopomogai/golos/releases/download/v0.3.1/golos-0.3.1-apple-silicon.dmg">golos-0.3.1-apple-silicon.dmg</a>
+                </td>
+                <td>
+                  Cloud via OpenRouter by default. Optional on-device STT after
+                  you click <strong>Download local (~1.5&nbsp;GB)</strong> — weights
+                  never start downloading on their own.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Intel</strong></td>
+                <td>
+                  <a href="https://github.com/Dopomogai/golos/releases/download/v0.3.1/golos-0.3.1-intel.dmg">golos-0.3.1-intel.dmg</a>
+                </td>
+                <td>
+                  <strong>Cloud-only.</strong> OpenRouter transcription only.
+                  Local MLX is unavailable; Settings disables it with a clear reason.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Cloud vs optional local (Apple Silicon)</h3>
+        <ul>
+          <li>
+            <strong>Cloud (OpenRouter)</strong> — works immediately after you
+            add an API key. No multi-gigabyte model download. Audio for
+            speech-to-text is sent to the selected cloud model.
+          </li>
+          <li>
+            <strong>Local MLX (optional)</strong> — only on Apple Silicon, only
+            after an explicit <strong>Download local (~1.5&nbsp;GB)</strong> in
+            onboarding or Settings → General. Transcription audio can stay on
+            device. Formatting and other cloud features are separate toggles.
+          </li>
+        </ul>
+        <p>
+          Full release notes and checksums:
+          <a href="https://github.com/Dopomogai/golos/releases/latest">latest release</a>.
+          Product download chooser:
+          <a href="https://golos.dopomogai.com/#download">golos.dopomogai.com/#download</a>.
+        </p>
+      </section>
+
+      <section id="install" aria-labelledby="install-title">
+        <h2 id="install-title">2. Download and install</h2>
+        <ol class="step-list">
+          <li>
+            <strong>Download the DMG</strong> for your architecture (links above).
+          </li>
+          <li>
+            <strong>Open the DMG</strong> from Downloads (double-click the disk image).
+          </li>
+          <li>
+            <strong>Drag <code>golos</code> onto Applications</strong> in the
+            Finder window the DMG shows.
+          </li>
+          <li>
+            Eject the disk image when you are done. Launch from
+            <strong>Applications → golos</strong> (not from the mounted DMG).
+          </li>
+        </ol>
+        <p>
+          golos is a menu-bar app (no Dock icon by default). Look for the
+          chakra status icon in the menu bar after a successful open.
+        </p>
+      </section>
+
+      <section id="gatekeeper" aria-labelledby="gatekeeper-title">
+        <h2 id="gatekeeper-title">3. First open: right-click → Open</h2>
+        <p>
+          Because the beta is <strong>unsigned</strong>, a normal double-click
+          may show a Gatekeeper warning that the app cannot be opened.
+        </p>
+        <ol class="step-list">
+          <li>In <strong>Applications</strong>, find <strong>golos</strong>.</li>
+          <li><strong>Right-click</strong> (or Control-click) the app.</li>
+          <li>Choose <strong>Open</strong>.</li>
+          <li>Confirm <strong>Open</strong> in the dialog if macOS asks again.</li>
+        </ol>
+        <div class="callout callout-warn" role="note">
+          <strong>Do not expect a signed or notarized installer yet.</strong>
+          Signing and notarization are planned distribution work, not part of
+          this beta. Right-click → Open is the supported path for v0.3.1.
+        </div>
+      </section>
+
+      <section id="permissions" aria-labelledby="permissions-title">
+        <h2 id="permissions-title">4. Grant three macOS permissions</h2>
+        <p>
+          macOS gates everything a dictation app does. Grant each permission to
+          <strong>golos.app</strong> itself (a separate identity from Terminal
+          if you also run from source). System Settings →
+          <strong>Privacy &amp; Security</strong>, or use the deep links from
+          the onboarding wizard / menu-bar <strong>Permissions</strong> submenu.
+        </p>
+
+        <div class="compare-table-wrap">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th scope="col">Permission</th>
+                <th scope="col">Why golos needs it</th>
+                <th scope="col">If missing</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Microphone</strong></td>
+                <td>Captures your voice for speech-to-text.</td>
+                <td>Recording fails or returns silence.</td>
+              </tr>
+              <tr>
+                <td><strong>Input Monitoring</strong></td>
+                <td>
+                  Sees the global hold key (<kbd>fn</kbd> by default) and runs
+                  the event tap that can swallow <kbd>fn</kbd>+Space so a space
+                  character is not typed into the target app.
+                </td>
+                <td>
+                  Hotkeys may not work while other apps are focused; without
+                  the event tap, Space may still type during the combo.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Accessibility</strong></td>
+                <td>
+                  Inserts text into other apps (synthetic typing / Cmd+V paste),
+                  reads window titles and permitted text context, and supports
+                  the learning loop after you edit.
+                </td>
+                <td>
+                  Transcription can still run, but paste/insert is blocked and
+                  context reads fail.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Also set the fn key (if you use fn)</h3>
+        <p>
+          System Settings → <strong>Keyboard</strong> →
+          <strong>Press 🌐/fn key to</strong> → <strong>Do Nothing</strong>.
+          Otherwise macOS steals <kbd>fn</kbd> for emoji picker, system
+          dictation, or another action, and golos cannot use it reliably.
+        </p>
+        <p>
+          After granting permissions, quit golos from the menu-bar icon and
+          reopen it so TCC grants fully apply. Use menu-bar →
+          <strong>Permissions</strong> for live ✓/✗ status, or
+          <strong>Test insertion</strong> to paste a probe string at the cursor.
+        </p>
+      </section>
+
+      <section id="onboarding" aria-labelledby="onboarding-title">
+        <h2 id="onboarding-title">5. The seven onboarding pages</h2>
+        <p>
+          On first run (when <code>[app] onboarded</code> is not set), golos
+          opens a branded wizard: dark sidebar with page dots, content on the
+          right, <strong>Back</strong> / <strong>Continue</strong> (last page:
+          <strong>Finish</strong>). Reopen anytime from the menu-bar icon →
+          <strong>Welcome / Setup…</strong>.
+        </p>
+
+        <ol class="step-list">
+          <li>
+            <strong>Welcome</strong> —
+            “Talk to your Mac. It types.” Short overview: hold key → speak →
+            release; optional AI cleanup; learning names and terms as you correct them.
+          </li>
+          <li>
+            <strong>Permissions</strong> —
+            “macOS needs three permissions.” Live status for Microphone, Input
+            Monitoring, and Accessibility (polls about every 2&nbsp;s). Each row
+            has <strong>Open Settings</strong>. You can Continue with missing
+            grants, but the app will not work fully until all three are granted.
+          </li>
+          <li>
+            <strong>Hold-to-talk key</strong> —
+            Choose <code>fn</code> (default), <code>right_option</code>,
+            <code>right_command</code>, or <code>f5</code>. A test pad lights up
+            when the key is detected. If <code>fn</code> is selected, the page
+            reminds you to set “Press 🌐/fn key to” → Do Nothing. The choice
+            saves and rebinds live.
+          </li>
+          <li>
+            <strong>Connect OpenRouter</strong> —
+            Paste an OpenRouter key (<code>sk-or-…</code>), then
+            <strong>Save &amp; validate</strong>, <em>or</em> on Apple Silicon
+            click <strong>Download local (~1.5&nbsp;GB)</strong> (disabled with
+            a reason on Intel / unsupported machines). Continue is blocked until
+            cloud is connected or a local model is downloaded and selected.
+            Local download is optional and explicit — never silent.
+          </li>
+          <li>
+            <strong>Formatting choice</strong> —
+            Two cards:
+            <em>AI formatting</em> (cleaner text, lists, context-aware polish;
+            about 1–3&nbsp;s extra) vs
+            <em>Raw &amp; instant</em> (skip the formatting pass; STT still
+            follows your backend). Changeable later in Settings. Note: short
+            dictations can also skip AI via Fast mode in Settings.
+          </li>
+          <li>
+            <strong>Try it</strong> —
+            Practice in a built-in text field while the wizard is focused.
+            Hold your key, speak, release. Try key+Space for lock mode.
+            <kbd>Esc</kbd> cancels while recording. Status labels show
+            listening / processing / inserted.
+          </li>
+          <li>
+            <strong>Done</strong> —
+            “You’re set.” Reminder of your hold key. Optional
+            <strong>Test insertion</strong> pastes
+            <code>✅ golos insertion test</code> at the cursor (checks
+            Accessibility). <strong>Finish</strong> sets onboarded and closes
+            the window.
+          </li>
+        </ol>
+      </section>
+
+      <section id="first-dictation" aria-labelledby="first-dictation-title">
+        <h2 id="first-dictation-title">6. Your first dictation</h2>
+        <p>
+          Click into any app with a text cursor (Notes is a good first target).
+          Default hold key is <kbd>fn</kbd> unless you changed it in onboarding.
+        </p>
+
+        <h3>Hold and release</h3>
+        <ol class="step-list">
+          <li>Hold your hold-to-talk key — recording starts; the bubble shows a live waveform (notch wings or corner pill).</li>
+          <li>Speak naturally.</li>
+          <li>Release the key — state goes to processing (blue shimmer / “processing…”), then a green success hill such as “✓ inserted” if paste succeeded.</li>
+        </ol>
+        <p>
+          <strong>Idle means no bubble</strong> — nothing is shown until you
+          dictate. That is intentional.
+        </p>
+
+        <h3>Hands-free lock: hold key + Space</h3>
+        <ul>
+          <li>
+            Press <kbd>fn</kbd>+<kbd>Space</kbd> (or your hold key + Space) to
+            start or toggle <strong>locked</strong> recording without holding
+            the key down.
+          </li>
+          <li>
+            While locked, a <strong>single press</strong> of the hold key (or
+            hold key + Space again) stops recording and runs transcription + insert.
+          </li>
+          <li>
+            If you are already in hold-to-talk recording, hold key + Space
+            upgrades the session to locked mode (release no longer stops it).
+          </li>
+          <li>
+            With Input Monitoring and a working event tap, Space is swallowed
+            so it does not type into the target field. Without the tap, Space
+            may still appear as a character.
+          </li>
+        </ul>
+
+        <h3>Cancel with Esc</h3>
+        <ul>
+          <li>
+            During <strong>recording</strong> or <strong>locked</strong>:
+            <kbd>Esc</kbd> discards the audio — no transcription. You may see a
+            brief “cancelled” notice.
+          </li>
+          <li>
+            During <strong>processing</strong>: <kbd>Esc</kbd> requests cancel;
+            if insertion has not started yet, the result is discarded. If
+            insertion already began, it is too late to pull the text back.
+          </li>
+        </ul>
+
+        <h3>Immediate repeat</h3>
+        <p>
+          You do not need to wait for the green success animation to finish.
+          While the app is still in the short <strong>success</strong> state
+          (or idle), press the hold key again to start the next recording
+          immediately. A new take ends any live edit-watcher session from the
+          previous insert.
+        </p>
+
+        <div class="callout callout-info" role="note">
+          <strong>Success means insertion was posted</strong> to the focused
+          app’s input path — not a guarantee every app accepted every character.
+          If text is missing, use menu-bar → Permissions, Test insertion, and
+          <a href="../troubleshooting/">Troubleshooting</a>.
+        </div>
+      </section>
+
+      <section id="compatibility" aria-labelledby="compatibility-title">
+        <h2 id="compatibility-title">Where text can insert</h2>
+        <p>
+          golos targets <strong>most standard macOS text fields</strong> that
+          accept Accessibility-driven typing or paste: Notes, many browsers,
+          chat composers, code editors, and similar. It is
+          <strong>not a universal guarantee</strong> for every custom control,
+          sandboxed field, secure password field, or non-standard web widget.
+        </p>
+        <p>
+          If a field ignores insert: confirm Accessibility is granted to
+          <strong>golos.app</strong>, focus a plain text area, try Test
+          insertion, and see
+          <a href="../troubleshooting/">Troubleshooting</a>.
+        </p>
+      </section>
+
+      <section id="updates" aria-labelledby="updates-title">
+        <h2 id="updates-title">Manual updates</h2>
+        <p>
+          v0.3.x uses <strong>GitHub Releases</strong> as the update channel.
+          There is no automatic signed Sparkle-style replacement while builds
+          remain unsigned.
+        </p>
+        <ol class="step-list">
+          <li>
+            Open
+            <a href="https://github.com/Dopomogai/golos/releases/latest">the latest release</a>
+            (the in-app check-for-updates action opens this page as well).
+          </li>
+          <li>Download the DMG for your architecture.</li>
+          <li>Quit golos from the menu-bar icon.</li>
+          <li>Drag the new <strong>golos</strong> into Applications, replacing the old app when asked.</li>
+          <li>Right-click → Open if Gatekeeper prompts again after an update.</li>
+        </ol>
+        <p>
+          Your data lives in <code>~/.golos/</code> (config, dictionary,
+          history, optional recordings) and is not inside the .app bundle —
+          replacing the app does not wipe that folder.
+        </p>
+      </section>
+
+      <section id="checklist" aria-labelledby="checklist-title">
+        <h2 id="checklist-title">First-five-minutes checklist</h2>
+        <ol class="step-list checklist">
+          <li>Confirmed Apple Silicon vs Intel and downloaded the matching v0.3.1 DMG.</li>
+          <li>Dragged <strong>golos</strong> to Applications.</li>
+          <li>Opened with <strong>right-click → Open</strong> (unsigned beta).</li>
+          <li>Granted Microphone, Input Monitoring, and Accessibility to <strong>golos.app</strong>.</li>
+          <li>If using <kbd>fn</kbd>: set “Press 🌐/fn key to” → <strong>Do Nothing</strong>.</li>
+          <li>Finished the seven-page wizard (or connected OpenRouter / optional local STT and picked formatting).</li>
+          <li>Held the hold key in Notes, spoke a short sentence, released — text appeared (or Test insertion succeeded).</li>
+          <li>Tried <kbd>Esc</kbd> cancel once so you know the escape hatch.</li>
+          <li>Bookmarked
+            <a href="https://github.com/Dopomogai/golos/releases/latest">Releases</a>
+            for manual updates.</li>
+        </ol>
+        <p>
+          Next: tune models and context in
+          <a href="../settings/">Settings</a>, practice patterns in
+          <a href="../workflows/">Workflows</a>, or read
+          <a href="../privacy/">Privacy &amp; data</a> before enabling extra
+          cloud features.
+        </p>
+      </section>
+
+      <nav class="docs-pager" aria-label="Article pagination">
+        <a class="docs-pager-prev" href="../index.html">
+          <span class="docs-pager-label">Previous</span>
+          <span class="docs-pager-title">Help center</span>
+        </a>
+        <a class="docs-pager-next" href="../settings/">
+          <span class="docs-pager-label">Next</span>
+          <span class="docs-pager-title">Settings</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="docs-footer">
+    <a class="brand" href="https://golos.dopomogai.com/">
+      <img class="brand-mark" src="../../golos-mark.svg" width="24" height="24" alt="" aria-hidden="true">
+      <span>golos</span>
+    </a>
+    <p>Open-source push-to-talk dictation for macOS · Help for v0.3.1</p>
+    <div class="docs-footer-links">
+      <a href="../index.html">Help center</a>
+      <a href="https://golos.dopomogai.com/#download">Download</a>
+      <a href="https://github.com/Dopomogai/golos">GitHub</a>
+      <a href="https://github.com/Dopomogai/golos/releases/latest">Releases</a>
+    </div>
+  </footer>
+
+  <script src="../docs.js"></script>
+</body>
+</html>
