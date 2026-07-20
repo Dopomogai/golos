@@ -586,7 +586,7 @@ def build_settings_window(app_controller):
                 "Also send the audio to the formatter (better recovery from bad transcription)")
             v.addSubview_(self.audio_checkbox)
             v.addSubview_(make_hint(
-                "Costs a little more; needs an audio-capable model (e.g. gemini-2.5-flash).",
+                "Costs a little more; requires an audio-capable formatter model.",
                 INSET + 28, opt_y + 2, w=520, h=14, size=10))
 
             # Prompt editor — keep clearly visible/editable
@@ -677,7 +677,7 @@ def build_settings_window(app_controller):
                 INSET + 10, CONTENT_H - 54, w=560, h=16))
 
             # Enable + model card
-            card_h = 150
+            card_h = 166
             card_y = CONTENT_H - 70 - card_h
             make_card(v, INSET - 4, card_y, INNER_W + 8, card_h)
 
@@ -692,26 +692,26 @@ def build_settings_window(app_controller):
                 INSET + 28, card_y + card_h - 54, w=520, h=14, size=10))
 
             v.addSubview_(make_label(
-                "Reviewer model", INSET + 8, card_y + 72, w=120, h=18))
+                "Reviewer model", INSET + 8, card_y + 80, w=120, h=18))
             self.reviewer_model_combo = NSComboBox.alloc().initWithFrame_(
-                NSMakeRect(INSET + 140, card_y + 69, INNER_W - 156, 26))
+                NSMakeRect(INSET + 140, card_y + 77, INNER_W - 156, 26))
             self.reviewer_model_combo.setStringValue_(DEFAULT_REVIEWER_MODEL)
             v.addSubview_(self.reviewer_model_combo)
 
             self.reviewer_audio_checkbox = NSButton.alloc().initWithFrame_(
-                NSMakeRect(INSET + 8, card_y + 36, 540, 22))
+                NSMakeRect(INSET + 8, card_y + 46, 540, 22))
             self.reviewer_audio_checkbox.setButtonType_(3)
             self.reviewer_audio_checkbox.setTitle_(
                 "Send the original audio with the review (when a recording was kept)")
             v.addSubview_(self.reviewer_audio_checkbox)
             v.addSubview_(make_hint(
                 "Privacy: when on, the retained WAV may leave this Mac. Needs keep_recordings.",
-                INSET + 28, card_y + 18, w=520, h=14, size=10))
+                INSET + 28, card_y + 29, w=520, h=14, size=10))
 
             v.addSubview_(make_label(
-                "Min confidence", INSET + 8, card_y + 4, w=120, h=18))
+                "Min confidence", INSET + 8, card_y + 6, w=120, h=18))
             self.reviewer_conf_field = NSTextField.alloc().initWithFrame_(
-                NSMakeRect(INSET + 140, card_y + 2, 80, 24))
+                NSMakeRect(INSET + 140, card_y + 4, 80, 24))
             self.reviewer_conf_field.setStringValue_("0.55")
             self.reviewer_conf_field.setToolTip_("0–1; discard lower-confidence pairs")
             v.addSubview_(self.reviewer_conf_field)
@@ -847,9 +847,9 @@ def build_settings_window(app_controller):
             self.stt_model_combo = NSComboBox.alloc().initWithFrame_(
                 NSMakeRect(INSET + 120, y - 4, 240, 26))
             v.addSubview_(self.stt_model_combo)
-            v.addSubview_(make_label("Languages", INSET + 372, y, w=70, h=16))
+            v.addSubview_(make_label("Languages", INSET + 372, y, w=80, h=16))
             self.lang_field = NSTextField.alloc().initWithFrame_(
-                NSMakeRect(INSET + 440, y - 4, INNER_W - 448, 24))
+                NSMakeRect(INSET + 450, y - 4, INNER_W - 458, 24))
             self.lang_field.setPlaceholderString_("en, uk")
             self.lang_field.setToolTip_("comma-separated, empty = auto-detect")
             v.addSubview_(self.lang_field)
