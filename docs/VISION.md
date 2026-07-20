@@ -22,7 +22,9 @@ a prompt you can print.
 
 - **Cloud-first, local by choice.** OpenRouter is the quickest setup and needs
   no large model download. Apple Silicon users can explicitly download
-  on-device Whisper. Formatting and audio forwarding remain separate controls.
+  on-device Whisper; Intel builds stay cloud-only for STT. Fully local
+  processing means MLX STT plus formatting and learning reviewer off.
+  Formatting and audio forwarding remain separate controls.
 - **Human-gated learning.** The app may *notice* that you fixed
   "wisper flow" to "Wispr Flow", but it never silently rewrites your
   dictionary. Suggestions are proposed; you promote or dismiss. Your

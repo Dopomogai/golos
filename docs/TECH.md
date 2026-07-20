@@ -31,10 +31,10 @@ keeps the shims + everything with UI or OS integration:
 | `learning.py` | edit capture (AX) → suggestion pairs, promote/dismiss, async wrapper |
 | `learning_reviewer.py` (core) | optional OpenRouter multimodal review after stable edits |
 | `editwatcher.py` | live edit cues: 2.5 s polling for 3 min, debounce, cue firing (workers for AX reads) |
-| `settings.py` | menu-bar status item (12-petal chakra glyph, 11 pt), Permissions submenu, 5-tab Settings (History first/default) |
-| `onboarding.py` | 7-page branded wizard (sidebar, radio cards, hotkey test pad, try-it field) |
+| `settings.py` | menu-bar status item (chakra template glyph, 14 pt; `mic.fill` fallback), Permissions submenu, 5-tab Settings (History first/default); **Fetch models** lives on General |
+| `onboarding.py` | 7-page branded wizard (welcome → permissions → hold key → OpenRouter/local → formatting → try it → done) |
 | `permissions.py` | Accessibility/Input Monitoring/Microphone preflight + deep links |
-| `insert.py` | single-line: synthetic keystrokes; multi-line: clipboard + Cmd+V (pasteboard keeps the transcript) |
+| `insert.py` | single-line: synthetic keystrokes; multi-line: clipboard + Cmd+V (pasteboard keeps the transcript); returns True after events are **posted**, not after target-app delivery |
 | `history.py` | JSONL append + durable recovery (ts, app, bundle, raw, final, context, audio, fast, schema_version/run_id/stage/status/error/attempts); load/normalize/copy_ready/retry helpers |
 | `config.py` | tomllib read, toml write (`update_config`), char-array healing, `~/.golos` migration |
 | `bench.py` | STT benchmark harness (`record` / `run`) |
@@ -180,7 +180,8 @@ consumed by the tap while configured) and rebinding is live via
    the pasteboard keeps the transcript (restoring raced slow target apps
    into pasting the OLD clipboard — Universal Clipboard stalls;
    `restore_clipboard = true` restores after 1500 ms as an escape hatch).
-   Success flashes the bubble; the insertion is remembered for learning.
+   Success flashes the bubble after events are posted (not app-confirmed
+   delivery); the insertion is remembered for learning.
 5. **History / recovery**: append-only JSONL (`~/.golos/history.jsonl`) with
    the full context dict (`workspace_files` truncated to 50 lines). Schema
    v2 adds recovery fields while remaining backward compatible with legacy
@@ -285,27 +286,32 @@ consumed by the tap while configured) and rebinding is live via
 
 ## Config reference (`config.toml`)
 
+Public end-user UI maps are in the Help Center
+([Settings](https://golos.dopomogai.com/docs/settings/)); this table is the
+code/config contract. **config-only** = no Settings control in v0.3.1.
+
 | Key | Default | Notes |
 |---|---|---|
-| `[hotkey] hold_key` | `"fn"` | `fn` / `right_option` / `right_command` / `f5` (live rebind) |
-| `[hotkey] toggle_combo` | `"fn+space"` | or `"double_fn"`; key+Space always works |
-| `[stt] backend` | `"openrouter"` | `openrouter` / `mlx` / `openai_compatible` / `deepgram` |
+| `[hotkey] hold_key` | `"fn"` | UI: General; `fn` / `right_option` / `right_command` / `f5` (live rebind) |
+| `[hotkey] toggle_combo` | `"fn+space"` | **config-only**; or `"double_fn"`; hold+Space always works |
+| `[stt] backend` | `"openrouter"` | `openrouter` / `mlx` (Apple Silicon) / advanced `openai_compatible` / `deepgram` |
 | `[stt] languages` | `[]` | e.g. `["en", "uk"]`; empty = auto-detect |
-| `[stt] mlx_model` | `mlx-community/whisper-large-v3-turbo` | local model |
+| `[stt] mlx_model` | `mlx-community/whisper-large-v3-turbo` | local model; Intel builds omit MLX |
 | `[stt.openrouter] model` | `deepgram/nova-3` | curated list in `openrouter.py` |
 | `[openrouter] api_key` | `""` | env `OPENROUTER_API_KEY` wins |
-| `[formatting] enabled` | `true` | the raw/formatted toggle |
+| `[formatting] enabled` | `true` | the raw/formatted toggle (UI) |
 | `[formatting] provider` | `"openrouter"` | or `"openai_compatible"` |
-| `[formatting] model` | `google/gemini-2.5-flash` | any chat model |
+| `[formatting] model` | `google/gemini-2.5-flash` | code default; any chat model |
 | `[formatting] answer_questions` | `false` | guarded answer mode |
 | `[formatting] send_audio` | `false` | attach original audio to the format call |
-| `[formatting] fast_mode` / `fast_mode_max_words` | `false` / `10` | skip LLM for short dictations |
-| `[formatting] debug` | `false` | logs the complete prompt |
+| `[formatting] fast_mode` | `false` | UI checkbox |
+| `[formatting] fast_mode_max_words` | `10` | **config-only** short-dictation cutoff |
+| `[formatting] debug` | `false` | **config-only**; logs the complete prompt |
 | `[formatting] prompt_file` | `"prompt.md"` | custom system-prompt template in `~/.golos` |
 | `[bubble] style` / `sensitivity` / `show_text` | `"notch"` / `1.0` / `true` | corner fallback / display gain 0.5–2.5 / animation-only option |
-| `[learning] enabled` / `edit_window_seconds` | `true` / `600` | suggestion loop |
-| `[learning] live_cues` / `live_cue_seconds` | `true` / `8` | click-to-keep edit cues |
-| `[learning] reviewer_enabled` | `false` | optional OpenRouter post-edit review (off for privacy) |
+| `[learning] enabled` / `edit_window_seconds` | `true` / `600` | **config-only** suggestion loop master + window |
+| `[learning] live_cues` / `live_cue_seconds` | `true` / `8` | **config-only** click-to-keep edit cues |
+| `[learning] reviewer_enabled` | `false` | UI: Learning; optional OpenRouter post-edit review |
 | `[learning] reviewer_model` | `google/gemini-3.1-flash-lite-preview` | independent of formatter model |
 | `[learning] reviewer_send_audio` | `true` | attach retained WAV when reviewing (audio leaves Mac) |
 | `[learning] reviewer_prompt_file` | `learning_prompt.md` | under `~/.golos/` |
@@ -314,10 +320,14 @@ consumed by the tap while configured) and rebinding is live via
 | `[context] focused_field_text` | `true` | full focused-input draft (≤4000) |
 | `[context] visible_text` | `true` | surrounding on-screen text only (≤4000) |
 | `[context] text_before_cursor` | `true` | pre-caret slice (≤500) |
-| `[insert] method` / `restore_clipboard` | `"auto"` / `false` | type/paste override; clipboard restore escape hatch |
-| `[audio] device` / `keep_recordings` | `0` / `true` | sounddevice index; wav archive |
+| `[insert] method` / `restore_clipboard` | `"auto"` / `false` | **config-only** type/paste override; clipboard restore escape hatch |
+| `[audio] device` / `keep_recordings` | `0` / `true` | **config-only** sounddevice index; wav archive |
 | `[app] onboarded` | — | set by the wizard |
 | `[paths] *` | `~/.golos/` | dictionary / corrections / history / suggestions / dismissed |
+
+**Fully local** product meaning (not a single toggle): Apple Silicon MLX STT
+with local weights downloaded, `[formatting] enabled = false`, and
+`[learning] reviewer_enabled = false`.
 
 Config writes go through `update_config` (tomllib read → `toml` dump).
 Gotcha that once bit us: `toml`'s encoder dispatches on exact `type(v)`, so

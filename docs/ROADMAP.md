@@ -12,11 +12,12 @@ Direction only. No ship dates, no promises.
 
 ## Shipped now
 
-Public **v0.3.1 Mac beta**:
+Public **v0.3.1 Mac beta** (macOS 13+):
 
-- Separate **Apple Silicon** and **Intel** DMGs
+- Separate **Apple Silicon** (cloud + optional local MLX) and **Intel**
+  (cloud-only OpenRouter; no MLX) DMGs
 - **Cloud-first OpenRouter** transcription by default
-- **Optional local MLX** speech-to-text on Apple Silicon (explicit download)
+- **Optional local MLX** speech-to-text on Apple Silicon only (explicit download)
 - **Context separation** (app / window / field / visible text roles)
 - **History and recovery** (retry, copy, retained audio when kept)
 - **Human-approved corrections** (suggestions and live cues never auto-promote)

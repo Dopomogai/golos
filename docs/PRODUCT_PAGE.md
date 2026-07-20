@@ -69,13 +69,16 @@ Same voice. Your choice per machine, per moment.
   the cloud model you select. It starts without a large model download.
 - **Local is an explicit option**: Apple Silicon users can download the
   on-device MLX model once (~1.5 GB). In that mode, transcription audio stays
-  on the Mac.
+  on the Mac. Intel builds are cloud-only for STT.
 - **What's shared, and when**: cloud STT sends audio for transcription. If
   formatting is enabled, the transcript plus permitted app context goes to
   the formatter; audio goes to the formatter only when its separate audio
   assistance toggle is enabled.
+- **Fully local** means local MLX STT **and** formatting off **and** learning
+  reviewer off — not “Format with LLM” off alone while cloud STT is still on.
 - **Your data stays put**: history, dictionary, and learned corrections are
   plain JSONL/text files in `~/.golos`. Delete them whenever you like.
+  Per-dictation WAV retention is a config-only switch (`keep_recordings`).
 
 ## Requirements
 
@@ -106,8 +109,9 @@ Mirror [`docs/ROADMAP.md`](ROADMAP.md) as a `#roadmap` section (no dates):
 **Is my audio stored?**
 By default, each dictation is retained locally as a WAV under
 `~/.golos/recordings/` for benchmarking and troubleshooting. Turn off
-`[audio] keep_recordings` to discard it after processing. Text history
-(raw + final, with the app it went to) stays in a local JSONL file you own.
+`[audio] keep_recordings` in `~/.golos/config.toml` (config-only; no Settings
+toggle) to stop archiving. Text history (raw + final, with the app it went
+to) stays in a local JSONL file you own.
 
 **What does it cost?**
 golos is free and open-source. Local STT costs nothing forever. Cloud

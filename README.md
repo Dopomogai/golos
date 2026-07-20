@@ -11,11 +11,12 @@ related_docs: [docs/PRODUCT.md, docs/GUIDE.md, docs/TECH.md, docs/VISION.md, doc
 A minimal macOS push-to-talk dictation app, in Python + PyObjC
 (renamed from "dictate" — the python packages are still `dictate`/`dictate_core`).
 
-> Docs: [docs/PRODUCT.md](docs/PRODUCT.md) (user guide) ·
-> [docs/TECH.md](docs/TECH.md) (architecture) · [docs/VISION.md](docs/VISION.md) ·
-> [docs/ROADMAP.md](docs/ROADMAP.md) (public roadmap) ·
-> [docs/PRODUCT_PAGE.md](docs/PRODUCT_PAGE.md) (site copy) ·
-> [docs/TESTING.md](docs/TESTING.md) (tests & coverage)
+> Help center: [golos.dopomogai.com/docs/](https://golos.dopomogai.com/docs/)
+> (getting started, settings, workflows, privacy, troubleshooting).
+> Repo deep dives: [docs/PRODUCT.md](docs/PRODUCT.md) ·
+> [docs/GUIDE.md](docs/GUIDE.md) · [docs/TECH.md](docs/TECH.md) ·
+> [docs/VISION.md](docs/VISION.md) · [docs/ROADMAP.md](docs/ROADMAP.md) ·
+> [docs/PRODUCT_PAGE.md](docs/PRODUCT_PAGE.md) · [docs/TESTING.md](docs/TESTING.md)
 
 **Download (v0.3.1 beta DMGs — pick your architecture):**
 
@@ -50,11 +51,13 @@ Product page source: [`site/`](site/) (direct architecture chooser at
    default): fillers and false starts removed, punctuation fixed, corrections
    from `corrections.tsv` applied, spoken filenames turned into real ones using
    the app/window context. Skipped gracefully if no API key is configured.
-4. The final text is **inserted at the cursor** of the frontmost app:
-   single-line text is *typed* as synthetic keystrokes; multi-line text goes
-   via the clipboard + synthetic Cmd+V — and the clipboard then simply keeps
-   the transcript (restoring the old clipboard raced slow apps into pasting
-   the OLD content; `[insert] restore_clipboard = true` opts back in).
+4. The final text is **posted for insertion** at the cursor of the frontmost
+   app: single-line text is *typed* as synthetic keystrokes; multi-line text
+   goes via the clipboard + synthetic Cmd+V — and the clipboard then simply
+   keeps the transcript (restoring the old clipboard raced slow apps into
+   pasting the OLD content; `[insert] restore_clipboard = true` opts back in).
+   Green "✓ inserted" means events were posted, not that the target app
+   verified delivery (macOS can silently drop them without Accessibility).
 5. Every dictation is appended to `history.jsonl`
    (`ts`, `app`, `bundle_id`, `raw`, `final`).
 
@@ -204,10 +207,16 @@ cloud call costs a fraction of a cent; a full run is on the order of cents.
 
 ## Settings
 
-Click the mic icon in the menu bar → **Settings…**. The menu also has:
+Click the **chakra** status icon in the menu bar → **Settings…**
+(template glyph at 14 pt; SF Symbol `mic.fill` only if the glyph asset is
+missing). Day-to-day UI walkthrough:
+[Help Center → Settings](https://golos.dopomogai.com/docs/settings/).
+The menu also has:
 
-- **Test insertion** — pastes `✅ dictate insertion test` at the current cursor;
-  a one-click end-to-end check of the Accessibility permission + paste path.
+- **Test insertion** — posts `✅ golos insertion test` at the current cursor
+  (Accessibility + type/paste path). Success means insertion *events were
+  posted*; macOS may still drop them without Accessibility, and the target
+  app does not confirm delivery.
 - **Permissions ▸** — live ✓/✗ for Accessibility, Input Monitoring and
   Microphone (refreshed each time the menu opens); clicking a ✗ item opens the
   matching System Settings pane. The same three checks run at startup and log
@@ -226,23 +235,26 @@ Five tabs (History is first and opens by default):
   an explicit **Download local (~1.5 GB)** button on supported Apple Silicon Macs, STT model,
   **Languages** (comma-separated, e.g. `en, uk`; empty = auto-detect),
   formatter model, OpenRouter API key, bubble style (`notch` / `corner`),
+  **Hold key** popup (`fn` / Right Option / Right Command / F5 — live rebind),
   **Input sensitivity** slider (0.5–2.5 — display gain for the recording
   waveform; 1.0 default), the **Format with LLM** checkbox (uncheck for
   the fastest raw-insert mode — no formatting pass, no context leaves the
   machine), and **Fast mode** (skip LLM cleanup for short dictations —
   short inserts become instant, `corrections.tsv` still applies locally).
+  **Fetch models** (General footer) pulls the current OpenRouter model list
+  (audio-capable models for STT, all text models for the formatter); listing
+  works without a key, and the combo boxes keep your current values if the
+  fetch fails. **Save** writes `config.toml` and rebuilds the STT/formatter
+  pipeline live. Bubble style applies after restart.
 - **Prompt** — context-sharing toggles (what the formatter may see),
   the **Answer obvious questions from context** toggle, **Also send the
   audio to the formatter** (recover from bad transcription; costs a little
   more, needs an audio-capable model), and the system prompt template editor
   (`~/.golos/prompt.md`).
-  **Fetch models** pulls the current OpenRouter model list (audio-capable
-  models for STT, all text models for the formatter); it works without a key
-  for listing, and the combo boxes keep your current values if the fetch fails.
-  **Save** writes `config.toml` and rebuilds the STT/formatter pipeline live.
-  Bubble style applies after restart.
 - **Learning** — optional OpenRouter reviewer after you edit an insert
-  (never auto-promotes; approve in History or the live cue).
+  (never auto-promotes; approve in History or the live cue). Live-cue
+  enable/duration is **config-only** (`[learning] live_cues` /
+  `live_cue_seconds`), not a Learning-tab control.
 - **Dictionary** — edit terms and corrections as tables (+/− to add/remove
   rows, double-click to edit inline); Save applies them to the running
   pipeline immediately. File comments (`#` lines) are preserved on save.
@@ -283,8 +295,8 @@ configurable in Settings or `config.toml`.
   **blue processing mode** — a traveling shimmer on both sides plus an
   animated "processing… Ns" label in the notch gap — then a **green "✓
   inserted"** hill (tallest at the notch, tapering outward) that ebbs away
-  over ~1.2 s. The panel is
-  fully click-through: it never blocks your menus. Idle = no bubble at all.
+  over ~1.2 s (posted-events success, not app-confirmed delivery). The panel
+  is fully click-through: it never blocks your menus. Idle = no bubble at all.
 - **corner**: a 132×36 draggable pill at the bottom-right with a live waveform
   while recording; hidden when idle.
 
@@ -363,9 +375,14 @@ surrounding context.
 
 Privacy note: nearby typed text (`text_before_cursor`), focused field text,
 visible text, and page/workspace context leave the machine **only** when LLM
-formatting is enabled — set `[formatting] enabled = false` (or uncheck
-"Format with LLM" in Settings → General) for fully-local raw insertion;
-`[context] enabled = false` turns the providers/AX reads off independently.
+formatting is enabled — uncheck **Format with LLM** (or
+`[formatting] enabled = false`) to skip the formatter network call.
+**Fully local** day-to-day dictation means all three: local **MLX** STT
+(Apple Silicon only, after the explicit download), formatting off, and the
+learning reviewer off (`[learning] reviewer_enabled = false`, default).
+Cloud STT still sends audio when the backend is OpenRouter. Intel builds are
+cloud-only for STT. `[context] enabled = false` turns providers/AX reads off
+independently.
 
 Note: the first use of a browser/Finder provider may pop a macOS **Automation
 consent** dialog per app — that's expected; denying simply disables that
@@ -418,25 +435,36 @@ has a hard 1.5 s timeout — a stuck app can't stall dictation.
 > with the toggle: the mode framing is prepended and the mode closer appended
 > when the template lacks the `{{mode_rules}}` placeholder.
 
-`config.toml` — see the shipped file for the annotated version. Highlights:
+`config.toml` — see the shipped `config.toml` for the annotated bootstrap copy
+(runtime state is `~/.golos/config.toml`). Highlights:
 
-- `[hotkey]` — `hold_key = "fn"` or `"right_option"`;
-  `toggle_combo = "fn+space"` or `"double_fn"` (double-tap the hold key within
-  350 ms to lock recording; a hold over 400 ms is never a tap). fn+Space
-  always toggles regardless of mode.
+- `[hotkey]` — `hold_key` is also a General popup (`fn` / `right_option` /
+  `right_command` / `f5`). `toggle_combo = "fn+space"` or `"double_fn"` is
+  **config-only** (double-tap the hold key within 350 ms to lock; a hold over
+  400 ms is never a tap). Hold-key+Space always toggles regardless of mode.
 - `[stt]` — `backend = "mlx" | "openrouter" | "openai_compatible" | "deepgram"`.
+  UI focuses on OpenRouter + MLX; the other backends are advanced/config.
 - `[openrouter]` — `api_key` (env `OPENROUTER_API_KEY` wins).
 - `[formatting]` — `provider = "openrouter" | "openai_compatible"`, `model`,
   and `debug = false`. Set `debug = true` to log the **complete system prompt
   and user message** (the full context the model receives: app, window title,
   page URL, workspace files, …) at INFO before every formatting call.
+  `fast_mode_max_words` is config-only (default 10).
 - `[bubble]` — `style = "notch" | "corner"`, waveform `sensitivity`, and
   `show_text = true | false` (status words or animation-only).
-- `[insert]` — `method = "auto" | "type" | "paste"`. Auto types single-line
-  text as synthetic keystrokes (no clipboard race) and uses clipboard paste
-  only for multi-line text; the pasteboard keeps the transcript afterwards
-  (`restore_clipboard = true` opts back into restoring it after 1.5 s).
-- `[audio]` — `device = 0` uses the default input.
+- `[insert]` — `method` and `restore_clipboard` are **config-only**.
+  `method = "auto" | "type" | "paste"` (auto types single-line, pastes
+  multi-line). The pasteboard keeps the transcript afterwards;
+  `restore_clipboard = true` opts back into restoring it after 1.5 s.
+- `[audio]` — `device` and `keep_recordings` are **config-only**
+  (`device = 0` = default input; `keep_recordings = true` archives WAVs under
+  `~/.golos/recordings/`).
+- `[learning]` — reviewer controls are on the Learning tab; `live_cues` /
+  `live_cue_seconds` and several reviewer knobs are config-only.
+
+Full config tables and config-only callouts:
+[docs/GUIDE.md](docs/GUIDE.md) ·
+[Help Center → Settings](https://golos.dopomogai.com/docs/settings/#config-only).
 
 Note: saving from the Settings window rewrites `config.toml` with the `toml`
 package — values and untouched sections are preserved, comments are not.
@@ -453,8 +481,8 @@ dictate/          python package
   __main__.py     entry point
   app.py          NSApplication + AppController state machine, instance lock, signal handling
   bubble.py       floating status NSPanel (notch wings + corner styles, waveform)
-  settings.py     menu-bar status item (Permissions submenu, Test insertion) + Settings window
-  onboarding.py   5-page first-run wizard (permissions, fn key, API key)
+  settings.py     menu-bar chakra status item (Permissions submenu, Test insertion) + Settings window
+  onboarding.py   7-page first-run wizard (welcome → permissions → hold key → OpenRouter/local → formatting → try it → done)
   openrouter.py   OpenRouter key resolution, /models listing, defaults
   permissions.py  Accessibility / Input Monitoring / Microphone checks + deep links
   hotkeys.py      global fn monitor + CGEventTap space-swallowing

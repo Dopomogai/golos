@@ -13,6 +13,9 @@ anywhere a cursor can blink. Hold a key, talk, release — the text appears in
 whatever app you're in. It's a personal, open-source take on Wispr Flow:
 inspectable, configurable Python, no subscription.
 
+End-user guides live in the Help Center:
+[golos.dopomogai.com/docs/](https://golos.dopomogai.com/docs/).
+
 ## Key features
 
 - **Hold-to-talk** — hold your key (`fn` by default — also Right ⌥, Right
@@ -47,8 +50,10 @@ inspectable, configurable Python, no subscription.
 
 ## Install
 
-Requirements: macOS 13+. The Apple Silicon build supports both OpenRouter and
-optional local MLX; the Intel beta build is cloud-only. Python ≥ 3.11 for source installs.
+Requirements: **macOS 13+**. The **Apple Silicon** build supports both
+OpenRouter and optional local MLX (explicit ~1.5 GB download); the **Intel**
+beta build is **cloud-only** (no on-device STT). Python ≥ 3.11 for source
+installs.
 
 ```sh
 cd ~/dictate
@@ -70,7 +75,7 @@ bundled app, later) in **System Settings → Privacy & Security**:
 Also set **System Settings → Keyboard → "Press 🌐/fn key to" → Do Nothing**,
 or macOS steals the fn key for its own action. Restart the terminal after
 granting. The app checks all three at startup and tells you exactly what's
-missing (menu-bar icon → Permissions shows live ✓/✗).
+missing (menu-bar **chakra** icon → Permissions shows live ✓/✗).
 
 ## First run
 
@@ -80,10 +85,13 @@ cd ~/dictate
 ```
 
 1. Hold `fn`, say "hello this is a test", release — text lands at the cursor.
-2. Add an OpenRouter key during onboarding for cloud STT and formatting with
+2. First-run onboarding is a **7-page** wizard (permissions, hold key,
+   OpenRouter or local STT, formatting choice, try-it, done).
+3. Add an OpenRouter key during onboarding for cloud STT and formatting with
    no model download.
-3. On Apple Silicon, optionally download the local model from Settings →
-   General for on-device STT. A green "✓ inserted" flash confirms each paste.
+4. On Apple Silicon, optionally download the local model from Settings →
+   General for on-device STT. A green "✓ inserted" flash means insertion
+   events were **posted** (not that the target app confirmed delivery).
 
 ## Speed knobs
 
@@ -93,7 +101,9 @@ context, and **send_audio** lets the formatter listen to the original
 recording to recover garbled transcription. Separately, the optional
 **learning reviewer** (Settings → Learning, off by default) can listen
 to a retained recording when proposing STT fixes after you edit — still
-human-gated, never auto-applied.
+human-gated, never auto-applied. Recording retention, insert method, audio
+device, live-cue toggles, and `toggle_combo` are **config-only**
+(`~/.golos/config.toml`) unless a Settings control exists for that key.
 
 ## Two modes
 
@@ -104,13 +114,16 @@ human-gated, never auto-applied.
 | Privacy | skips formatter/context sharing; cloud STT still sends audio | transcript + allowed context go to the formatter API |
 
 Toggle with the **Format with LLM** checkbox in Settings → General
-(`[formatting] enabled`). You can also keep formatting on but disable
+(`[formatting] enabled`). **Fully local** day-to-day dictation needs MLX STT
+(Apple Silicon only) **and** formatting off **and** learning reviewer off —
+not formatting-off alone. You can also keep formatting on but disable
 context providers with `[context] enabled = false`.
 
 ## Troubleshooting
 
-- **Nothing is pasted** — Accessibility permission missing. Menu-bar icon →
-  Permissions shows what's red; "Test insertion" pastes a probe string.
+- **Nothing is pasted** — Accessibility permission missing. Menu-bar chakra →
+  Permissions shows what's red; **Test insertion** posts
+  `✅ golos insertion test` (events posted, not app-verified).
 - **fn does nothing** — Input Monitoring missing, or "Press fn key to" isn't
   set to Do Nothing. Check the startup log.
 - **"golos is already running (pid N)"** — a previous instance is alive

@@ -9,14 +9,18 @@ related_docs: [docs/PRODUCT.md, docs/TECH.md, README.md]
 # golos — the complete guide
 
 Everything the app does, and how to drive it. Verified against the current code.
+For end-user walkthroughs (install, settings UI, privacy, troubleshooting),
+prefer the public Help Center:
+[golos.dopomogai.com/docs/](https://golos.dopomogai.com/docs/).
 
 ## What it is
 
 golos is a menu-bar dictation app: hold a key, speak, release — cleaned-up
 text appears at the cursor of whatever app you're in. OpenRouter speech-to-text
-is the default; Apple Silicon users can explicitly download local Whisper.
-The LLM formatting pass is optional.
-It runs as an accessory app (no Dock icon) with a status-bar chakra icon.
+is the default; Apple Silicon users can explicitly download local Whisper
+(Intel builds are cloud-only). The LLM formatting pass is optional.
+It runs as an accessory app (no Dock icon) with a status-bar chakra glyph
+(14 pt template image).
 
 ## Controls
 
@@ -26,7 +30,7 @@ It runs as an accessory app (no Dock icon) with a status-bar chakra icon.
 | `fn`+Space | Lock recording hands-free. |
 | `fn` (single press, while locked) | Stop locked recording, transcribe + insert. |
 | `fn`+Space (while locked) | Same — also stops. |
-| Double-tap `fn` (if `toggle_combo = "double_fn"`) | Toggle locked mode (fn+Space always works too). |
+| Double-tap hold key (if config-only `toggle_combo = "double_fn"`) | Toggle locked mode (hold+Space always works too). |
 | `Esc` (while recording/locked) | **Cancel**: discard the audio, no transcription. |
 | `Esc` (while processing) | Discard the result before it inserts (if insertion already started, it's too late). |
 
@@ -49,6 +53,8 @@ row, bars capped at 34 pt so nothing leaves the screen top):
   notch gap (elapsed seconds after 3 s).
 - **Success**: a green `✓ inserted` hill — tallest at the notch, tapering
   outward across nearly the full strip — that ebbs away over ~1.2 s.
+  This means insertion events were **posted** to macOS, not that the target
+  app verified the text landed.
 - **Idle**: nothing. No bubble at all. Silence while recording shows a
   perfectly even dotted line.
 
@@ -67,9 +73,11 @@ draggable pill at the bottom-right shows the same states.
    cite the visible text (see below). Skipped gracefully when disabled or
    keyless — the raw transcript is inserted.
 
-Every dictation is saved (`~/.golos/recordings/YYYY-MM-DD/HHMMSS_mmm.wav`,
-disable with `[audio] keep_recordings = false`) — these are ready-made
-samples for the benchmark harness; copy or symlink them into `samples/`.
+Every dictation is saved by default
+(`~/.golos/recordings/YYYY-MM-DD/HHMMSS_mmm.wav`). Retention is
+**config-only** (`[audio] keep_recordings = false` to stop archiving) —
+there is no Settings toggle. These WAVs are ready-made samples for the
+benchmark harness; copy or symlink them into `samples/`.
 
 ## Models
 
@@ -102,7 +110,9 @@ samples for the benchmark harness; copy or symlink them into `samples/`.
   for locating text in the field, not a token-length minimum.
   A live **edit watcher** also polls the field for 3 min after each insertion:
   pause after a manual fix and a clickable cue pill (`wrong → right ✓?`)
-  appears — click to keep the correction instantly (`[learning] live_cues`).
+  appears — click to keep the correction instantly. Cue enable/duration is
+  **config-only** (`[learning] live_cues` / `live_cue_seconds`; not on the
+  Learning tab).
   Pairs aggregate in Settings → History → Suggestions: **Add to corrections**,
   **Add to dictionary**, or **Dismiss**. Menu item "Add selection to
   dictionary" teaches a selected word instantly.
@@ -134,10 +144,14 @@ When `[context] enabled = true`, the formatter receives, per app:
   the output with a short verbatim `> quote`, then your comment; it never
   quotes text that isn't in that surrounding context.
 
-**Privacy**: context and transcripts leave the machine only when LLM
-formatting is enabled. `[formatting] enabled = false` (or the Settings
-checkbox) = fully local raw mode. `[context] enabled = false` disables the
-providers and text reads independently.
+**Privacy**: context and transcripts leave for the formatter only when LLM
+formatting is enabled. Unchecking **Format with LLM** (or
+`[formatting] enabled = false`) skips the formatter network call — but cloud
+STT still sends audio if the backend is OpenRouter. **Fully local** means
+Apple Silicon **MLX** STT (explicit download) **and** formatting off **and**
+learning reviewer off. Intel builds cannot do on-device STT.
+`[context] enabled = false` disables providers and text reads independently.
+See also [Help Center → Privacy](https://golos.dopomogai.com/docs/privacy/).
 
 ## Insertion
 
@@ -148,21 +162,25 @@ providers and text reads independently.
   apps): restoring the old clipboard raced slow apps into pasting that old
   content. Escape hatch: `[insert] restore_clipboard = true` (restores after
   1.5 s, with a warning logged).
-- `[insert] method = "auto" | "type" | "paste"` overrides the per-text choice.
+- `[insert] method = "auto" | "type" | "paste"` overrides the per-text choice
+  (**config-only** — not a Settings control).
+- Return value / green success = events **posted**. Without Accessibility,
+  macOS can silently drop them; the destination app is not polled for delivery.
+  Menu **Test insertion** posts `✅ golos insertion test`.
 
 ## Settings (menu-bar chakra icon)
 
-The status item shows the golos chakra glyph (a template image that adapts
-to light/dark menu bars; SF Symbol fallback if the file is missing).
+The status item shows the golos chakra glyph at **14 pt** (template image for
+light/dark menu bars; SF Symbol `mic.fill` only if the glyph asset is missing).
 
 - **General**: STT backend (OpenRouter cloud-first / optional local MLX),
   explicit local-model download/status, STT + formatter models
-  (combo, "Fetch models" refreshes from OpenRouter), **Languages** (comma-
-  separated, e.g. `en, uk`), API key field, bubble style, **Hold-to-talk
-  key** popup (fn / Right Option / Right Command / F5), **Input sensitivity**
-  slider (0.5–2.5, display gain for the recording waveform), **Format with
-  LLM** checkbox (raw mode when off), **Fast mode** checkbox (short
-  dictations skip the LLM), Save applies live.
+  (combo; **Fetch models** on this tab refreshes from OpenRouter),
+  **Languages** (comma-separated, e.g. `en, uk`), API key field, bubble
+  style, **Hold-to-talk key** popup (fn / Right Option / Right Command / F5),
+  **Input sensitivity** slider (0.5–2.5, display gain for the recording
+  waveform), **Format with LLM** checkbox (raw mode when off), **Fast mode**
+  checkbox (short dictations skip the LLM), Save applies live.
 - **Dictionary**: terms table + corrections table (+/−, inline edit, Save).
 - **History** (first tab, default): home dashboard of every dictation
   (newest first, resizable columns) with raw/final/context detail;
@@ -172,17 +190,20 @@ to light/dark menu bars; SF Symbol fallback if the file is missing).
 - **Prompt**: context-sharing checkboxes (what may reach the formatter) and
   the system-prompt template editor (placeholders
   {{dictionary}} {{corrections}} {{context_block}} {{context_rules}}).
+  Model fetch is **not** on this tab (General).
+- **Learning**: optional OpenRouter reviewer controls (off by default; never
+  auto-promotes). Live cues are config-only (see below).
 - Menu: Settings…, Welcome / Setup…, Test insertion, Add selection to
   dictionary, Permissions ▸ (live ✓/✗ + deep links), Quit.
 - **Onboarding**: 7-page branded wizard (dark sidebar with page dots:
   welcome → permissions with live checks → hold-key select with a live test
-  pad → API key → formatting radio cards → try-it practice field → done) on
-  first run; reopen from the menu.
+  pad → OpenRouter key / optional local download → formatting radio cards →
+  try-it practice field → done) on first run; reopen from the menu.
 
 ## Permissions (all three required)
 
 Microphone, Input Monitoring, Accessibility — granted in System Settings →
-Privacy & Security to the terminal **or** to dictate.app (separate
+Privacy & Security to the terminal **or** to **golos.app** (separate
 identities; the bundled app needs its own grants). Also set System
 Settings → Keyboard → "Press 🌐/fn key to" → **Do Nothing**. The app checks
 at startup and in the Permissions submenu.
@@ -237,39 +258,43 @@ Build notes: requires `setuptools<80`; `build_app.sh` temporarily hides
 
 ## Config reference (`~/.golos/config.toml`)
 
+Keys marked **config-only** have no Settings control in v0.3.1 (edit the file).
+UI coverage detail: [Help Center → Settings](https://golos.dopomogai.com/docs/settings/#config-only).
+
 | Key | Default | Meaning |
 |---|---|---|
-| `[hotkey] hold_key` | `"fn"` | or `"right_option"` |
-| `[hotkey] toggle_combo` | `"fn+space"` | or `"double_fn"` |
-| `[stt] backend` | `"openrouter"` | `openrouter` / `mlx` / `openai_compatible` / `deepgram` |
+| `[hotkey] hold_key` | `"fn"` | UI: General popup; also `right_option` / `right_command` / `f5` |
+| `[hotkey] toggle_combo` | `"fn+space"` | **config-only**; or `"double_fn"` (hold+Space always works) |
+| `[stt] backend` | `"openrouter"` | `openrouter` / `mlx` (Apple Silicon) / advanced `openai_compatible` / `deepgram` |
 | `[stt] languages` | `[]` | e.g. `["en", "uk"]`; empty = auto-detect |
-| `[stt] mlx_model` | `whisper-large-v3-turbo` | local model repo |
+| `[stt] mlx_model` | `whisper-large-v3-turbo` | local model repo (Apple Silicon) |
 | `[stt] language` | `""` | empty = auto |
 | `[stt.openrouter] model` | `deepgram/nova-3` | curated list in openrouter.py |
 | `[openrouter] api_key` | `""` | env `OPENROUTER_API_KEY` wins |
-| `[formatting] enabled` | `true` | off = raw mode |
+| `[formatting] enabled` | `true` | off = raw mode (not the same as fully local STT) |
 | `[formatting] provider` | `"openrouter"` | or `"openai_compatible"` |
-| `[formatting] model` | `google/gemini-2.5-flash` | formatter model |
+| `[formatting] model` | `google/gemini-2.5-flash` | formatter model (code default) |
 | `[formatting] send_audio` | `false` | attach the original audio to the format call |
 | `[formatting] answer_questions` | `false` | answer obvious questions from context |
-| `[formatting] fast_mode` / `fast_mode_max_words` | `false` / `10` | skip LLM for short dictations |
-| `[formatting] debug` | `false` | true = log the complete prompt |
+| `[formatting] fast_mode` | `false` | UI checkbox; short dictations skip LLM |
+| `[formatting] fast_mode_max_words` | `10` | **config-only** short-dictation cutoff |
+| `[formatting] debug` | `false` | **config-only**; true = log the complete prompt |
 | `[bubble] style` | `"notch"` | or `"corner"` (restart to apply) |
 | `[bubble] sensitivity` | `1.0` | waveform display gain, 0.5–2.5 |
 | `[bubble] show_text` | `true` | status words on top animation; false keeps animation only |
-| `[learning] enabled` / `edit_window_seconds` | `true` / `600` | suggestion loop |
-| `[learning] live_cues` / `live_cue_seconds` | `true` / `8` | click-to-keep edit cues |
-| `[learning] reviewer_enabled` | `false` | optional post-edit OpenRouter review |
+| `[learning] enabled` / `edit_window_seconds` | `true` / `600` | **config-only** master + window |
+| `[learning] live_cues` / `live_cue_seconds` | `true` / `8` | **config-only** click-to-keep edit cues |
+| `[learning] reviewer_enabled` | `false` | UI: Learning tab; optional post-edit OpenRouter review |
 | `[learning] reviewer_model` / `reviewer_send_audio` | audio-capable default / `true` | independent model; audio leaves Mac when on |
 | `[learning] reviewer_prompt_file` / `reviewer_min_confidence` | `learning_prompt.md` / `0.55` | editable prompt + confidence floor |
 | `[context] enabled` | `true` | providers + AX text reads |
 | `[context] focused_field_text` | `true` | full focused-input draft |
 | `[context] visible_text` | `true` | surrounding on-screen text only |
 | `[context] text_before_cursor` | `true` | pre-caret continuation slice |
-| `[insert] method` | `"auto"` | `auto` / `type` / `paste` |
-| `[insert] restore_clipboard` | `false` | true = restore old clipboard after 1.5 s |
-| `[audio] device` | `0` | sounddevice input index |
-| `[audio] keep_recordings` | `true` | save wav per dictation |
+| `[insert] method` | `"auto"` | **config-only**; `auto` / `type` / `paste` |
+| `[insert] restore_clipboard` | `false` | **config-only**; true = restore old clipboard after 1.5 s |
+| `[audio] device` | `0` | **config-only**; sounddevice input index |
+| `[audio] keep_recordings` | `true` | **config-only**; save wav per dictation |
 | `[app] onboarded` | — | set by the wizard |
 | `[paths] *` | `~/.golos/` | dictionary / corrections / history / suggestions / dismissed |
 
