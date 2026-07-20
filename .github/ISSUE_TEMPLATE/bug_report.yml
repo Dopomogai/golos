@@ -1,0 +1,114 @@
+name: Bug report
+description: Something broken in the golos macOS beta or from source.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. This is the **unsigned v0.3.1 macOS beta**
+        (macOS 13+, Apple Silicon + Intel). There is no auto-updater.
+
+        **Never paste API keys, tokens, full `config.toml`, private audio, or
+        private transcripts.** Sanitize logs before attaching them.
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Mac architecture
+      description: Which machine architecture you are running on.
+      options:
+        - Apple Silicon (arm64)
+        - Intel (x86_64)
+        - Unknown / other
+    validations:
+      required: true
+  - type: input
+    id: macos_version
+    attributes:
+      label: macOS version
+      description: e.g. 14.5, 15.1 (Apple menu → About This Mac).
+      placeholder: "14.x / 15.x"
+    validations:
+      required: true
+  - type: input
+    id: app_version
+    attributes:
+      label: App version
+      description: Release tag, DMG name, or git commit (e.g. v0.3.1, golos-0.3.1-apple-silicon.dmg, or main @ abc1234).
+      placeholder: "v0.3.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: install_path
+    attributes:
+      label: How did you install / run golos?
+      options:
+        - DMG → Applications (unsigned beta; right-click → Open)
+        - Built app (build_app.sh / build_intel_app.sh)
+        - From source (./dictate.sh / python -m dictate)
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: stt_path
+    attributes:
+      label: Cloud or local STT path
+      description: OpenRouter/cloud is default. Local MLX is optional on Apple Silicon only; Intel builds are cloud-only.
+      options:
+        - Cloud (OpenRouter / cloud STT)
+        - Local MLX (Apple Silicon only)
+        - Mixed / unsure
+        - N/A (not related to transcription)
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps starting from a cold launch when possible.
+      placeholder: |
+        1. Launch golos…
+        2. Hold fn / release…
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs
+      description: |
+        Paste relevant stdout / console lines only. Redact API keys, tokens,
+        emails, paths that identify private content, and any transcript text
+        you do not want public. Local config lives under ~/.golos — do not
+        dump that directory.
+      placeholder: |
+        [example] combo path: event tap (blocking)
+        [example] warning text with secrets removed
+    validations:
+      required: false
+  - type: checkboxes
+    id: permissions
+    attributes:
+      label: Permissions checklist (if relevant)
+      options:
+        - label: Microphone granted to the process that runs golos (Terminal or golos.app)
+        - label: Input Monitoring granted
+        - label: Accessibility granted
+        - label: Keyboard “Press 🌐/fn key to” set to Do Nothing
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Bubble style, hotkey, target app, formatting on/off, etc.

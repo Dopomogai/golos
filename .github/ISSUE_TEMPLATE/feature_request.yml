@@ -1,0 +1,55 @@
+name: Feature request
+description: Propose a change that fits golos’s macOS dictation scope.
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        golos is a **macOS 13+** push-to-talk dictation app (v0.3.1 unsigned
+        beta). Check [docs/ROADMAP.md](https://github.com/Dopomogai/golos/blob/main/docs/ROADMAP.md)
+        before requesting work already listed there.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What is hard or missing in day-to-day dictation?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Concrete behavior you would like. Prefer product outcomes over implementation detail.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary area
+      options:
+        - Dictation / hotkeys / insert
+        - STT (cloud or local MLX)
+        - Formatting / context / privacy toggles
+        - Learning / dictionary / corrections
+        - History / recovery
+        - Settings / onboarding / UI
+        - Packaging / unsigned beta distribution
+        - Docs / website
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds, other tools, or roadmap items you already checked.
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: I understand Windows/mobile are pipeline work with no announced date (Mac is supported today).
+        - label: I am not requesting a signed/notarized or auto-updating build as if it already ships (those remain near-term distribution work).
