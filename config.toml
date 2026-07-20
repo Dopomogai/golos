@@ -1,0 +1,58 @@
+[hotkey]
+hold_key = "fn"            # fn | right_option | right_command | f5
+toggle_combo = "fn+space"  # fn+space | double_fn (fn+space always works alongside)
+
+[stt]
+backend = "openrouter"
+mlx_model = "mlx-community/whisper-large-v3-turbo"
+language = ""
+
+[openrouter]
+api_key = ""  # set yours here or via Settings (stored in ~/.golos)
+
+[formatting]
+enabled = true
+provider = "openrouter"
+model = "google/gemini-3.1-flash-lite-preview"
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+fast_mode = false
+fast_mode_max_words = 10
+
+[bubble]
+style = "notch"
+
+[learning]
+live_cues = true           # watch the field after insertion, offer corrections live
+live_cue_seconds = 8      # how long the cue pill stays visible
+enabled = true
+edit_window_seconds = 600
+
+[context]
+enabled = true
+
+[insert]
+method = "auto"           # auto | type | paste (auto: type for single-line, paste for multi-line)
+
+[audio]
+device = 0                 # 0 = default input
+keep_recordings = true     # save every dictation wav to ~/.dictate/recordings/
+
+[paths]
+dictionary = "dictionary.txt"
+corrections = "corrections.tsv"
+history = "history.jsonl"
+suggestions = "suggestions.jsonl"
+dismissed = "dismissed.jsonl"
+
+[stt.openrouter]
+model = "qwen/qwen3-asr-flash-2026-02-10"
+
+[stt.cloud]
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+model = "whisper-1"
+
+[stt.deepgram]
+api_key_env = "DEEPGRAM_API_KEY"
+model = "nova-3"

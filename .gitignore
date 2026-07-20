@@ -1,0 +1,15 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Build artifacts
+build/
+dist/
+
+# Runtime state (real state lives in ~/.golos/)
+.dictate.lock
+
+# OS junk
+.DS_Store

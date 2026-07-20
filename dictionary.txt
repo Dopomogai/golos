@@ -1,0 +1,7 @@
+# One term per line. These are fed to the STT model as an initial_prompt
+# (vocabulary biasing) and to the formatting LLM. Lines starting with # are ignored.
+Wispr Flow
+PyObjC
+mlx-whisper
+JSONL
+macOS

@@ -1,0 +1,12 @@
+mlx-whisper==0.4.3
+mlx==0.32.0
+sounddevice==0.5.5
+numpy==2.4.6
+httpx==0.28.1
+pyobjc-core==12.2.1
+pyobjc-framework-Cocoa==12.2.1
+pyobjc-framework-Quartz==12.2.1
+pyobjc-framework-ApplicationServices==12.2.1
+pyobjc-framework-AVFoundation==12.2.1
+toml==0.10.2
+py2app==0.28.10

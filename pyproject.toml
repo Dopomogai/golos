@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dictate"
+version = "0.2.0"
+description = "Push-to-talk dictation for macOS, plus dictate_core: an embeddable voice pipeline library"
+requires-python = ">=3.11"
+dependencies = ["httpx", "numpy"]
+
+[project.optional-dependencies]
+mlx = ["mlx-whisper"]
+mic = ["sounddevice"]
+app = [
+    "pyobjc-core",
+    "pyobjc-framework-Cocoa",
+    "pyobjc-framework-Quartz",
+    "pyobjc-framework-ApplicationServices",
+    "pyobjc-framework-AVFoundation",
+    "toml",
+    "sounddevice",
+    "mlx-whisper",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["dictate", "dictate_core"]
