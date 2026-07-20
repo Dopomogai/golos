@@ -4,7 +4,7 @@
 @role: reference
 @stability: accepted
 @tags: [golos, readme, setup, permissions, dictation]
-related_docs: [docs/PRODUCT.md, docs/GUIDE.md, docs/TECH.md, docs/VISION.md, docs/TESTING.md, RELEASE_CHECKLIST.md]
+related_docs: [docs/PRODUCT.md, docs/GUIDE.md, docs/TECH.md, docs/VISION.md, docs/ROADMAP.md, docs/PRODUCT_PAGE.md, docs/TESTING.md, RELEASE_CHECKLIST.md]
 ---
 # golos
 
@@ -13,7 +13,21 @@ A minimal macOS push-to-talk dictation app, in Python + PyObjC
 
 > Docs: [docs/PRODUCT.md](docs/PRODUCT.md) (user guide) ·
 > [docs/TECH.md](docs/TECH.md) (architecture) · [docs/VISION.md](docs/VISION.md) ·
+> [docs/ROADMAP.md](docs/ROADMAP.md) (public roadmap) ·
+> [docs/PRODUCT_PAGE.md](docs/PRODUCT_PAGE.md) (site copy) ·
 > [docs/TESTING.md](docs/TESTING.md) (tests & coverage)
+
+**Download (v0.3.1 beta DMGs — pick your architecture):**
+
+- [Apple Silicon](https://github.com/Dopomogai/golos/releases/download/v0.3.1/golos-0.3.1-apple-silicon.dmg)
+  — cloud + optional local MLX
+- [Intel](https://github.com/Dopomogai/golos/releases/download/v0.3.1/golos-0.3.1-intel.dmg)
+  — cloud-only OpenRouter
+
+Unsigned beta: first launch is **right-click → Open**. Release notes and
+checksums: [latest release](https://github.com/Dopomogai/golos/releases/latest).
+Product page source: [`site/`](site/) (direct architecture chooser at
+`#download`; roadmap at `#roadmap`).
 
 **Tests:** `.venv/bin/pip install -r requirements-dev.txt` then
 `.venv/bin/python -m pytest -q` — see [docs/TESTING.md](docs/TESTING.md).
@@ -112,8 +126,10 @@ Requires `py2app` and `setuptools<80` (in the requirements files). The bundle is
 unsigned — to run it: **right-click → Open** (Gatekeeper), then re-grant the
 three permissions (Microphone, Input Monitoring, Accessibility) to
 **golos.app** — it's a separate TCC identity from your terminal. The
-onboarding wizard appears on first run and walks you through it. Signing +
-notarization are the remaining steps for real distribution (docs/VISION.md).
+onboarding wizard appears on first run and walks you through it. Signing,
+notarization, and a trustworthy update path are near-term distribution work
+(see [docs/ROADMAP.md](docs/ROADMAP.md)); do not claim the beta is signed or
+auto-updating.
 
 ## Install (from the DMG)
 

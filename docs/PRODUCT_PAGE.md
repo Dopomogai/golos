@@ -1,10 +1,10 @@
 ---
-@purpose: "Source marketing copy for the golos product page: hero, features, privacy, FAQ, and download blocks."
+@purpose: "Source marketing copy for the golos product page: hero, features, privacy, FAQ, download, and roadmap blocks."
 @why: "Keeps launch-site wording in one place mapped by the release checklist and site README."
 @role: reference
 @stability: evolving
 @tags: [golos, product-page, marketing, copy, launch]
-related_docs: [site/README.md, RELEASE_CHECKLIST.md, docs/PRODUCT.md]
+related_docs: [site/README.md, RELEASE_CHECKLIST.md, docs/PRODUCT.md, docs/ROADMAP.md]
 ---
 # golos — product page copy
 
@@ -23,6 +23,17 @@ types it into whatever app you're in — email, terminal, chat, IDE.
   download. Apple Silicon users can explicitly download on-device Whisper.
 - **It knows where you're typing.** dictate sees the app, the window, even
   the file you're editing — so "attach main dot pi" becomes `main.py`.
+
+**Hero CTAs:** direct architecture downloads (not the generic releases index):
+
+- Apple Silicon DMG:
+  `https://github.com/Dopomogai/golos/releases/download/v0.3.1/golos-0.3.1-apple-silicon.dmg`
+- Intel DMG (cloud-only):
+  `https://github.com/Dopomogai/golos/releases/download/v0.3.1/golos-0.3.1-intel.dmg`
+
+Nav **Download** anchors to `#download`. Note: Intel is cloud-only; beta is
+unsigned — first launch uses right-click → Open. Keep the GitHub release page
+as a small details/fallback link only.
 
 ## Feature grid
 
@@ -75,6 +86,21 @@ Same voice. Your choice per machine, per moment.
 - Microphone, Input Monitoring, Accessibility permissions (guided setup)
 - Optional: an OpenRouter API key for cloud models + LLM formatting
 
+## Roadmap
+
+Mirror [`docs/ROADMAP.md`](ROADMAP.md) as a `#roadmap` section (no dates):
+
+- **Shipped now** — v0.3.1 Mac beta; Apple Silicon + Intel; cloud-first
+  OpenRouter; optional local MLX on Apple Silicon; context separation;
+  History/recovery; human-approved corrections.
+- **Near term** — stability/compatibility hardening; Developer ID
+  signing/notarization; launch at login; trustworthy update path; smoother
+  diagnostics/recovery.
+- **Next** — command mode; screenshot context; meeting/diarization; opt-in
+  encrypted cross-device sync.
+- **Pipeline** — Windows desktop and mobile. Mac is supported today;
+  Windows/mobile need separate native work and have no announced date.
+
 ## FAQ
 
 **Is my audio stored?**
@@ -94,9 +120,10 @@ Microphone to hear you, Input Monitoring to see the fn key globally,
 Accessibility to paste into other apps and read context. No Accessibility =
 dictation still transcribes, it just can't paste for you.
 
-**Windows?**
-Not planned — golos is built on macOS-native APIs (Accessibility,
-CGEvent, the notch). It's a Mac app through and through.
+**Which platforms are available?**
+macOS is supported today (Apple Silicon and Intel). Windows desktop and
+mobile are in the pipeline; they require separate native work and have no
+announced date.
 
 **How does the dictionary learn?**
 When you hand-edit something dictate inserted, it notices the diff and
@@ -106,11 +133,21 @@ Nothing is learned without your approval.
 
 ## Download
 
-**golos for macOS** — separate Apple Silicon and Intel DMGs.
-Free and open-source under MIT. The current beta is unsigned, so first launch
-uses right-click → Open; do not describe it as signed or notarized yet.
+**golos for macOS** — choose architecture; each CTA is a **direct DMG**:
+
+| Architecture | Asset |
+|---|---|
+| Apple Silicon | `…/releases/download/v0.3.1/golos-0.3.1-apple-silicon.dmg` |
+| Intel (cloud-only) | `…/releases/download/v0.3.1/golos-0.3.1-intel.dmg` |
+
+Free and open-source under MIT. The current beta is **unsigned**, so first
+launch uses **right-click → Open**; do not describe it as signed, notarized,
+or auto-updating. The generic GitHub release page is a **details/fallback**
+link only (notes, checksums), not the primary download path. Nav Download
+points at `#download`.
 
 ---
 *Copy notes: hero animates the notch wings in a 6s loop; the raw/formatted
 toggle is an interactive split-view; FAQ stays accordion. Before/after
-examples are real history entries (anonymized).*
+examples are real history entries (anonymized). Roadmap section matches
+docs/ROADMAP.md.*

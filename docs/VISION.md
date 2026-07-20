@@ -1,10 +1,10 @@
 ---
-@purpose: "Why golos exists, design principles, and the roadmap through public release and later phases."
+@purpose: "Why golos exists, design principles, and status-aligned direction after the public v0.3.1 Mac beta."
 @why: "Anchors product decisions so processing choices stay explicit, human-gated, and legible."
 @role: reference
 @stability: evolving
 @tags: [golos, vision, principles, roadmap]
-related_docs: [docs/PRODUCT.md, docs/TECH.md, RELEASE_CHECKLIST.md, README.md]
+related_docs: [docs/PRODUCT.md, docs/TECH.md, docs/ROADMAP.md, RELEASE_CHECKLIST.md, README.md]
 ---
 # golos — vision
 
@@ -35,39 +35,42 @@ a prompt you can print.
 - **Small and legible.** One process, ~15 modules, no framework. If a
   feature can't be explained in the README, it doesn't ship.
 
-## Roadmap
+## Status (public v0.3.1 beta)
 
-### Must-haves before public release
+golos is a **public Mac beta**. Apple Silicon and Intel DMGs ship today;
+OpenRouter is the default path; optional local MLX is available on Apple
+Silicon after an explicit download. Onboarding, History/recovery, context
+separation, and human-approved learning are in the product.
 
-- **py2app bundle** — a signed `.app` so permissions attach to the app,
-  not the terminal; no Python install required.
-- **Notarization** — Gatekeeper-clean distribution for non-technical users.
-- **Onboarding wizard** — first-run flow that walks the three permission
-  grants with live ✓/✗ detection (the checks already exist) and a test
-  dictation.
-- **Launch at login** — one checkbox; the single-instance flock already
-  makes double-launches safe.
+What is **not** true of this beta: Developer ID signing, notarization, or
+automatic updates. First launch still uses **right-click → Open**. Treat
+signing, notarization, launch-at-login, and a trustworthy update path as
+**near-term hardening**, not as pre-release gates that block the public repo.
 
-### Phase 2
+For the honest public list (shipped / near term / next / pipeline), see
+[`docs/ROADMAP.md`](ROADMAP.md). Summary:
+
+### Near term
+
+Stability and compatibility hardening, Developer ID signing and
+notarization, launch at login, a trustworthy update path, smoother
+diagnostics and recovery.
+
+### Next
 
 - **Command mode** — "computer, search for X" / "send that": intents, not
   just text. The guarded answer mode (`[formatting] answer_questions`) that
   ships today is the first step down this path.
-- **Cross-device sync with accounts** — dictionary, corrections, and
-  dismissed suggestions synced across a user's machines; opt-in, end-to-end
-  encrypted, history stays local.
 - **Screenshot context** — a frame around the cursor as formatter context
   for apps where AX sees nothing (Electron, games, remote desktops).
 - **Meeting / diarization mode** — long-form capture with speaker labels
   and a summary pass; different UX (recording window, not a bubble).
+- **Opt-in encrypted cross-device sync** — dictionary, corrections, and
+  dismissed suggestions across a user's machines; history stays local.
 
-### Explicitly parked
+### Pipeline
 
-- **Windows/Linux ports** — the entire value proposition hangs off macOS
-  APIs (AX, CGEvent, NSPanel); a port is a rewrite, not a port.
-- **One-stage multimodal audio** (LLM straight from audio) — weakens the
-  local option and vocabulary biasing today; revisit when local
-  audio-LLMs mature.
-- **Emotion/style annotations** — tone inference from voice is creepy by
-  default and high-effort; punctuation + context already covers the 95%
-  case.
+**Mac is supported today.** Windows desktop and mobile are in the pipeline;
+they need separate native work and have no announced date. One-stage
+multimodal audio and emotion/style annotations remain deferred product
+research — not platform-availability statements.
