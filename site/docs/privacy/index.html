@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="How golos handles audio, text context, cloud APIs, and local files under ~/.golos. Data-flow matrix, retention, backup, and a privacy-minimal setup.">
+  <meta name="theme-color" content="#080b12">
+  <meta property="og:title" content="Privacy &amp; data — Golos Help">
+  <meta property="og:description" content="Clear data flow for cloud STT, local MLX, formatting, learning reviewer, and local files under ~/.golos.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://golos.dopomogai.com/docs/privacy/">
+  <title>Privacy &amp; data — Golos Help</title>
+  <link rel="canonical" href="https://golos.dopomogai.com/docs/privacy/">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="../../golos-mark.svg">
+  <link rel="stylesheet" href="../docs.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="docs-nav-shell">
+    <nav class="docs-nav" aria-label="Primary navigation">
+      <a class="brand" href="https://golos.dopomogai.com/" aria-label="golos home">
+        <img class="brand-mark" src="../../golos-mark.svg" width="28" height="28" alt="" aria-hidden="true">
+        <span>golos</span>
+      </a>
+      <div class="docs-nav-links">
+        <a href="https://golos.dopomogai.com/">Home</a>
+        <a href="../" aria-current="page">Docs</a>
+        <a class="button button-small" href="https://golos.dopomogai.com/#download">Download</a>
+      </div>
+    </nav>
+  </header>
+
+  <div class="docs-shell docs-shell--with-sidebar">
+    <aside class="docs-sidebar" aria-label="Help topics">
+      <p class="docs-sidebar-title">Help Center</p>
+      <nav>
+        <ul>
+          <li><a href="../getting-started/">Getting started</a></li>
+          <li><a href="../settings/">Settings</a></li>
+          <li><a href="../workflows/">Workflows</a></li>
+          <li><a href="../better-results/">Better results</a></li>
+          <li><a href="./" aria-current="page">Privacy &amp; data</a></li>
+          <li><a href="../troubleshooting/">Troubleshooting</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-group">
+        <span>More</span>
+        <nav aria-label="Project links">
+          <ul>
+            <li><a href="https://github.com/Dopomogai/golos">GitHub</a></li>
+            <li><a href="https://github.com/Dopomogai/golos/blob/main/docs/ROADMAP.md">Roadmap</a></li>
+            <li><a href="https://github.com/Dopomogai/golos/releases/latest">Releases</a></li>
+          </ul>
+        </nav>
+      </div>
+    </aside>
+
+    <main id="main" class="docs-article">
+      <header class="page-hero">
+        <p class="kicker">Privacy &amp; data</p>
+        <h1>What leaves your Mac, and what stays</h1>
+        <p class="lede">
+          golos is cloud-first by default, with an explicit local STT option on Apple Silicon.
+          Formatting, context reads, retained audio, and the optional learning reviewer are separate switches.
+          This page maps the real data paths in v0.3.1 — not marketing claims.
+        </p>
+        <div class="page-hero-meta">
+          <span class="version-badge" title="Documentation applies to this public beta">Applies to v0.3.1</span>
+          <span class="muted" style="font-size:13px">macOS 13+ · no built-in sync or encryption layer</span>
+        </div>
+      </header>
+
+      <nav aria-label="On this page">
+        <p class="docs-sidebar-title">On this page</p>
+        <ul>
+          <li><a href="#data-flow">Data-flow matrix</a></li>
+          <li><a href="#focused-vs-visible">Focused draft vs surrounding context</a></li>
+          <li><a href="#local-data">What lives in ~/.golos</a></li>
+          <li><a href="#keep-recordings">Recordings &amp; History recovery</a></li>
+          <li><a href="#backup-reset">Backup, transfer, reset, uninstall</a></li>
+          <li><a href="#privacy-minimal">Privacy-minimal setup</a></li>
+          <li><a href="#permissions">Permissions</a></li>
+          <li><a href="#security">Report a security issue</a></li>
+        </ul>
+      </nav>
+
+      <section id="data-flow" aria-labelledby="data-flow-title">
+        <h2 id="data-flow-title">Data-flow matrix</h2>
+        <p>
+          Each pipeline stage can send different material off-device. Turning formatting off does
+          <strong>not</strong> stop cloud speech-to-text from receiving audio. There is no built-in
+          end-to-end encryption of API traffic beyond normal HTTPS, and golos does not sync
+          <code>~/.golos</code> anywhere for you.
+        </p>
+        <p>
+          When a cloud path is enabled, audio and/or text go to the provider you configured
+          (OpenRouter by default, or another OpenAI-compatible endpoint). golos does
+          <strong>not</strong> claim that third parties retain nothing. Read and trust their own
+          policies — for example
+          <a href="https://openrouter.ai/privacy">OpenRouter’s privacy policy</a>
+          and the policies of any model vendor behind a route you pick.
+        </p>
+
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <caption class="sr-only">What each pipeline stage may send off-device</caption>
+            <thead>
+              <tr>
+                <th scope="col">Stage</th>
+                <th scope="col">Default</th>
+                <th scope="col">What may leave the Mac</th>
+                <th scope="col">Stays local when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Cloud STT</th>
+                <td>On (<code>backend = "openrouter"</code>)</td>
+                <td>
+                  Recorded dictation audio (16&nbsp;kHz mono WAV), plus dictionary terms as a
+                  recognition prompt/bias. Not the full formatter context block.
+                  Also applies to OpenAI-compatible and Deepgram backends when selected.
+                </td>
+                <td>
+                  Switch STT to local MLX on Apple Silicon
+                  (<code>[stt] backend = "mlx"</code>). Intel builds are cloud-only for STT.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Local MLX STT</th>
+                <td>Off until you choose it</td>
+                <td>
+                  Nothing for transcription itself. Weights live under
+                  <code>~/.cache/huggingface</code> after an <strong>explicit</strong>
+                  Download local (~1.5&nbsp;GB) action — dictation never starts that download silently.
+                </td>
+                <td>
+                  Always for the STT step. Formatting and the learning reviewer are independent
+                  and can still send data if enabled.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Formatter</th>
+                <td>On (<code>[formatting] enabled = true</code>)</td>
+                <td>
+                  Raw transcript text plus the filtered context block when context is enabled:
+                  app/window identity (never process PID), optional browser tab URL, VS&nbsp;Code
+                  workspace file list, Finder selection, and the text roles below. If no API key
+                  is configured, formatting is skipped and raw text is used.
+                </td>
+                <td>
+                  <code>[formatting] enabled = false</code> (raw mode), or no key configured.
+                  Context providers are not gathered for the formatter when formatting is off.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Formatter <code>send_audio</code></th>
+                <td>Off (<code>false</code>)</td>
+                <td>
+                  Same as the formatter, plus the original WAV attached as
+                  <code>input_audio</code> for garbled-transcript recovery on audio-capable models.
+                  Extra privacy and cost exposure.
+                </td>
+                <td>
+                  Leave <code>[formatting] send_audio = false</code>, or disable formatting entirely.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Learning reviewer</th>
+                <td>Off (<code>reviewer_enabled = false</code>)</td>
+                <td>
+                  Only when you turn it on: bounded excerpts of raw transcript, inserted text,
+                  and your edited field (capped; not a whole large document). If
+                  <code>reviewer_send_audio</code> is on (default <code>true</code> when the reviewer
+                  is enabled) <em>and</em> a retained WAV exists, that audio is base64-attached too.
+                  Suggestions are never auto-promoted — you approve them.
+                </td>
+                <td>
+                  Leave the reviewer off (shipped default), or disable
+                  <code>reviewer_send_audio</code> for text-only review. Offline deterministic
+                  text-diff learning still works without any reviewer network call.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <aside class="callout callout--note" aria-label="Note">
+          <span class="callout-icon" aria-hidden="true">i</span>
+          <div class="callout-body">
+            <span class="callout-title">History is local</span>
+            <p>
+              Every completed or failed run is appended to
+              <code>~/.golos/history.jsonl</code> on disk. That file is not uploaded by golos.
+              It can still contain transcripts and context snapshots you would not want in a
+              public bug report.
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      <section id="focused-vs-visible" aria-labelledby="focused-vs-visible-title">
+        <h2 id="focused-vs-visible-title">Focused draft vs surrounding reading context</h2>
+        <p>
+          Accessibility text is split into separate roles on purpose. They are not interchangeable,
+          and <code>visible_text</code> never silently reuses the focused field’s value.
+        </p>
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th scope="col">Role</th>
+                <th scope="col">What it is</th>
+                <th scope="col">Cap</th>
+                <th scope="col">Typical use</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>focused_field_text</code></th>
+                <td>
+                  Full accessible value of the <strong>focused input</strong> — the draft you are
+                  composing (AXValue of the focused element).
+                </td>
+                <td>≤ 4000 characters (last chunk if longer)</td>
+                <td>Continue or edit the document you are already writing.</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>text_before_cursor</code></th>
+                <td>
+                  Slice of that same focused field immediately before the caret
+                  (continuation placement).
+                </td>
+                <td>≤ 500 characters</td>
+                <td>Join mid-sentence without re-sending the whole draft.</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>visible_text</code></th>
+                <td>
+                  Surrounding / on-screen <strong>reading</strong> context from another suitable
+                  text area in the focused window — not the focused field. Normalized
+                  (box-drawing stripped, space runs collapsed). Empty when inaccessible.
+                </td>
+                <td>≤ 4000 characters (last chunk)</td>
+                <td>
+                  Comment-on-what-you-see / citation-style formatting when the surrounding
+                  surface is readable via Accessibility.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>
+            These text roles, plus app/window and provider fields (browser tab URL, workspace
+            file list, Finder selection), leave the Mac only when formatting is enabled and the
+            matching <code>[context]</code> toggles allow them.
+          </li>
+          <li>
+            Process <strong>PID</strong> is kept for local edit-capture after app switch and is
+            stripped before any formatter prompt.
+          </li>
+          <li>
+            Master switch: <code>[context] enabled = false</code> skips providers and AX text reads.
+            Per-field toggles live under Settings → Prompt (and in <code>config.toml</code>).
+          </li>
+          <li>
+            Context is best-effort. Missing Accessibility, Automation consent, or app support means
+            empty fields — not a guarantee of citations or perfect app awareness.
+          </li>
+        </ul>
+      </section>
+
+      <section id="local-data" aria-labelledby="local-data-title">
+        <h2 id="local-data-title">What lives in <code>~/.golos</code></h2>
+        <p>
+          All mutable app state is under your home directory so a bundled
+          <code>golos.app</code> does not need the project tree. On first launch after the rename
+          from “dictate”, an existing <code>~/.dictate</code> set is <strong>copied</strong> once
+          into <code>~/.golos</code> (originals are left in place). There is no cloud backup or
+          multi-device sync built into golos.
+        </p>
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th scope="col">Path</th>
+                <th scope="col">Contents</th>
+                <th scope="col">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>~/.golos/config.toml</code></th>
+                <td>Settings, model ids, feature flags, optional OpenRouter API key</td>
+                <td>
+                  Created with mode <code>600</code> (user-only) because it may hold a key.
+                  Environment variable <code>OPENROUTER_API_KEY</code> wins over the file when set.
+                  Never paste this file into issues or chat.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row"><code>~/.golos/history.jsonl</code></th>
+                <td>Append-only dictation / recovery log</td>
+                <td>
+                  Raw and final text, app identity, truncated context, status/stage,
+                  optional retained audio path. Grouped by <code>run_id</code> in Settings → History.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row"><code>~/.golos/dictionary.txt</code></th>
+                <td>Vocabulary terms (one per line)</td>
+                <td>Biases STT and is listed for the formatter. Editable in Settings → Dictionary.</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>~/.golos/corrections.tsv</code></th>
+                <td><code>wrong → right</code> pairs</td>
+                <td>Applied by the formatter (and local fast-mode literals). Human-approved promotions land here.</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>~/.golos/suggestions.jsonl</code></th>
+                <td>Pending learned pairs</td>
+                <td>From edit capture / optional reviewer. Approve or dismiss in History → Suggestions.</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>~/.golos/dismissed.jsonl</code></th>
+                <td>Pairs you dismissed</td>
+                <td>Keeps the same bad suggestion from returning.</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>~/.golos/recordings/</code></th>
+                <td>WAV archives when retention is on</td>
+                <td>
+                  Layout <code>YYYY-MM-DD/HHMMSS_mmm.wav</code>. Only written when
+                  <code>[audio] keep_recordings = true</code> (default).
+                </td>
+              </tr>
+              <tr>
+                <th scope="row"><code>~/.golos/dictate.lock</code></th>
+                <td>Single-instance flock</td>
+                <td>Released when the process exits. Not personal content.</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>~/.golos/prompt.md</code> (optional)</th>
+                <td>Custom formatter system prompt template</td>
+                <td>Created if you edit the prompt in Settings.</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>~/.golos/learning_prompt.md</code> (optional)</th>
+                <td>Custom learning-reviewer prompt</td>
+                <td>Only relevant if the reviewer is enabled.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <aside class="callout callout--warning" aria-label="Warning">
+          <span class="callout-icon" aria-hidden="true">!</span>
+          <div class="callout-body">
+            <span class="callout-title">Do not share secrets or personal audio</span>
+            <p>
+              When asking for help, never paste API keys, full <code>config.toml</code>,
+              private transcripts from history, or WAV files. Describe the symptom and the
+              Settings toggles you changed — not the content of your dictations.
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      <section id="keep-recordings" aria-labelledby="keep-recordings-title">
+        <h2 id="keep-recordings-title">Recordings retention and History recovery</h2>
+        <p>
+          <code>[audio] keep_recordings</code> defaults to <code>true</code>. When on, each capture
+          that is saved is written under <code>~/.golos/recordings/</code> and the history line may
+          store that path (<code>audio</code> / <code>audio_retained</code>). When off, no archive
+          file is written for that dictation.
+        </p>
+        <ul>
+          <li>
+            <strong>STT retry</strong> in Settings → History needs a retained WAV still on disk.
+            If retention was off (or the file was deleted), STT cannot be re-run from History —
+            golos will not invent audio.
+          </li>
+          <li>
+            <strong>Format retry</strong> needs stored raw text; attaching audio for
+            <code>send_audio</code> is optional and only works if the WAV is still present.
+          </li>
+          <li>
+            Default History <strong>Retry does not re-insert</strong> into the frontmost app.
+            Use <strong>Copy text</strong> for an explicit paste. Show audio reveals the file in
+            Finder when a path exists.
+          </li>
+          <li>
+            <strong>Esc while recording</strong> discards the capture with no history line.
+            <strong>Esc while processing</strong> can write a cancelled recovery line without inserting.
+          </li>
+          <li>
+            Turning retention off reduces local disk footprint and removes one path for
+            <code>reviewer_send_audio</code> / formatter audio attach on later runs. It also
+            limits recovery for failed cloud STT.
+          </li>
+        </ul>
+        <p>
+          Retention is config-only today (edit <code>~/.golos/config.toml</code>); it is not a
+          dedicated Settings toggle in the UI. Quit golos before hand-editing the file, or change
+          the value carefully and restart so the process reloads config.
+        </p>
+      </section>
+
+      <section id="backup-reset" aria-labelledby="backup-reset-title">
+        <h2 id="backup-reset-title">Backup, transfer, reset, and uninstall</h2>
+        <p>
+          Prefer <strong>copy first</strong>, then delete only explicit paths you intend to remove.
+          Avoid broad recursive deletes against your home folder or whole volumes. The examples below
+          use only <code>~/.golos</code>.
+        </p>
+
+        <h3 id="backup">Back up</h3>
+        <p>Copy the whole data directory to a folder you control (external drive, encrypted disk image, etc.):</p>
+        <pre><code>mkdir -p ~/Desktop/golos-backup
+cp -R ~/.golos ~/Desktop/golos-backup/golos-$(date +%Y%m%d)</code></pre>
+        <p>
+          That archive may contain an API key and personal audio. Treat it like a password vault —
+          do not email it or commit it to git.
+        </p>
+
+        <h3 id="transfer">Transfer to another Mac</h3>
+        <ol class="step-list">
+          <li>
+            <strong class="step-title">Install on the destination</strong>
+            <p>Install golos and complete first-run permissions on the new Mac.</p>
+          </li>
+          <li>
+            <strong class="step-title">Quit both instances</strong>
+            <p>Quit golos on both machines (menu-bar icon → Quit).</p>
+          </li>
+          <li>
+            <strong class="step-title">Copy <code>~/.golos</code></strong>
+            <p>
+              Copy the folder from the old Mac into the new Mac’s home directory
+              (replace or merge intentionally). A full folder copy preserves history, dictionary,
+              corrections, and recordings.
+            </p>
+          </li>
+          <li>
+            <strong class="step-title">Re-check keys and models</strong>
+            <p>
+              Verify the API key and STT backend. Local MLX weights under
+              <code>~/.cache/huggingface</code> are separate; re-download on Apple Silicon if needed.
+              Rotate the OpenRouter (or other) key if the old machine will be wiped or shared.
+            </p>
+          </li>
+        </ol>
+        <p>There is no official account-based sync. Transfer is a manual file copy only.</p>
+
+        <h3 id="reset">Reset local state</h3>
+        <p>To start clean while keeping a safety copy:</p>
+        <pre><code>cp -R ~/.golos ~/Desktop/golos-backup-before-reset
+# Then remove only what you want, for example history only:
+rm ~/.golos/history.jsonl
+# Or clear retained audio only:
+rm -R ~/.golos/recordings</code></pre>
+        <p>
+          Removing <code>config.toml</code> drops Settings and any stored key; the next launch
+          recreates a seed config. Removing dictionary/corrections forgets vocabulary you taught.
+        </p>
+
+        <h3 id="uninstall">Uninstall</h3>
+        <ol class="step-list">
+          <li>
+            <strong class="step-title">Quit golos</strong>
+            <p>Use the menu-bar icon → Quit.</p>
+          </li>
+          <li>
+            <strong class="step-title">Remove the app</strong>
+            <p>Drag <code>/Applications/golos.app</code> to the Trash (or delete the app bundle you installed).</p>
+          </li>
+          <li>
+            <strong class="step-title">Optionally remove data (after a backup)</strong>
+            <pre><code>rm -R ~/.golos</code></pre>
+          </li>
+          <li>
+            <strong class="step-title">Optional model cache</strong>
+            <p>
+              Inspect <code>~/.cache/huggingface</code> before deleting anything — it may hold other
+              models. Remove Whisper weights there only if you no longer need them.
+            </p>
+          </li>
+          <li>
+            <strong class="step-title">Permissions leftovers</strong>
+            <p>
+              TCC entries for golos may remain in System Settings → Privacy &amp; Security until
+              you remove them manually; that is normal for macOS.
+            </p>
+          </li>
+        </ol>
+      </section>
+
+      <section id="privacy-minimal" aria-labelledby="privacy-minimal-title">
+        <h2 id="privacy-minimal-title">Privacy-minimal setup</h2>
+        <p>
+          “Fully local” for day-to-day dictation means: speech stays on-device, and no second-stage
+          LLM or learning reviewer is called. That combination requires <strong>Apple Silicon</strong>
+          for local MLX. Intel builds are cloud-only for STT.
+        </p>
+        <ol class="step-list">
+          <li>
+            <strong class="step-title">Local MLX STT</strong>
+            <p>
+              Settings → General: set STT backend to <strong>local MLX</strong> and complete the
+              explicit local model download (~1.5&nbsp;GB).
+            </p>
+          </li>
+          <li>
+            <strong class="step-title">Formatting off</strong>
+            <p>
+              Turn formatting off (<code>[formatting] enabled = false</code>).
+              Insertions use the raw STT transcript — no chat formatter call and no
+              formatter context upload.
+            </p>
+          </li>
+          <li>
+            <strong class="step-title">Reviewer off</strong>
+            <p>
+              Leave the learning reviewer off (default:
+              <code>[learning] reviewer_enabled = false</code>).
+            </p>
+          </li>
+          <li>
+            <strong class="step-title">Optional hardening</strong>
+            <p>
+              <code>[audio] keep_recordings = false</code> if you do not need History STT retry
+              or local WAV archives; <code>[context] enabled = false</code> if you want no
+              AX/provider reads for the formatter path;
+              <code>[learning] enabled = false</code> if you do not want edit capture writing
+              suggestions files.
+            </p>
+          </li>
+        </ol>
+
+        <aside class="callout callout--tip" aria-label="Tip">
+          <span class="callout-icon" aria-hidden="true">✓</span>
+          <div class="callout-body">
+            <span class="callout-title">Check the combination</span>
+            <p>
+              Local MLX + formatting still on = audio stays for STT, but transcript and context can
+              still leave for the formatter. Formatting off + cloud STT = no formatter upload, but
+              <strong>audio still goes to the STT provider</strong>.
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      <section id="permissions" aria-labelledby="permissions-title">
+        <h2 id="permissions-title">Permissions (and why two of them are sensitive)</h2>
+        <p>
+          golos checks permissions at startup; it does not silently grant them. You approve each
+          one in <strong>System Settings → Privacy &amp; Security</strong>. The bundled app is a
+          separate TCC identity from Terminal — grant permissions to <strong>golos.app</strong>
+          when you run the DMG build.
+        </p>
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th scope="col">Permission</th>
+                <th scope="col">Why golos asks</th>
+                <th scope="col">Sensitivity</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Microphone</th>
+                <td>Capture 16&nbsp;kHz mono audio while you hold the talk key.</td>
+                <td>
+                  Expected for any dictation app. Audio is processed per the STT backend you chose
+                  and may be retained locally when <code>keep_recordings</code> is on.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Input Monitoring</th>
+                <td>
+                  Global hold-key and <kbd>fn</kbd>+Space detection, including the event tap that
+                  can swallow Space/F5 so they do not type into the target app.
+                </td>
+                <td>
+                  <strong>Sensitive:</strong> allows observing keyboard events across apps.
+                  golos uses this for hotkeys, not for logging what you type into other apps.
+                  Only grant it to software you trust.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Accessibility</th>
+                <td>
+                  Read focused window title and field text for context/learning; insert via
+                  synthetic typing or Cmd+V paste.
+                </td>
+                <td>
+                  <strong>Sensitive:</strong> can read UI content and drive input.
+                  Context text leaves the Mac only when formatting (and toggles) allow it.
+                  Without Accessibility, insertion and context degrade or fail.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Browser/Finder providers may also trigger a one-time <strong>Automation</strong> consent
+          dialog. Denying simply disables that provider. Also set
+          <strong>Keyboard → “Press 🌐/fn key to” → Do Nothing</strong> so macOS does not steal
+          <kbd>fn</kbd> for system dictation or emoji.
+        </p>
+      </section>
+
+      <section id="security" aria-labelledby="security-title">
+        <h2 id="security-title">Report a security issue</h2>
+        <p>
+          If you believe you found a vulnerability in golos, use GitHub
+          <strong>private</strong> vulnerability reporting — do not file a full public exploit write-up.
+        </p>
+        <p>
+          <a class="button button-small" href="https://github.com/Dopomogai/golos/security/advisories/new">Open a private security advisory</a>
+        </p>
+        <p>
+          Include affected version, macOS/arch if relevant, and clear reproduction steps over the
+          private channel only. Sanitize logs:
+          <strong>never</strong> paste API keys, tokens, full config files, personal history lines,
+          or private audio. Full policy:
+          <a href="https://github.com/Dopomogai/golos/blob/main/SECURITY.md">SECURITY.md</a>.
+        </p>
+      </section>
+
+      <nav class="docs-pager" aria-label="Adjacent help topics">
+        <a class="pager-link" href="../better-results/">
+          <span class="pager-dir">Previous</span>
+          <span class="pager-title">Better results</span>
+        </a>
+        <a class="pager-link pager-link--next" href="../troubleshooting/">
+          <span class="pager-dir">Next</span>
+          <span class="pager-title">Troubleshooting</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="docs-footer">
+    <a class="brand" href="https://golos.dopomogai.com/">
+      <img class="brand-mark" src="../../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
+      <span>golos</span>
+    </a>
+    <p>Help Center · Applies to v0.3.1 · Privacy &amp; data</p>
+    <div class="docs-footer-links">
+      <a href="../">Docs home</a>
+      <a href="https://golos.dopomogai.com/#download">Download</a>
+      <a href="https://github.com/Dopomogai/golos">GitHub</a>
+      <a href="https://github.com/Dopomogai/golos/security/advisories/new">Security</a>
+    </div>
+  </footer>
+
+  <script src="../docs.js"></script>
+</body>
+</html>
