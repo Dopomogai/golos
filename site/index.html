@@ -158,11 +158,11 @@
     <section class="section faq" id="faq">
       <div class="section-heading"><p class="kicker">Questions, answered</p><h2>The details.</h2></div>
       <div class="accordion">
-        <details open><summary>Is my audio stored?<span></span></summary><p>No. Audio is transcribed in memory and discarded. Text history—raw and final, with the destination app—stays in a local JSONL file you own.</p></details>
+        <details open><summary>Is my audio stored?<span></span></summary><p>By default, each dictation is retained locally as a WAV under <code>~/.golos/recordings/</code> for benchmarking and troubleshooting. Turn off keep-recordings to discard it after processing. Text history stays in a local JSONL file you own.</p></details>
         <details><summary>What does it cost?<span></span></summary><p>golos is free and open-source. Local speech-to-text costs nothing. Optional cloud transcription costs fractions of a cent per minute, and the built-in benchmark lets you compare supported models using your own voice.</p></details>
         <details><summary>Why does it need permissions?<span></span></summary><p>Microphone lets golos hear you, Input Monitoring sees the global <kbd>fn</kbd> key, and Accessibility inserts text and reads permitted context. Without Accessibility it can still transcribe, but cannot paste for you.</p></details>
         <details><summary>Is Windows supported?<span></span></summary><p>Not planned. golos is built around macOS-native Accessibility, keyboard-event, and camera-notch APIs. It is a Mac app through and through.</p></details>
-        <details><summary>How does the dictionary learn?<span></span></summary><p>When you edit inserted text, golos notices the near-match and suggests a correction. Promote it to your dictionary with one click or dismiss it. Nothing is learned without your approval.</p></details>
+        <details><summary>How does the dictionary learn?<span></span></summary><p>When you edit inserted text, golos notices the near-match and suggests a correction. Promote it to your dictionary with a single confirmation or dismiss it. Nothing is learned without your approval.</p></details>
       </div>
     </section>
 

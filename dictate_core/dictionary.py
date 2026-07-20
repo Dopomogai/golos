@@ -1,4 +1,9 @@
-"""Dictionary (vocabulary biasing terms) and corrections list loading."""
+"""Dictionary (vocabulary biasing terms) and corrections list loading.
+
+Plain text files under ~/.golos/: dictionary.txt (one term per line) and
+corrections.tsv (wrong\\tright). Used to bias STT prompts and stage-2
+formatting; never sent as raw file uploads.
+"""
 
 from pathlib import Path
 

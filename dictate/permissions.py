@@ -30,11 +30,13 @@ WHY = {
 
 
 def check_accessibility() -> bool:
+    """True if this process is trusted for Accessibility (AX + synthetic keys)."""
     from ApplicationServices import AXIsProcessTrusted
     return bool(AXIsProcessTrusted())
 
 
 def check_input_monitoring() -> bool:
+    """True if Input Monitoring is granted (required for a live CGEventTap)."""
     from Quartz import CGPreflightListenEventAccess
     return bool(CGPreflightListenEventAccess())
 
@@ -62,6 +64,7 @@ def check_all() -> dict:
 
 
 def granted(status) -> bool:
+    """Normalize bool (AX/IM) and mic status string into a single truthy check."""
     return status is True or status == "authorized"
 
 

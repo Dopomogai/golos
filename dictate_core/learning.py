@@ -1,6 +1,16 @@
 """Pure text-diff helpers for the learning loop (UI-free, no AppKit).
 
 Used by the dictate app (dictate/learning.py) and by dictate_core.VoicePipeline.
+
+Heuristics and false-positive guards (suggest_pairs / pair_is_plausible):
+- scroll-tolerant fuzzy locate of the insertion inside the live field text;
+- minimum anchor length + coverage so wholesale rewrites are ignored;
+- short whole-field near-miss path when the field *is* the recent short
+  insertion (scope + similarity), without relaxing the 8/12-char anchors
+  used to locate short text inside large/embedded fields;
+- near-miss similarity gate so mis-anchored spans (e.g. 'We'→'likely') drop;
+- token runs only for replace ops; pure appends/prepends yield no pairs.
+All processing is local — no network, no AppKit.
 """
 
 import difflib
@@ -11,6 +21,15 @@ import string
 log = logging.getLogger(__name__)
 
 _PUNCT = string.punctuation + "…“”‘’—–"
+
+# Short whole-field confidence path (anchor < 8 only).
+# Why safe: when the field is essentially the insertion itself (similar length
+# and high overall similarity), a whole-field token-diff cannot pull in
+# unrelated surrounding UI text. Embedded short insertions in much larger
+# fields fail the length-scope gate and still need the normal 8/12-char anchor.
+_SHORT_MAX_CHARS = 64          # both sides must fit (short insertion / field)
+_SHORT_LEN_RATIO = 2.0         # max(len)/min(len) — allows ok→okay, not rewrites
+_SHORT_MIN_SIM = 0.5           # case-insensitive whole-string similarity
 
 _BOX_DRAWING = (
     "─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻"
@@ -78,10 +97,46 @@ def pair_is_plausible(wrong: str, right: str) -> tuple[bool, str]:
     return False, f"not similar enough (ratio {ratio:.2f})"
 
 
+def _short_edit_credible(full: str, ins: str) -> tuple[bool, str]:
+    """Whether a short-anchor edit is safe to learn via whole-field diff.
+
+    Safe when the focused field is credibly the recent short insertion itself
+    (both short, length within a tight band, overall near-miss similarity).
+    Not safe when the insertion is a small span inside a much larger field —
+    those still need the 8/12-char location anchor.
+    """
+    n_full, n_ins = len(full), len(ins)
+    longer, shorter = max(n_full, n_ins), min(n_full, n_ins)
+    if longer > _SHORT_MAX_CHARS:
+        return False, (f"not whole-field short scope "
+                       f"(field {n_full} chars, insertion {n_ins} chars, "
+                       f"max {_SHORT_MAX_CHARS})")
+    if shorter == 0 or longer / shorter > _SHORT_LEN_RATIO:
+        return False, (f"length scope too wide "
+                       f"(field {n_full} chars, insertion {n_ins} chars)")
+    sim = difflib.SequenceMatcher(
+        None, full.lower(), ins.lower(), autojunk=False).ratio()
+    if sim < _SHORT_MIN_SIM:
+        return False, f"similarity too low (ratio {sim:.2f} < {_SHORT_MIN_SIM})"
+    return True, ""
+
+
+def _plausible_pairs(inserted_region: str, field_region: str) -> list[tuple[str, str]]:
+    """extract_replacement_pairs + pair_is_plausible, with debug discards."""
+    pairs = []
+    for wrong, right in extract_replacement_pairs(inserted_region, field_region):
+        ok, reason = pair_is_plausible(wrong, right)
+        if ok:
+            pairs.append((wrong, right))
+        else:
+            log.debug("Discarded pair %r -> %r: %s", wrong, right, reason)
+    return pairs
+
+
 def suggest_pairs(full_text: str, inserted: str) -> list[tuple[str, str]]:
     """Fuzzy-locate `inserted` inside `full_text` and diff the edited regions.
 
-    Acceptance gates (v2, scroll-tolerant):
+    Acceptance gates (v2, scroll-tolerant + short whole-field path):
     - the field text is normalized like visible_text (box-drawing, whitespace)
       before matching;
     - the longest exact common block must be >= 12 chars (>= 8 with the
@@ -90,6 +145,12 @@ def suggest_pairs(full_text: str, inserted: str) -> list[tuple[str, str]]:
       than the insertion (a scrolled input box dropped the older part), the
       field length is the denominator — otherwise the insertion length;
       require >= 50% (>= 60% under the 8-char anchor);
+    - when the longest exact anchor is < 8 chars, a short-confidence path
+      may still accept a whole-field near-miss if the field is credibly the
+      recent short insertion (both ≤ 64 chars, length ratio ≤ 2, overall
+      case-insensitive similarity ≥ 0.5). Embedded short insertions in much
+      larger fields fail that scope gate and still require the 8/12-char
+      anchor — ambiguous 1–7 char anchors never locate into large text;
     - each pair must still look like a near-miss (pair_is_plausible).
     Returns [] when the inserted text is unchanged or too changed to trust.
     """
@@ -107,14 +168,24 @@ def suggest_pairs(full_text: str, inserted: str) -> list[tuple[str, str]]:
     # Scroll tolerance: a short field (scrolled input) is measured against
     # itself, not against the full insertion.
     denom = min(len(full), len(ins))
-    coverage = matched / denom
+    coverage = matched / denom if denom else 0.0
     if m.size >= 12:
         need = 0.5
     elif m.size >= 8:
         need = 0.6
     else:
-        log.info("Learning skipped: anchor %d chars too short.", m.size)
-        return []
+        # Short-confidence path: whole-field near-miss only when the field is
+        # credibly the recent short insertion (see _short_edit_credible).
+        ok, reason = _short_edit_credible(full, ins)
+        if not ok:
+            log.info("Learning skipped: short-edit refused (%s, anchor %d).",
+                     reason, m.size)
+            return []
+        pairs = _plausible_pairs(ins, full)
+        if not pairs:
+            log.info("Learning skipped: short-edit had no plausible pairs "
+                     "(anchor %d chars).", m.size)
+        return pairs
     if coverage < need:
         log.info("Learning skipped: inserted text not found in field / too "
                  "changed (coverage %.0f%% < %.0f%%, anchor %d chars).",
@@ -147,10 +218,5 @@ def suggest_pairs(full_text: str, inserted: str) -> list[tuple[str, str]]:
             continue
         cap = int(len(i_region) * 1.5) + 10
         f_region = f_region[-cap:] if is_head else f_region[:cap]
-        for wrong, right in extract_replacement_pairs(i_region, f_region):
-            ok, reason = pair_is_plausible(wrong, right)
-            if ok:
-                pairs.append((wrong, right))
-            else:
-                log.debug("Discarded pair %r -> %r: %s", wrong, right, reason)
+        pairs.extend(_plausible_pairs(i_region, f_region))
     return pairs

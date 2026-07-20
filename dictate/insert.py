@@ -124,7 +124,12 @@ def _paste_text(text: str, restore_clipboard: bool = False) -> None:
 
 def insert_text(text: str, method: str = "auto",
                 restore_clipboard: bool = False) -> bool:
-    """Insert `text` into the frontmost application. Returns True on apparent success."""
+    """Insert `text` into the frontmost application.
+
+    Returns True after posting events (macOS may still drop them without
+    Accessibility — we cannot observe delivery). Call on the main thread when
+    possible; paste path sleeps and must not run under a held AppKit lock.
+    """
     if not text:
         return False
     try:

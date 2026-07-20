@@ -1,3 +1,11 @@
+---
+@purpose: "Ordered checklist of remaining steps from ready code/docs to a public golos release."
+@why: "Prevents shipping without signing, notarization, site mapping, demo, or other open launch work."
+@role: reference
+@stability: evolving
+@tags: [golos, release, checklist, notarization, launch]
+related_docs: [docs/PRODUCT_PAGE.md, site/README.md, docs/VISION.md, README.md]
+---
 # golos — release checklist
 
 Ordered, from "today" to "public". Status: code and docs are ready; the
@@ -64,7 +72,17 @@ bundle). The single-instance flock already makes double-launches safe.
 Everything else on the old must-have list is done: py2app bundle, onboarding
 wizard, this checklist.
 
-## 5. Demo recording (90 s)
+## 5. Founder video recording (long master → edited launch set)
+
+The production source of truth is [`docs/VIDEO_PRODUCTION.md`](docs/VIDEO_PRODUCTION.md).
+Record one natural 20–30 minute master, then hand it to the editing agent for:
+
+- one approximately five-minute 16:9 founder story and product walkthrough;
+- four distinct 45–60 second 9:16 cuts;
+- captions, thumbnails, and a timestamped transcript.
+
+The old 90-second flow below remains a compact practice pass and a fallback
+shot list. It is not the primary launch format.
 
 Pre-recording setup:
 - Fresh `~/.golos/history.jsonl` (or curate out anything personal), clear

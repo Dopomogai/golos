@@ -18,6 +18,7 @@ TEXT = "alpha\nbeta\ngamma"
 
 
 def textedit_pid():
+    """Pid of a running TextEdit, or None if not launched yet."""
     from AppKit import NSWorkspace
     for app in NSWorkspace.sharedWorkspace().runningApplications():
         if app.bundleIdentifier() == "com.apple.TextEdit":

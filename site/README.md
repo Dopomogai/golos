@@ -1,3 +1,11 @@
+---
+@purpose: "How to preview and deploy the static golos product page under site/."
+@why: "Connects PRODUCT_PAGE.md copy to the dependency-free site layout and local preview path."
+@role: reference
+@stability: evolving
+@tags: [golos, site, product-page, static, deploy]
+related_docs: [docs/PRODUCT_PAGE.md, RELEASE_CHECKLIST.md]
+---
 # golos product page
 
 Static, dependency-free product page mapped from `docs/PRODUCT_PAGE.md`.

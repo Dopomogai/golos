@@ -1,4 +1,7 @@
-"""Compatibility shim — the implementation moved to dictate_core.stt."""
+"""Compatibility shim — the implementation moved to dictate_core.stt.
+
+Remote backends upload audio; mlx keeps it on-device — see dictate_core.stt.
+"""
 from dictate_core.stt import *  # noqa: F401,F403
 from dictate_core.stt import (  # noqa: F401
     DeepgramBackend, MlxWhisperBackend, OpenAICompatibleBackend,

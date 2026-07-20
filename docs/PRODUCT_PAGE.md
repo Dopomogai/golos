@@ -1,3 +1,11 @@
+---
+@purpose: "Source marketing copy for the golos product page: hero, features, privacy, FAQ, and download blocks."
+@why: "Keeps launch-site wording in one place mapped by the release checklist and site README."
+@role: reference
+@stability: evolving
+@tags: [golos, product-page, marketing, copy, launch]
+related_docs: [site/README.md, RELEASE_CHECKLIST.md, docs/PRODUCT.md]
+---
 # golos — product page copy
 
 ## Hero
@@ -65,7 +73,9 @@ Same voice. Your choice per machine, per moment.
 ## FAQ
 
 **Is my audio stored?**
-No. Audio is transcribed in memory and discarded. The text history
+By default, each dictation is retained locally as a WAV under
+`~/.golos/recordings/` for benchmarking and troubleshooting. Turn off
+`[audio] keep_recordings` to discard it after processing. Text history
 (raw + final, with the app it went to) stays in a local JSONL file you own.
 
 **What does it cost?**
@@ -86,7 +96,7 @@ CGEvent, the notch). It's a Mac app through and through.
 **How does the dictionary learn?**
 When you hand-edit something dictate inserted, it notices the diff and
 suggests the correction (near-miss pairs only — no junk). Promote it to
-your dictionary or corrections list with one click, or dismiss it forever.
+your dictionary or corrections list with a single confirmation, or dismiss it forever.
 Nothing is learned without your approval.
 
 ## Download

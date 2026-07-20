@@ -1,0 +1,5 @@
+# Development / test dependencies (not required to run the app).
+# Install: .venv/bin/pip install -r requirements-dev.txt
+# Or:      .venv/bin/pip install -e ".[dev]"
+pytest>=8.0
+pytest-cov>=5.0

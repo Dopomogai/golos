@@ -51,6 +51,11 @@ def edge_falloff(i: int) -> float:
 
 
 SUCCESS_SECONDS = 1.2
+# Distinct learning-review "suggestion ready" flash (not the green insert).
+SUGGESTION_SECONDS = 0.65
+# Violet → amber palette for the inward pulse (unique vs green success).
+SUGGESTION_RGB = (0.62, 0.35, 0.95)
+SUGGESTION_RGB_END = (0.95, 0.62, 0.20)
 
 
 def success_decay(progress: float) -> float:
@@ -72,6 +77,35 @@ def shimmer_amplitude(t: float, breath: float) -> float:
     """Processing wave energy: decays with distance from the notch (t 0..1),
     multiplied by the slow breathing factor."""
     return (1.0 - 0.6 * t) * breath
+
+
+def suggestion_inward(i: int, progress: float, n_bars: int = SUCCESS_BARS) -> float:
+    """Inward-pulse envelope for the suggestion-ready strip.
+
+    progress 0..1: energy starts at the outer ends and sweeps toward the
+    notch (bar index 0). Distinct from success (hill recede) and processing
+    (traveling shimmer). Returns bar height scale in [0, 1].
+    """
+    if n_bars <= 1:
+        return max(0.0, 1.0 - progress)
+    t = i / (n_bars - 1)  # 0 = notch edge, 1 = outermost
+    # Wavefront moves from outer (t=1) toward notch (t=0).
+    front = 1.0 - progress
+    dist = abs(t - front)
+    import math
+    envelope = math.exp(-(dist * dist) / 0.08)
+    return envelope * (1.0 - 0.35 * progress)
+
+
+def prefers_reduced_motion() -> bool:
+    """macOS Reduce Motion preference; False when unavailable (tests/headless)."""
+    try:
+        from AppKit import NSWorkspace
+        return bool(
+            NSWorkspace.sharedWorkspace().accessibilityDisplayShouldReduceMotion()
+        )
+    except Exception:
+        return False
 
 
 def circle_rect_values(i: int, side: int, notch_w: float, mid_y: float):
@@ -223,7 +257,9 @@ def _bubble_classes():
             self._label_override = text
             self._notice_rgb = {"success": (0.25, 0.85, 0.4),
                                 "info": (0.30, 0.55, 0.95),
-                                "warn": (0.95, 0.35, 0.25)}.get(kind, (0.5, 0.5, 0.5))
+                                "warn": (0.95, 0.35, 0.25),
+                                "suggestion": SUGGESTION_RGB}.get(
+                                    kind, (0.5, 0.5, 0.5))
             if self._processing_timer is not None:
                 self._processing_timer.invalidate()
                 self._processing_timer = None
@@ -286,7 +322,8 @@ def _bubble_classes():
         The strip is a single state-driven surface (setMode_):
         - "recording": red live waveform;
         - "processing": blue traveling shimmer + "processing… Ns" gap label;
-        - "success": green strip + "✓ inserted" gap label."""
+        - "success": green strip + "✓ inserted" gap label;
+        - "suggestion": violet/amber inward pulse + "suggestion ready"."""
 
         def initWithFrame_(self, frame):
             self = objc.super(WingsView, self).initWithFrame_(frame)
@@ -319,9 +356,9 @@ def _bubble_classes():
             if self._shimmer_timer is not None:
                 self._shimmer_timer.invalidate()
                 self._shimmer_timer = None
-            if mode in ("processing", "success"):
-                # 30fps redraw clock: drives the shimmer travel AND the
-                # success recede (progress computed from _mode_start).
+            if mode in ("processing", "success", "suggestion"):
+                # 30fps redraw clock: drives the shimmer travel, the
+                # success recede, and the suggestion inward pulse.
                 self._shimmer_timer = NSTimer \
                     .scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
                         1 / 30, self, "shimmerTick:", None, True)
@@ -347,6 +384,7 @@ def _bubble_classes():
             rgb = {"recording": (1.0, 0.3, 0.2),
                    "processing": (0.25, 0.5, 1.0),
                    "success": (0.2, 0.85, 0.4),
+                   "suggestion": SUGGESTION_RGB,
                    "notice": (0.5, 0.5, 0.5)}.get(self._mode, (1, 1, 1))
             self.layer().setShadowColor_(CGColorCreateGenericRGB(*rgb, 1.0))
 
@@ -357,6 +395,8 @@ def _bubble_classes():
                 self._draw_shimmer()
             elif self._mode == "success":
                 self._draw_success_strip()
+            elif self._mode == "suggestion":
+                self._draw_suggestion_strip()
             elif self._mode == "notice":
                 self._draw_notice()
             else:
@@ -488,6 +528,39 @@ def _bubble_classes():
             self._draw_gap_label("✓ inserted", NSColor.colorWithCalibratedRed_green_blue_alpha_(
                 0.6, 1.0, 0.7, 1.0))
 
+        def _draw_suggestion_strip(self):
+            # Violet/amber inward pulse: energy sweeps from the outer ends
+            # toward the notch — distinct from green success and blue process.
+            w = self.bounds().size.width
+            h = self.bounds().size.height
+            notch_w = w - 2 * WING_W
+            mid_y = h - MENU_ROW_H / 2
+            progress = (time.monotonic() - self._mode_start) / SUGGESTION_SECONDS
+            progress = min(1.0, max(0.0, progress))
+            r0, g0, b0 = SUGGESTION_RGB
+            r1, g1, b1 = SUGGESTION_RGB_END
+            for side in (0, 1):
+                for i in range(SUCCESS_BARS):
+                    scale = suggestion_inward(i, progress)
+                    bar_h = 22.0 * scale
+                    if bar_h < 0.5:
+                        continue
+                    t = i / (SUCCESS_BARS - 1)
+                    # Outer bars lean amber; inner bars stay violet.
+                    r = r0 + (r1 - r0) * t
+                    g = g0 + (g1 - g0) * t
+                    b = b0 + (b1 - b0) * t
+                    NSColor.colorWithCalibratedRed_green_blue_alpha_(
+                        r, g, b, (0.8 - t * 0.4) * edge_falloff(i)).set()
+                    NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(
+                        NSMakeRect(self._bar_x(side, i, notch_w),
+                                   mid_y - bar_h / 2, WING_BAR_W, bar_h),
+                        WING_BAR_W / 2, WING_BAR_W / 2).fill()
+            self._draw_gap_label(
+                "suggestion ready",
+                NSColor.colorWithCalibratedRed_green_blue_alpha_(
+                    0.85, 0.7, 1.0, 1.0))
+
         def _draw_notice(self):
             # Faint bars + gap text — a lightweight "something was learned" flash.
             w = self.bounds().size.width
@@ -504,7 +577,9 @@ def _bubble_classes():
                         WING_BAR_W / 2, WING_BAR_W / 2).fill()
             rgb = {"success": (0.35, 0.95, 0.45),
                    "info": (0.45, 0.65, 1.0),
-                   "warn": (1.0, 0.4, 0.35)}.get(self._notice_kind, (0.9, 0.9, 0.9))
+                   "warn": (1.0, 0.4, 0.35),
+                   "suggestion": SUGGESTION_RGB}.get(
+                       self._notice_kind, (0.9, 0.9, 0.9))
             self._draw_gap_label(self._notice_text,
                                  NSColor.colorWithCalibratedRed_green_blue_alpha_(
                                      *rgb, 1.0))
@@ -707,7 +782,6 @@ class Bubble:
 
     def _enforce_visibility(self) -> None:
         """Set final panel visibility from the state matrix. Synchronous."""
-        self._vis_gen += 1
         if self._geometry is not None:
             # Notch path: strip handles real states; notice may use strip
             # (notice) or pill (cue).
@@ -715,11 +789,15 @@ class Bubble:
             show_strip = (self._state in strip_states
                           or (self._state == "notice"
                               and self._notice_surface == "wings")
+                          or (self._state == "suggestion"
+                              and self._notice_surface == "wings")
                           or (self._collapse > 0.0
                               and self.wings is not None
                               and self.wings.isVisible()))
-            show_pill = (self._state == "notice"
-                         and self._notice_surface == "pill")
+            show_pill = ((self._state == "notice"
+                          and self._notice_surface == "pill")
+                         or (self._state == "suggestion"
+                             and self._notice_surface == "pill"))
             if show_strip:
                 self._ensure_wings()
                 self.wings.orderFrontRegardless()
@@ -765,9 +843,19 @@ class Bubble:
         self._enforce_visibility()
 
     def set_state(self, state: str) -> None:
+        """Main thread only. Drive bubble/wings from the controller state name.
+
+        Self-healing: every path ends in _enforce_visibility(), which is the
+        sole authority for panel orderFront/orderOut. Collapse animations and
+        notice timers are generation-guarded so a stale completion cannot hide
+        a panel a newer state just showed (or leave the strip permanently blank).
+        """
         if state not in STATES:
             return
-        # Any real state change dismisses a pending notice instantly.
+        # This is a *state* generation, not a repaint/visibility generation.
+        # Collapse captures it below; only a newer state may stale that callback.
+        self._vis_gen += 1
+        # Any real state change dismisses a pending notice/suggestion instantly.
         self._notice_gen += 1
         self._state = state
         wings_up = self.wings is not None and self.wings.isVisible()
@@ -824,7 +912,7 @@ class Bubble:
         AppHelper.callLater(seconds, self._dismiss_notice, gen)
 
     def _dismiss_notice(self, gen: int) -> None:
-        if gen != self._notice_gen or self._state != "notice":
+        if gen != self._notice_gen or self._state not in ("notice", "suggestion"):
             return  # superseded or already dismissed by a real state change
         self._state = "idle"
         self.view._on_click = None
@@ -839,7 +927,7 @@ class Bubble:
         a time — a new cue replaces the visible one. Never clobbers real
         states (recording/processing/success).
         """
-        if self._state not in ("idle", "notice"):
+        if self._state not in ("idle", "notice", "suggestion"):
             log.info("cue skipped (state=%s): %s → %s", self._state, wrong, right)
             return
         pair = f"{wrong} → {right}"
@@ -854,6 +942,52 @@ class Bubble:
         self._enforce_visibility()
         from PyObjCTools import AppHelper
         AppHelper.callLater(seconds, self._dismiss_notice, gen)
+
+    def suggestion_ready(self, wrong: str, right: str, seconds: float,
+                         on_accept) -> None:
+        """Distinct learning-review flash, then the interactive wrong→right cue.
+
+        Uses a violet/amber inward pulse on the notch strip (or a violet pill
+        flash in corner style). Never clobbers recording/processing/success —
+        only runs from idle/notice. Respects Reduce Motion (skips pulse and
+        goes straight to the cue). Generation-guarded so a newer set_state
+        cannot be replaced by a stale suggestion timer.
+        """
+        if self._state not in ("idle", "notice", "suggestion"):
+            log.info("suggestion_ready skipped (state=%s): %s → %s",
+                     self._state, wrong, right)
+            return
+        self._notice_gen += 1
+        gen = self._notice_gen
+        if prefers_reduced_motion():
+            self.cue(wrong, right, seconds, on_accept)
+            return
+        self._state = "suggestion"
+        from PyObjCTools import AppHelper
+        if self._geometry is not None:
+            self._notice_surface = "wings"
+            self._ensure_wings()
+            self.wings_view.setMode_("suggestion")
+            self._enforce_visibility()
+            AppHelper.callLater(
+                SUGGESTION_SECONDS, self._after_suggestion_anim,
+                gen, wrong, right, seconds, on_accept)
+        else:
+            # Corner / no-aux: violet pill flash, then the clickable cue.
+            self._notice_surface = "pill"
+            self.view.displayNotice_kind_("suggestion ready", "suggestion")
+            self.view._on_click = None
+            self._enforce_visibility()
+            AppHelper.callLater(
+                SUGGESTION_SECONDS, self._after_suggestion_anim,
+                gen, wrong, right, seconds, on_accept)
+
+    def _after_suggestion_anim(self, gen: int, wrong: str, right: str,
+                               seconds: float, on_accept) -> None:
+        """Transition into the interactive cue only if still this suggestion."""
+        if gen != self._notice_gen or self._state not in ("suggestion", "notice"):
+            return  # superseded by recording/processing/newer notice
+        self.cue(wrong, right, seconds, on_accept)
 
     def _accept_cue(self, gen: int, wrong: str, right: str, on_accept) -> None:
         if gen != self._notice_gen or self._state != "notice":

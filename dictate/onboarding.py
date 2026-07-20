@@ -25,6 +25,7 @@ KEY_NAMES = {"fn": "fn", "right_option": "Right ⌥",
 
 
 def _class():
+    """Build (once) the ObjC onboarding controller class; class name is global."""
     global _controller_class
     if _controller_class is not None:
         return _controller_class

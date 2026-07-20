@@ -4,6 +4,13 @@ __pycache__/
 *.pyc
 *.egg-info/
 
+# Test / coverage output
+.coverage
+.coverage.*
+.pytest_cache/
+htmlcov/
+coverage.xml
+
 # Build artifacts
 build/
 dist/

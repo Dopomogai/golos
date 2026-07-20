@@ -35,6 +35,7 @@ PASS_MAX_WORDS = 40
 
 
 def _load():
+    """Build a Formatter from the live ~/.golos config (real network calls)."""
     import httpx
     from dictate_core.formatter import Formatter
     cfg = tomllib.load(open(Path.home() / ".golos" / "config.toml", "rb"))

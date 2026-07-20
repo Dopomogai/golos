@@ -6,6 +6,10 @@ record. Edit-capture triggers (next recording, app switch, 45s timer, the
 against the insertion; pairs go to suggestions.jsonl. The Settings → History
 tab lists aggregated suggestions with promote/dismiss actions.
 
+Optional [learning] reviewer (OpenRouter, audio-aware) may propose candidates
+when enabled; deterministic suggest_pairs remains the offline/failure fallback.
+Nothing is auto-promoted — human approval only.
+
 The pure text-diff helpers live in dictate_core.learning (UI-free).
 """
 
@@ -17,7 +21,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from dictate_core.learning import (  # noqa: F401  (re-exported for the app)
-    extract_replacement_pairs, norm_text, pair_is_plausible, suggest_pairs,
+    extract_replacement_pairs, normalize_visible, norm_text,
+    pair_is_plausible, suggest_pairs,
 )
 
 log = logging.getLogger(__name__)
@@ -88,19 +93,123 @@ def read_selection() -> str | None:
 # suggestions store
 
 
-def append_suggestions(path: str, app_name: str, pairs: list[tuple[str, str]]) -> None:
+def append_suggestions(
+    path: str,
+    app_name: str,
+    pairs: list[tuple[str, str]],
+    *,
+    provenance: str | None = None,
+    model: str | None = None,
+    confidence: float | None = None,
+    confidences: list[float | None] | None = None,
+) -> None:
+    """Append (wrong, right) rows to suggestions.jsonl (local only; no network).
+
+    Optional provenance/model/confidence fields are stored for newer rows;
+    aggregate_suggestions still keys only on (wrong, right) so older rows
+    and mixed sources keep working.
+    """
     if not pairs:
         return
     ts = datetime.now(timezone.utc).isoformat()
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     with open(p, "a", encoding="utf-8") as f:
-        for wrong, right in pairs:
-            f.write(json.dumps({"ts": ts, "app": app_name,
-                                "wrong": wrong, "right": right},
-                               ensure_ascii=False) + "\n")
+        for i, (wrong, right) in enumerate(pairs):
+            row: dict = {
+                "ts": ts,
+                "app": app_name,
+                "wrong": wrong,
+                "right": right,
+            }
+            if provenance:
+                row["provenance"] = provenance
+            if model:
+                row["model"] = model
+            conf = None
+            if confidences is not None and i < len(confidences):
+                conf = confidences[i]
+            elif confidence is not None:
+                conf = confidence
+            if conf is not None:
+                row["confidence"] = conf
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
     log.info("Recorded %d suggestion(s): %s", len(pairs),
              "; ".join(f"{w!r} -> {r!r}" for w, r in pairs))
+
+
+def propose_pairs(
+    li: dict,
+    text: str,
+    cfg: dict,
+    *,
+    chat_post=None,
+) -> tuple[list[tuple[str, str]], dict]:
+    """Propose correction pairs for one insertion + observed field text.
+
+    Tries the optional OpenRouter learning reviewer at most once per
+    insertion (`li["_reviewer_done"]`). Falls back to deterministic
+    suggest_pairs when the reviewer is disabled, keyless, errors, times
+    out, returns malformed JSON, or yields no credible candidates.
+
+    Returns (pairs, meta) where meta may include provenance, model,
+    confidences, and from_reviewer. Never auto-promotes.
+    """
+    meta: dict = {"provenance": "deterministic", "from_reviewer": False}
+    inserted = li.get("final", "") or ""
+    raw = li.get("raw", "") or inserted
+    learning = cfg.get("learning") or {}
+    if not learning.get("enabled", True):
+        return [], meta
+
+    ins_n = norm_text(normalize_visible(inserted))
+    full_n = norm_text(normalize_visible(text))
+    if not ins_n or not full_n:
+        return [], meta
+    # Untouched field: do not burn the single reviewer attempt.
+    if ins_n in full_n:
+        return [], meta
+
+    pairs: list[tuple[str, str]] = []
+    confidences: list[float | None] = []
+
+    from dictate_core.learning_reviewer import (
+        candidates_to_pairs,
+        review_edit,
+        reviewer_config,
+    )
+
+    rcfg = reviewer_config(cfg)
+    if rcfg["enabled"] and not li.get("_reviewer_done"):
+        # At most one reviewer attempt per insertion (success or fail).
+        li["_reviewer_done"] = True
+        try:
+            candidates = review_edit(
+                raw=raw,
+                inserted=inserted,
+                edited=text,
+                cfg=cfg,
+                audio_path=li.get("audio_path"),
+                chat_post=chat_post,
+            )
+            if candidates:
+                pairs = candidates_to_pairs(candidates)
+                confidences = [c.confidence for c in candidates]
+                meta = {
+                    "provenance": "reviewer",
+                    "from_reviewer": True,
+                    "model": rcfg["model"],
+                    "confidences": confidences,
+                }
+                log.info("Learning reviewer proposed %d candidate(s).", len(pairs))
+        except Exception as e:
+            log.warning("Learning reviewer failed (%s); deterministic fallback.", e)
+
+    if not pairs:
+        pairs = suggest_pairs(text, inserted)
+        meta = {"provenance": "deterministic", "from_reviewer": False}
+
+    return pairs, meta
 
 
 def _read_jsonl(path: str) -> list[dict]:
@@ -118,10 +227,12 @@ def _read_jsonl(path: str) -> list[dict]:
 
 
 def load_dismissed(path: str) -> set[tuple[str, str]]:
+    """Set of (wrong, right) pairs the user has dismissed (never re-suggest)."""
     return {(r.get("wrong", ""), r.get("right", "")) for r in _read_jsonl(path)}
 
 
 def dismiss_pair(path: str, wrong: str, right: str) -> None:
+    """Append one dismissed pair (append-only log; aggregate filters it out)."""
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     with open(p, "a", encoding="utf-8") as f:
@@ -152,12 +263,14 @@ def aggregate_suggestions(path: str, dismissed_path: str) -> list[dict]:
 
 
 def promote_to_corrections(corrections_path: str, wrong: str, right: str) -> None:
+    """Append one wrong\\tright line to corrections.tsv (caller reloads live)."""
     with open(corrections_path, "a", encoding="utf-8") as f:
         f.write(f"{wrong}\t{right}\n")
     log.info("Added correction: %r -> %r", wrong, right)
 
 
 def promote_to_dictionary(dictionary_path: str, term: str) -> None:
+    """Append one vocabulary term to dictionary.txt (caller reloads live)."""
     with open(dictionary_path, "a", encoding="utf-8") as f:
         f.write(term.strip() + "\n")
     log.info("Added dictionary term: %r", term)
@@ -211,7 +324,7 @@ def capture_edit(app_controller, text: str | None = None) -> list[tuple[str, str
     if not text:
         log.info("No focused text to compare against; skipping edit capture.")
         return []
-    pairs = suggest_pairs(text, li.get("final", ""))
+    pairs, meta = propose_pairs(li, text, cfg)
     # Dedupe against pairs the live edit watcher already cued/recorded for
     # this insertion — nothing gets recorded twice.
     watcher = getattr(app_controller, "_watcher", None)
@@ -220,6 +333,21 @@ def capture_edit(app_controller, text: str | None = None) -> list[tuple[str, str
     if pairs:
         # Recorded: don't report the same insertion again.
         app_controller.last_insertion = None
-        append_suggestions(cfg["paths"]["suggestions"],
-                           li.get("app_name", ""), pairs)
+        append_suggestions(
+            cfg["paths"]["suggestions"],
+            li.get("app_name", ""),
+            pairs,
+            provenance=meta.get("provenance"),
+            model=meta.get("model"),
+            confidences=meta.get("confidences"),
+        )
+        if meta.get("from_reviewer") and hasattr(
+                app_controller, "present_reviewer_suggestions"):
+            # Distinct cue path: suggestion-ready animation + interactive cue.
+            try:
+                from PyObjCTools import AppHelper
+                AppHelper.callAfter(
+                    app_controller.present_reviewer_suggestions, pairs, meta)
+            except Exception as e:
+                log.info("Could not present reviewer suggestions: %s", e)
     return pairs

@@ -1,4 +1,5 @@
-"""Menu-bar status item and the Settings window (General / Dictionary / History).
+"""Menu-bar status item and the Settings window (General / Prompt / Learning /
+Dictionary / History).
 
 The app stays NSApplicationActivationPolicyAccessory: opening Settings calls
 NSApp.activateIgnoringOtherApps_(True) and makeKeyAndOrderFront; closing the
@@ -23,6 +24,7 @@ _class_cache: dict = {}
 
 
 def _trunc(s: str, n: int = 24) -> str:
+    """Ellipsize for menu/bubble labels; keeps UI rows a fixed visual width."""
     return s if len(s) <= n else s[:n - 1] + "…"
 
 
@@ -258,6 +260,7 @@ def build_settings_window(app_controller):
             self._build_window()
             self._load_general()
             self._load_prompt()
+            self._load_learning()
             self._load_dictionary_files()
             self._load_history()
             self._load_suggestions()
@@ -279,6 +282,7 @@ def build_settings_window(app_controller):
             self.window.contentView().addSubview_(tabs)
             self._build_general_tab(tabs)
             self._build_prompt_tab(tabs)
+            self._build_learning_tab(tabs)
             self._build_dictionary_tab(tabs)
             self._build_history_tab(tabs)
 
@@ -413,6 +417,150 @@ def build_settings_window(app_controller):
             path.write_text(DEFAULT_TEMPLATE, encoding="utf-8")
             self.app_controller.apply_settings()
             self.prompt_status.setStringValue_("Reset to default.")
+
+        def _build_learning_tab(self, tabs):
+            """Dedicated Learning tab: optional OpenRouter review stage."""
+            from dictate_core.learning_reviewer import DEFAULT_REVIEWER_MODEL
+
+            v = NSView.alloc().initWithFrame_(NSMakeRect(0, 0, WINDOW_W - 20, CONTENT_H))
+
+            self.reviewer_checkbox = NSButton.alloc().initWithFrame_(
+                NSMakeRect(20, CONTENT_H - 36, 520, 22))
+            self.reviewer_checkbox.setButtonType_(3)  # NSSwitchButton
+            self.reviewer_checkbox.setTitle_(
+                "Learning reviewer (OpenRouter proposes corrections after you edit)")
+            v.addSubview_(self.reviewer_checkbox)
+            rhint = make_label(
+                "Off by default. Never auto-promotes — you approve in History or the live cue.",
+                20, CONTENT_H - 58, w=560)
+            rhint.setFont_(NSFont.systemFontOfSize_(11))
+            rhint.setTextColor_(NSColor.secondaryLabelColor())
+            v.addSubview_(rhint)
+
+            v.addSubview_(make_label("Reviewer model", 20, CONTENT_H - 96, w=120))
+            self.reviewer_model_combo = NSComboBox.alloc().initWithFrame_(
+                NSMakeRect(150, CONTENT_H - 99, 390, 26))
+            self.reviewer_model_combo.setStringValue_(DEFAULT_REVIEWER_MODEL)
+            v.addSubview_(self.reviewer_model_combo)
+
+            self.reviewer_audio_checkbox = NSButton.alloc().initWithFrame_(
+                NSMakeRect(20, CONTENT_H - 140, 540, 22))
+            self.reviewer_audio_checkbox.setButtonType_(3)
+            self.reviewer_audio_checkbox.setTitle_(
+                "Send the original audio with the review (when a recording was kept)")
+            v.addSubview_(self.reviewer_audio_checkbox)
+            ahint = make_label(
+                "Privacy: when on, the retained WAV leaves this Mac to OpenRouter. "
+                "Requires keep_recordings; otherwise text-only.",
+                20, CONTENT_H - 168, w=560)
+            ahint.setFont_(NSFont.systemFontOfSize_(11))
+            ahint.setTextColor_(NSColor.secondaryLabelColor())
+            v.addSubview_(ahint)
+
+            v.addSubview_(make_label("Min confidence", 20, CONTENT_H - 204, w=120))
+            self.reviewer_conf_field = NSTextField.alloc().initWithFrame_(
+                NSMakeRect(150, CONTENT_H - 207, 80, 24))
+            self.reviewer_conf_field.setStringValue_("0.55")
+            self.reviewer_conf_field.setToolTip_("0–1; discard lower-confidence pairs")
+            v.addSubview_(self.reviewer_conf_field)
+
+            v.addSubview_(make_label("Reviewer system prompt", 20, CONTENT_H - 244, w=300))
+            lscroll, self.learning_prompt_text = make_text_scroll(
+                20, 76, WINDOW_W - 60, CONTENT_H - 328, font_size=11)
+            v.addSubview_(lscroll)
+            phint = make_label(
+                "Saved to ~/.golos/learning_prompt.md (or [learning] reviewer_prompt_file).",
+                20, 52, w=560)
+            phint.setFont_(NSFont.systemFontOfSize_(10))
+            phint.setTextColor_(NSColor.secondaryLabelColor())
+            v.addSubview_(phint)
+
+            sbtn = NSButton.alloc().initWithFrame_(NSMakeRect(20, 14, 140, 28))
+            sbtn.setTitle_("Save learning")
+            sbtn.setBezelStyle_(1)
+            sbtn.setTarget_(self)
+            sbtn.setAction_("saveLearning:")
+            v.addSubview_(sbtn)
+            rbtn = NSButton.alloc().initWithFrame_(NSMakeRect(172, 14, 150, 28))
+            rbtn.setTitle_("Reset prompt")
+            rbtn.setBezelStyle_(1)
+            rbtn.setTarget_(self)
+            rbtn.setAction_("resetLearningPrompt:")
+            v.addSubview_(rbtn)
+            self.learning_status = make_label("", 340, 18, w=240)
+            self.learning_status.setFont_(NSFont.systemFontOfSize_(11))
+            self.learning_status.setTextColor_(NSColor.secondaryLabelColor())
+            v.addSubview_(self.learning_status)
+
+            item = NSTabViewItem.alloc().initWithIdentifier_("learning")
+            item.setLabel_("Learning")
+            item.setView_(v)
+            tabs.addTabViewItem_(item)
+
+        def _load_learning(self):
+            from dictate_core.learning_reviewer import (
+                DEFAULT_MIN_CONFIDENCE,
+                DEFAULT_REVIEWER_MODEL,
+                DEFAULT_REVIEWER_PROMPT,
+                prompt_file_path,
+            )
+            learning = self.app_controller.cfg.get("learning") or {}
+            self.reviewer_checkbox.setState_(
+                1 if learning.get("reviewer_enabled", False) else 0)
+            self.reviewer_model_combo.setStringValue_(
+                learning.get("reviewer_model") or DEFAULT_REVIEWER_MODEL)
+            self.reviewer_audio_checkbox.setState_(
+                1 if learning.get("reviewer_send_audio", True) else 0)
+            conf = learning.get("reviewer_min_confidence", DEFAULT_MIN_CONFIDENCE)
+            self.reviewer_conf_field.setStringValue_(str(conf))
+            path = prompt_file_path(
+                learning.get("reviewer_prompt_file", "learning_prompt.md"))
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError:
+                text = DEFAULT_REVIEWER_PROMPT
+            self.learning_prompt_text.setString_(text)
+
+        def saveLearning_(self, sender):
+            from dictate_core.learning_reviewer import (
+                DEFAULT_MIN_CONFIDENCE,
+                prompt_file_path,
+            )
+            try:
+                conf_raw = str(self.reviewer_conf_field.stringValue()).strip()
+                conf = float(conf_raw) if conf_raw else DEFAULT_MIN_CONFIDENCE
+                conf = max(0.0, min(1.0, conf))
+                update_config({"learning": {
+                    "reviewer_enabled": bool(self.reviewer_checkbox.state()),
+                    "reviewer_model": str(self.reviewer_model_combo.stringValue()),
+                    "reviewer_send_audio": bool(self.reviewer_audio_checkbox.state()),
+                    "reviewer_min_confidence": conf,
+                }})
+                learning = self.app_controller.cfg.get("learning") or {}
+                path = prompt_file_path(
+                    learning.get("reviewer_prompt_file", "learning_prompt.md"))
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(str(self.learning_prompt_text.string()),
+                                encoding="utf-8")
+            except Exception as e:
+                self.learning_status.setStringValue_(f"save failed: {e}")
+                return
+            self.app_controller.apply_settings()
+            self.learning_status.setStringValue_("Saved.")
+
+        def resetLearningPrompt_(self, sender):
+            from dictate_core.learning_reviewer import (
+                DEFAULT_REVIEWER_PROMPT,
+                prompt_file_path,
+            )
+            self.learning_prompt_text.setString_(DEFAULT_REVIEWER_PROMPT)
+            learning = self.app_controller.cfg.get("learning") or {}
+            path = prompt_file_path(
+                learning.get("reviewer_prompt_file", "learning_prompt.md"))
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(DEFAULT_REVIEWER_PROMPT, encoding="utf-8")
+            self.app_controller.apply_settings()
+            self.learning_status.setStringValue_("Prompt reset to default.")
 
         def _build_general_tab(self, tabs):
             v = NSView.alloc().initWithFrame_(NSMakeRect(0, 0, WINDOW_W - 20, CONTENT_H))

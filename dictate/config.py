@@ -67,6 +67,13 @@ def ensure_data_dir(data_dir: Path = DATA_DIR,
 
 
 def load_config(path: Path | None = None) -> dict:
+    """Load config.toml, heal char-array corruption, resolve paths under ~/.golos.
+
+    When `path` is None: ensure_data_dir() first (copy-once migration), then
+    read CONFIG_PATH. Relative path entries become absolute under DATA_DIR so
+    a bundled .app never depends on cwd. Returns a mutable dict owned by the
+    caller — live reloads re-call this rather than mutating a shared global.
+    """
     if path is None:
         ensure_data_dir()
         path = CONFIG_PATH

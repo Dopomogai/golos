@@ -1,3 +1,11 @@
+---
+@purpose: "Why golos exists, design principles, and the roadmap through public release and later phases."
+@why: "Anchors product decisions so features stay local-first, human-gated, and legible."
+@role: reference
+@stability: evolving
+@tags: [golos, vision, principles, roadmap]
+related_docs: [docs/PRODUCT.md, docs/TECH.md, RELEASE_CHECKLIST.md, README.md]
+---
 # golos — vision
 
 ## Why this exists

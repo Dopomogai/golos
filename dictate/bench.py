@@ -35,6 +35,7 @@ COST_NOTE = ("note: each cloud transcription costs a fraction of a cent — "
 
 
 def _norm_words(text: str) -> list[str]:
+    """Lowercase + strip punctuation for WER tokenization."""
     table = str.maketrans("", "", string.punctuation + "…“”‘’—–")
     return text.lower().translate(table).split()
 

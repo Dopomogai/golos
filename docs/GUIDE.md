@@ -1,3 +1,11 @@
+---
+@purpose: "Complete operator guide for driving golos: controls, pipeline, models, dictionary, and settings."
+@why: "One verified how-to source so day-to-day use is not inferred from partial README or product blurbs."
+@role: reference
+@stability: accepted
+@tags: [golos, guide, user-guide, controls, pipeline]
+related_docs: [docs/PRODUCT.md, docs/TECH.md, README.md]
+---
 # golos — the complete guide
 
 Everything the app does, and how to drive it. Verified against the current code.
@@ -84,14 +92,23 @@ samples for the benchmark harness; copy or symlink them into `samples/`.
   Capture triggers: your next recording, switching away from the app, a 45 s
   fallback timer, and the "Check for edits" button. Two gates keep junk out:
   the insertion must be verifiably present (scroll-tolerant anchor — ≥ 50 %
-  coverage of the visible overlap, longest common block ≥ 12 chars) and each
-  pair must look like a near-miss (similarity ≥ 0.5 or containment, ≤ 6 tokens).
+  coverage of the visible overlap, longest common block ≥ 12 chars, or ≥ 8
+  with stricter coverage; short whole-field near-misses when the field is
+  essentially the recent short insertion) and each pair must look like a
+  near-miss (similarity ≥ 0.5 or containment, ≤ 6 tokens).
   A live **edit watcher** also polls the field for 3 min after each insertion:
   pause after a manual fix and a clickable cue pill (`wrong → right ✓?`)
   appears — click to keep the correction instantly (`[learning] live_cues`).
   Pairs aggregate in Settings → History → Suggestions: **Add to corrections**,
   **Add to dictionary**, or **Dismiss**. Menu item "Add selection to
   dictionary" teaches a selected word instantly.
+- **Optional learning reviewer** (Settings → Learning, off by default): when
+  enabled, an independent OpenRouter model can re-check a stable edit using
+  the raw transcript, inserted text, your edit, and optionally the original
+  WAV (`reviewer_send_audio` — **audio leaves the Mac** when on and a
+  recording was kept). Suggestions still require your click; nothing is
+  auto-learned. If the reviewer is off, errors, or finds nothing, the
+  deterministic text-diff path still runs.
 
 ## App context & citation mode
 
@@ -227,6 +244,9 @@ Build notes: requires `setuptools<80`; `build_app.sh` temporarily hides
 | `[bubble] sensitivity` | `1.0` | waveform display gain, 0.5–2.5 |
 | `[learning] enabled` / `edit_window_seconds` | `true` / `600` | suggestion loop |
 | `[learning] live_cues` / `live_cue_seconds` | `true` / `8` | click-to-keep edit cues |
+| `[learning] reviewer_enabled` | `false` | optional post-edit OpenRouter review |
+| `[learning] reviewer_model` / `reviewer_send_audio` | audio-capable default / `true` | independent model; audio leaves Mac when on |
+| `[learning] reviewer_prompt_file` / `reviewer_min_confidence` | `learning_prompt.md` / `0.55` | editable prompt + confidence floor |
 | `[context] enabled` | `true` | providers + AX text reads |
 | `[insert] method` | `"auto"` | `auto` / `type` / `paste` |
 | `[insert] restore_clipboard` | `false` | true = restore old clipboard after 1.5 s |

@@ -27,6 +27,14 @@ live_cues = true           # watch the field after insertion, offer corrections 
 live_cue_seconds = 8      # how long the cue pill stays visible
 enabled = true
 edit_window_seconds = 600
+# Optional OpenRouter learning reviewer (off by default — privacy). When
+# enabled, runs after a stable manual edit of a recent insertion; never
+# auto-promotes. Deterministic text-diff remains the offline fallback.
+reviewer_enabled = false
+reviewer_model = "google/gemini-3.1-flash-lite-preview"
+reviewer_send_audio = true   # only used when reviewer_enabled; audio leaves the Mac
+reviewer_prompt_file = "learning_prompt.md"
+reviewer_min_confidence = 0.55
 
 [context]
 enabled = true

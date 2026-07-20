@@ -1,3 +1,11 @@
+---
+@purpose: "Product-facing overview of golos features, install path, permissions, and first-run usage."
+@why: "Separates the product story from architecture detail and marketing launch copy."
+@role: reference
+@stability: accepted
+@tags: [golos, product, features, install]
+related_docs: [docs/GUIDE.md, docs/VISION.md, docs/PRODUCT_PAGE.md, README.md]
+---
 # golos — push-to-talk dictation for macOS
 
 **golos** is a small macOS menu-bar app that turns your voice into text
@@ -26,7 +34,7 @@ local-first, hackable Python, no account, no subscription.
   proper citations.
 - **Self-improving dictionary** — fix an inserted text by hand and golos
   notices the edit, proposes the correction, and lets you promote it into
-  your dictionary or corrections list with one click. A live edit watcher
+  your dictionary or corrections list with a single confirmation. A live edit watcher
   can even offer it within seconds as a click-to-keep pill. Nothing is
   learned without your approval.
 - **Model choice** — local on-device Whisper (mlx) by default, or 9 curated
@@ -38,7 +46,7 @@ local-first, hackable Python, no account, no subscription.
 
 ## Install
 
-Requirements: Apple Silicon Mac, macOS 12+, Python ≥ 3.11.
+Requirements: Apple Silicon Mac, macOS 13+, Python ≥ 3.11.
 
 ```sh
 cd ~/dictate
@@ -79,7 +87,10 @@ cd ~/dictate
 Beyond the two modes below: **Fast mode** skips the LLM for short dictations
 (instant), **answer mode** lets the formatter answer obvious questions from
 context, and **send_audio** lets the formatter listen to the original
-recording to recover garbled transcription.
+recording to recover garbled transcription. Separately, the optional
+**learning reviewer** (Settings → Learning, off by default) can listen
+to a retained recording when proposing STT fixes after you edit — still
+human-gated, never auto-applied.
 
 ## Two modes
 
@@ -105,5 +116,8 @@ context providers with `[context] enabled = false`.
   processing / confirming.
 - **Weird suggestions in Settings → History** — dismiss them; the learning
   gates only propose near-miss corrections, but dismissal is permanent.
+  If the optional learning reviewer is on, turn off
+  `[learning] reviewer_enabled` or lower send-audio for stricter local-only
+  diffs.
 - **Logs** — the app logs verbosely to stdout; `[formatting] debug = true`
   logs the complete prompt sent to the formatter.

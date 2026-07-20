@@ -1,16 +1,28 @@
+---
+@purpose: "Project entry point for golos: what it is, how it works, setup, permissions, and links into deeper docs."
+@why: "Gives a single starting place so install, permissions, and doc discovery are not scattered or guessed."
+@role: reference
+@stability: accepted
+@tags: [golos, readme, setup, permissions, dictation]
+related_docs: [docs/PRODUCT.md, docs/GUIDE.md, docs/TECH.md, docs/VISION.md, docs/TESTING.md, RELEASE_CHECKLIST.md]
+---
 # golos
 
 A minimal macOS push-to-talk dictation app, in Python + PyObjC
 (renamed from "dictate" — the python packages are still `dictate`/`dictate_core`).
 
 > Docs: [docs/PRODUCT.md](docs/PRODUCT.md) (user guide) ·
-> [docs/TECH.md](docs/TECH.md) (architecture) · [docs/VISION.md](docs/VISION.md)
+> [docs/TECH.md](docs/TECH.md) (architecture) · [docs/VISION.md](docs/VISION.md) ·
+> [docs/TESTING.md](docs/TESTING.md) (tests & coverage)
+
+**Tests:** `.venv/bin/pip install -r requirements-dev.txt` then
+`.venv/bin/python -m pytest -q` — see [docs/TESTING.md](docs/TESTING.md).
 
 - **Hold `fn` to talk**, release to transcribe and insert at the cursor.
 - **`fn` + Space** toggles a hands-free "locked" recording mode (press again to stop).
 - Notch-style floating bubble (Dynamic Island look: hugs the camera notch, expands
   with a live waveform while recording) or a draggable corner pill.
-- Menu-bar icon with Settings (General / Dictionary / History tabs) — no dock icon.
+- Menu-bar icon with Settings (General / Prompt / Learning / Dictionary / History) — no dock icon.
 - Local on-device STT by default; optional OpenRouter cloud STT and LLM formatting pass.
 
 ## How it works
@@ -273,6 +285,9 @@ insertion, the **edit watcher** polls the field for a few minutes: if you
 hand-edit a word and pause, a clickable cue pill appears
 (`wrong → right ✓?`) — click it to add the correction to `corrections.tsv`
 instantly (`[learning] live_cues = true`, `live_cue_seconds = 8`).
+An optional **learning reviewer** (`[learning] reviewer_enabled`, default
+off) can re-check a stable edit via OpenRouter (optional retained audio);
+still human-gated — never auto-promotes.
 
 Only edits made within `[learning] edit_window_seconds` (default 600 s) after
 the paste are considered, and only while the same app is frontmost (the
@@ -409,6 +424,7 @@ dictate/          python package
   dictionary.py   dictionary/corrections loading
   history.py      JSONL append
   learning.py     edit capture → suggestions.jsonl, promote/dismiss
+  (core) learning_reviewer.py  optional audio-aware OpenRouter review
   providers.py    app context: browser tabs, VS Code workspace, Finder selection
   bench.py        STT model benchmark harness (record/run subcommands)
 ```

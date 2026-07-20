@@ -1,4 +1,4 @@
-"""dictate_core — the UI-free brain of dictate, embeddable in other apps.
+"""dictate_core — the UI-free brain of dictate/golos, embeddable in other apps.
 
 Quickstart:
 
@@ -7,6 +7,9 @@ Quickstart:
     text = vp.process(open("clip.wav", "rb").read(), app_name="Slack")
 
 No AppKit/Quartz imports anywhere in this package (enforced by tests).
+Embeddable key lookup still reads ~/.dictate/config.toml (read-only, no
+migration) so host apps that predate the golos rename keep working; the
+desktop app itself uses ~/.golos via dictate.config.
 """
 
 import io

@@ -1,8 +1,12 @@
 """NSApplication setup and the AppController state machine.
 
 States: idle -> recording (hold) / locked (fn+Space toggle) -> processing -> idle.
-UI runs on the main run loop; record/STT/format/insert runs on worker threads.
-UI updates from workers go through PyObjCTools.AppHelper.callAfter.
+UI and hotkey callbacks run on the main run loop; record stop/STT/format/insert
+and Accessibility reads run on worker threads. UI updates from workers go
+through PyObjCTools.AppHelper.callAfter (never touch AppKit from workers).
+
+Threading invariant (CoreAudio): recorder.start() may run on main (fast path);
+recorder.stop()/abort() must only run on workers — see dictate_core.recorder.
 """
 
 import logging
@@ -12,6 +16,15 @@ log = logging.getLogger(__name__)
 
 
 class AppController:
+    """Owns dictation state and wires hotkeys → recorder → STT → format → insert.
+
+    Hotkey handlers (on_press/on_release/on_toggle/on_escape) are invoked on the
+    main thread by HotkeyMonitor. Long work is always offloaded: context gather
+    and edit capture on daemon workers, the full pipeline on another worker.
+    `self._lock` only protects state transitions at hotkey boundaries — the
+    pipeline itself does not hold it across network I/O.
+    """
+
     def __init__(self, cfg, recorder, stt_backend, formatter, bubble,
                  dictionary_terms, corrections, history_path):
         self.cfg = cfg
@@ -22,12 +35,15 @@ class AppController:
         self.dictionary_terms = dictionary_terms
         self.corrections = corrections
         self.history_path = history_path
-        self.state = "idle"          # idle | recording | locked | processing
+        self.state = "idle"          # idle | recording | locked | processing | success
+        self._state_gen = 0           # invalidates delayed callbacks from older states
         self._lock = threading.Lock()
         self._context = {"app_name": "", "bundle_id": "", "window_title": ""}
         self._fmt_context = {}           # formatter-facing, toggle-filtered
         self._settings = None        # settings window controller, built lazily
-        self.last_insertion = None   # {ts, app_name, bundle_id, raw, final}
+        # {ts, app_name, bundle_id, pid, raw, final, audio_path?}
+        # audio_path is a retained WAV path only — never raw audio bytes.
+        self.last_insertion = None
         self._cancel_requested = False
         self._watcher = None         # EditWatcher, created lazily in run_app
         self._hotkey_monitor = None  # set by run_app
@@ -39,6 +55,8 @@ class AppController:
     # -- UI state helper -------------------------------------------------
 
     def _set_state(self, state):
+        """Main thread: flip controller + bubble state and mirror callbacks."""
+        self._state_gen += 1
         self.state = state
         self.bubble.set_state(state)
         log.info("State: %s", state)
@@ -47,16 +65,24 @@ class AppController:
                 self.on_state_change(state)
             except Exception as e:
                 log.info("on_state_change failed: %s", e)
+        return self._state_gen
+
+    def _finish_success(self, generation):
+        """Hide success only if no newer recording/state superseded its timer."""
+        if generation != self._state_gen or self.state != "success":
+            return
+        self._set_state("idle")
 
     # -- hotkey callbacks (main thread) ----------------------------------
 
     def on_press(self):
+        """Hold-key down. idle/success→recording, or end locked mode."""
         handler = self.hotkey_test_handler
         if handler is not None:
             handler("press")
             return
         with self._lock:
-            if self.state == "idle":
+            if self.state in ("idle", "success"):
                 self._begin_recording("recording")
                 return
             if self.state != "locked":
@@ -65,6 +91,7 @@ class AppController:
         self._finish_recording()
 
     def on_release(self):
+        """Hold-key up (main thread). Ends hold-to-talk; locked mode ignores it."""
         handler = self.hotkey_test_handler
         if handler is not None:
             handler("release")
@@ -75,11 +102,12 @@ class AppController:
         self._finish_recording()
 
     def on_toggle(self):
+        """fn+Space (or double-tap): lock hold, start locked, or finish locked."""
         with self._lock:
             if self.state == "recording":
                 self._set_state("locked")
                 return
-            if self.state == "idle":
+            if self.state in ("idle", "success"):
                 self._begin_recording("locked")
                 return
             if self.state != "locked":
@@ -99,6 +127,10 @@ class AppController:
             return
         if new_bundle_id == li["bundle_id"]:
             return
+        # Preserve a correction already observed by the live watcher even if
+        # the user switches away before the second stable debounce poll.
+        if self._watcher is not None:
+            self._watcher.flush_pending("app switch")
         # AX read of the OLD app's field + diff happen on a worker — the
         # main thread never blocks on Accessibility reads.
         threading.Thread(target=self._capture_on_switch, args=(li,),
@@ -154,6 +186,24 @@ class AppController:
         except Exception as e:
             log.warning("Could not accept cue: %s", e)
 
+    def present_reviewer_suggestions(self, pairs, meta=None) -> None:
+        """Main thread: distinct 'suggestion ready' animation then cue.
+
+        Never auto-promotes. Generation/state guards live on the bubble so a
+        newer recording/processing state is never overridden.
+        """
+        if not pairs:
+            return
+        wrong, right = pairs[0]
+        secs = self.cfg.get("learning", {}).get("live_cue_seconds", 8)
+        present = getattr(self.bubble, "suggestion_ready", None)
+        if present is not None:
+            present(wrong, right, secs,
+                    lambda w, r: self.accept_cue(w, r))
+        else:
+            self.bubble.cue(wrong, right, secs,
+                            lambda w, r: self.accept_cue(w, r))
+
     def open_settings(self):
         """Menu-bar "Settings…" action (main thread)."""
         if self._settings is None:
@@ -197,6 +247,12 @@ class AppController:
     # -- pipeline ---------------------------------------------------------
 
     def _begin_recording(self, mode):
+        """Main thread: start mic capture and spawn the context worker.
+
+        mode is "recording" (hold-to-talk) or "locked" (toggle). A new
+        recording ends any live edit-watcher session. Mic start is the
+        tolerated main-thread CoreAudio call; AX / providers stay off-main.
+        """
         # A new recording ends the current edit-watching session.
         if self._watcher is not None:
             self._watcher.stop("new recording")
@@ -278,6 +334,11 @@ class AppController:
             log.info("Discard failed: %s", e)
 
     def _finish_recording(self):
+        """Main thread: enter processing and spawn the pipeline worker.
+
+        Only flips UI state here — recorder.stop() runs inside _pipeline on
+        the worker. Stopping PortAudio on main deadlocks CoreAudio.
+        """
         # Main thread ONLY flips state — recorder.stop() happens in the
         # pipeline worker. (Stopping on main deadlocks CoreAudio.)
         self._set_state("processing")
@@ -306,6 +367,13 @@ class AppController:
             return None
 
     def _pipeline(self):
+        """Worker thread: stop mic → STT → format → schedule insert on main.
+
+        Privacy: audio leaves the Mac only for non-mlx STT backends, and again
+        if [formatting] send_audio is true (formatter multimodal path). The
+        raw transcript leaves for stage-2 LLM formatting when enabled.
+        self._fmt_context is already filtered by [context] toggles.
+        """
         from PyObjCTools import AppHelper
         from .insert import insert_text
         from .history import append_history
@@ -348,6 +416,8 @@ class AppController:
             else:
                 audio_wav = None
                 if fmt_cfg.get("send_audio"):
+                    # Optional: original wav rides with the chat request so the
+                    # model can un-garble STT from what it hears. Off by default.
                     from .stt import wav_bytes
                     audio_wav = wav_bytes(audio)
                 final = self.formatter.format(raw, self._fmt_context,
@@ -373,6 +443,9 @@ class AppController:
                         "pid": self._context.get("pid"),
                         "raw": raw,
                         "final": final,
+                        # Retained WAV path only when [audio] keep_recordings
+                        # saved one; never store raw audio bytes here.
+                        "audio_path": audio_path,
                     }
                     # Fallback edit-capture: if the insertion is still pending
                     # in 45s (no new recording, no app switch), check now.
@@ -380,8 +453,8 @@ class AppController:
                     # Live edit cues: watch the field for manual corrections.
                     if self._watcher is not None:
                         self._watcher.start()
-                    self.bubble.set_state("success")
-                    AppHelper.callLater(1.2, self._set_state, "idle")
+                    success_gen = self._set_state("success")
+                    AppHelper.callLater(1.2, self._finish_success, success_gen)
                 else:
                     self._set_state("idle")
 
@@ -658,6 +731,7 @@ def _install_signal_handlers(app):
 
 
 def _yield_focus(previous):
+    """Return activation to the app that was frontmost before our launch bump."""
     from AppKit import NSApplicationActivateIgnoringOtherApps
     if previous is not None and not previous.isTerminated():
         previous.activateWithOptions_(NSApplicationActivateIgnoringOtherApps)

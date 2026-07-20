@@ -1,3 +1,11 @@
+---
+@purpose: "Technical architecture of golos: module map, state machine, hotkeys, bubble UI, and pipeline boundaries."
+@why: "Prevents architecture guesswork when changing dictate/dictate_core or debugging OS integration."
+@role: reference
+@stability: accepted
+@tags: [golos, architecture, tech, pyobjc, dictate]
+related_docs: [docs/GUIDE.md, docs/VISION.md, README.md]
+---
 # golos — technical architecture
 
 A single Python process (PyObjC) runs an NSApplication run loop. Worker
@@ -16,11 +24,12 @@ keeps the shims + everything with UI or OS integration:
 |---|---|
 | `__main__.py` | entry: logging, load config, `run_app` |
 | `app.py` | NSApplication setup, `AppController` state machine, instance lock, app-switch observer, threading boundaries |
-| `hotkeys.py` | 4 hold keys (fn/right_option/right_command via flagsChanged; f5 via key events), CGEventTap swallowing Space + F5, double-tap detection, live rebind |
+| `hotkeys.py` | 4 hold keys (fn/right_option/right_command via CGEventTap flagsChanged when active, NSEvent fallback; f5 via key events), CGEventTap swallowing Space + F5, double-tap detection, live rebind |
 | `bubble.py` | notch strip (recording wings / processing shimmer / success hill / notice / cue) + corner pill (NSPanel status-level UI) |
 | `context.py` | frontmost app/window/pid, text-before-cursor, normalized visible text (AX) |
 | `providers.py` | per-app context: browser tab, VS Code workspace, Finder selection |
 | `learning.py` | edit capture (AX) → suggestion pairs, promote/dismiss, async wrapper |
+| `learning_reviewer.py` (core) | optional OpenRouter multimodal review after stable edits |
 | `editwatcher.py` | live edit cues: 2.5 s polling for 3 min, debounce, cue firing (workers for AX reads) |
 | `settings.py` | menu-bar status item (12-petal chakra glyph, 11 pt), Permissions submenu, 4-tab Settings window |
 | `onboarding.py` | 7-page branded wizard (sidebar, radio cards, hotkey test pad, try-it field) |
@@ -42,15 +51,29 @@ thread; state transitions are logged.
 ## Hotkeys: event tap vs monitor
 
 Global `NSEvent` monitors are observe-only — the Space in fn+Space would
-also type into the target app. So a `CGEventTap` (session-level, keyDown)
-sits in front: if `should_consume(keycode, fn_held, flags)` — Space plus fn
-held, or fn in the event's own flags — the callback returns `None`
-(swallowing it) and fires the toggle; otherwise the event passes through.
-The tap re-enables itself on `kCGEventTapDisabledByTimeout/UserInput`. If
-creation fails (no Input Monitoring permission), the old observe-only
-monitor remains as fallback and the startup log says which path is active.
-Two flag domains are easy to confuse: CGEvent fn = `0x200000`,
-NSEventModifierFlagFunction = `0x800000` — each path uses its own.
+also type into the target app. So a `CGEventTap` (session-level,
+keyDown/keyUp/**flagsChanged**) sits in front:
+
+- **Modifier hold keys** (`fn` keycode 63, `right_option` 61,
+  `right_command` 54): delivered on the tap's `flagsChanged` path, filtered
+  by that keycode + the matching CGEvent flag mask. Events pass through
+  (not swallowed). While the tap is active the NSEvent `flagsChanged`
+  handler no-ops so press/release never double-fire.
+- **Space combo**: if `should_consume(keycode, fn_held, flags)` — Space plus
+  hold key held, or SecondaryFn in the event's own flags — the callback
+  returns `None` (swallowing down *and* up) and fires toggle on keyDown only.
+- **F5** as hold key: both keyDown and keyUp are swallowed.
+
+Fn flag mask is `kCGEventFlagMaskSecondaryFn == 0x800000` (same numeric
+value as `NSEventModifierFlagFunction`). The old `0x200000` literal was
+wrong and broke the event-local Space fallback.
+
+On `kCGEventTapDisabledByTimeout/UserInput` the tap re-enables itself and,
+if `_fn_held` is still true, forces a single release so a missed modifier-up
+cannot leave recording stuck or make the next press a permanent no-op. If
+tap creation fails (no Input Monitoring permission), the observe-only
+NSEvent monitors remain as fallback and the startup log says which path is
+active.
 
 `toggle_combo = "double_fn"`: taps are classified by the pure function
 `double_tap_decision` (tap ≤ 400 ms, gap ≤ 350 ms). While locked, hold-key
@@ -126,15 +149,33 @@ consumed by the tap while configured) and rebinding is live via
 - **Anchor gate (v2, scroll-tolerant)**: matching-block coverage ≥ 50% of
   the visible overlap (field length when the input box scrolled the older
   part away, else insertion length) with the longest block ≥ 12 chars
-  (≥ 8 chars requires ≥ 60%), else skip with an INFO log. The field text is
+  (≥ 8 chars requires ≥ 60%). When the longest exact block is under 8 chars,
+  a short whole-field path still accepts near-misses if the field *is* the
+  recent short insertion (both ≤ 64 chars, length ratio ≤ 2, overall
+  similarity ≥ 0.5); embedded short text in large fields still needs the
+  8/12-char anchor. Otherwise skip with an INFO log. The field text is
   normalized like visible_text first; the anchor is shrunk to word
-  boundaries and only head/tail regions are diffed — never the whole field.
+  boundaries and only head/tail regions are diffed — never the whole field
+  (except the short whole-field path above).
   A live **edit watcher** (`[learning] live_cues`) polls the field every
   2.5 s for 3 min after each insertion; a pair that survives two consecutive
   polls (user paused) becomes a clickable cue (`wrong → right ✓?` pill) —
   accepting promotes to corrections + dismisses it.
 - **Similarity gate**: keep a pair only if `SequenceMatcher.ratio() ≥ 0.5`
   or one side contains the other; drop if either side > 6 tokens.
+- **Optional learning reviewer** (`[learning] reviewer_enabled`, default
+  **false**): after a stable manual edit, an independent OpenRouter chat
+  model may propose structured `{wrong, right, confidence}` candidates
+  from raw + inserted + edited text and, when
+  `[learning] reviewer_send_audio` and a retained WAV path exist, the
+  original audio (`input_audio`). Validation requires wrong ∈ raw/inserted,
+  right ∈ edited, length bounds, and min confidence; audio may accept
+  low string-similarity pairs (e.g. alarm→LLM). **Never auto-promotes.**
+  At most one reviewer attempt per insertion; independent of formatter /
+  fast mode. On disable, missing key, missing WAV with text-only, API
+  error, malformed JSON, or empty candidates → deterministic
+  `suggest_pairs` fallback. Credible reviewer hits play a violet/amber
+  “suggestion ready” animation before the interactive cue.
 - Triggers: next recording, app switch (AX read of the old app's pid),
   45 s fallback timer, manual "Check for edits". Window: 600 s
   (`[learning] edit_window_seconds`).
@@ -153,9 +194,12 @@ consumed by the tap while configured) and rebinding is live via
   title, tab URL, workspace file list, ≤500 chars before the cursor,
   ≤4000 chars of normalized visible text) — only when `[formatting] enabled = true`
   and a key is configured. Cloud STT sends the audio to OpenRouter when
-  `backend = "openrouter"`.
+  `backend = "openrouter"`. The optional learning reviewer may send a
+  bounded edit excerpt (and a retained WAV when `reviewer_send_audio`)
+  only if `[learning] reviewer_enabled = true`.
 - Off switches: `[formatting] enabled = false` (raw mode), `[context]
-  enabled = false` (no providers/AX reads), `[learning] enabled = false`.
+  enabled = false` (no providers/AX reads), `[learning] enabled = false`,
+  `[learning] reviewer_enabled = false` (default).
 - The API key lives in `config.toml` (plain text, user-only) or
   `OPENROUTER_API_KEY` (env wins). History/suggestions are local JSONL.
 - Permissions are preflighted at startup; the app never requests them
@@ -183,6 +227,11 @@ consumed by the tap while configured) and rebinding is live via
 | `[bubble] style` / `sensitivity` | `"notch"` / `1.0` | corner fallback / display gain 0.5–2.5 |
 | `[learning] enabled` / `edit_window_seconds` | `true` / `600` | suggestion loop |
 | `[learning] live_cues` / `live_cue_seconds` | `true` / `8` | click-to-keep edit cues |
+| `[learning] reviewer_enabled` | `false` | optional OpenRouter post-edit review (off for privacy) |
+| `[learning] reviewer_model` | `google/gemini-3.1-flash-lite-preview` | independent of formatter model |
+| `[learning] reviewer_send_audio` | `true` | attach retained WAV when reviewing (audio leaves Mac) |
+| `[learning] reviewer_prompt_file` | `learning_prompt.md` | under `~/.golos/` |
+| `[learning] reviewer_min_confidence` | `0.55` | drop lower-confidence candidates |
 | `[context] enabled` | `true` | providers + AX text reads |
 | `[insert] method` / `restore_clipboard` | `"auto"` / `false` | type/paste override; clipboard restore escape hatch |
 | `[audio] device` / `keep_recordings` | `0` / `true` | sounddevice index; wav archive |

@@ -6,7 +6,11 @@ The system prompt is a template with four placeholders:
   {{context_block}}   labeled context lines (or "(no context available)")
   {{context_rules}}   instruction lines that apply to the context actually
                       present (references / continuation / citation rules)
-The user can override the template via ~/.dictate/prompt.md (Settings → Prompt).
+The user can override the template via ~/.golos/prompt.md (Settings → Prompt).
+
+Privacy: when enabled, the raw transcript and the filtered context block leave
+the Mac as a chat request. With [formatting] send_audio, the original wav is
+also attached (multimodal models only). Failures return the raw transcript.
 """
 
 import logging
@@ -201,7 +205,7 @@ class Formatter:
         self.send_audio = bool(fmt.get("send_audio", False))
         self.dictionary_terms = dictionary_terms
         self.corrections = corrections
-        # Prompt template: ~/.dictate/prompt.md if it exists, else the default.
+        # Prompt template: ~/.golos/prompt.md if it exists, else the default.
         self.template = DEFAULT_TEMPLATE
         prompt_path = _prompt_file_path(fmt.get("prompt_file", "prompt.md"))
         if prompt_path.exists():

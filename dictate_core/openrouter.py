@@ -1,4 +1,9 @@
-"""OpenRouter integration: API key resolution, model listing, defaults."""
+"""OpenRouter integration: API key resolution, model listing, defaults.
+
+Shared by STT (openrouter backend) and the chat formatter. Key order:
+OPENROUTER_API_KEY env > [openrouter] api_key in config. TRANSCRIPTION_MODELS
+is a curated allow-list — the public /models catalog does not list all of them.
+"""
 
 import logging
 import os

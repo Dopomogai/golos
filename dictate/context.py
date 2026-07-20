@@ -1,6 +1,10 @@
-"""Frontmost-app context: name, bundle id, focused window title.
+"""Frontmost-app context: name, bundle id, focused window title, pid.
 
-Window title needs Accessibility permission; degrade gracefully to app name only.
+Window title and field text need Accessibility; degrade gracefully when
+missing. Privacy: `pid` is local bookkeeping only (edit capture after app
+switch) and must never be sent to the formatter. App identity and scraped
+field/window text leave the Mac only when the formatter is enabled and the
+matching [context] toggles allow them — see AppController._prepare_context.
 """
 
 import logging
@@ -9,6 +13,11 @@ log = logging.getLogger(__name__)
 
 
 def frontmost_context() -> dict:
+    """Snapshot of the frontmost app. Keys: app_name, bundle_id, window_title, pid.
+
+    Best-effort: missing Accessibility yields empty window_title; failures
+    never raise. Safe to call from a worker thread (AppKit NSWorkspace + AX).
+    """
     ctx = {"app_name": "", "bundle_id": "", "window_title": "", "pid": None}
     try:
         from AppKit import NSWorkspace

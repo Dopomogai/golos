@@ -1,4 +1,9 @@
-"""py2app build for golos.app — run via build_app.sh."""
+"""py2app build for golos.app — run via build_app.sh (not `python setup.py` alone).
+
+Platform: macOS only (AppKit/Quartz/AVFoundation includes). Excludes list
+keeps optional ML/data-science transitive deps out of the bundle so DMG size
+stays manageable; packages/includes list is the allow-set for what ships.
+"""
 
 import sys
 

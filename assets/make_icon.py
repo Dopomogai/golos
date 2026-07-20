@@ -25,6 +25,7 @@ PETAL_SHORT = SIZE * 0.105
 
 
 def lerp(c1, c2, t):
+    """Linear blend of two RGB triples; t in [0, 1]."""
     return tuple(a + (b - a) * t for a, b in zip(c1, c2))
 
 

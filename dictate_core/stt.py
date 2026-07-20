@@ -1,4 +1,10 @@
-"""Speech-to-text backends: local mlx-whisper, OpenAI-compatible, Deepgram."""
+"""Speech-to-text backends: local mlx-whisper, OpenAI-compatible, Deepgram.
+
+Privacy boundary: mlx keeps audio on-device. openrouter / openai_compatible /
+deepgram upload the 16 kHz wav (or base64 equivalent) to the remote API —
+that is when mic data leaves the Mac for transcription. The optional
+formatter send_audio path (stage 2) is separate and lives in formatter.py.
+"""
 
 import io
 import logging
@@ -56,6 +62,7 @@ def write_wav(path: str, audio: np.ndarray, sample_rate: int = SAMPLE_RATE) -> N
 
 
 def wav_bytes(audio: np.ndarray, sample_rate: int = SAMPLE_RATE) -> bytes:
+    """In-memory 16-bit PCM WAV (same encoding as write_wav)."""
     buf = io.BytesIO()
     pcm = np.clip(audio, -1.0, 1.0)
     pcm = (pcm * 32767).astype(np.int16)
@@ -68,7 +75,7 @@ def wav_bytes(audio: np.ndarray, sample_rate: int = SAMPLE_RATE) -> bytes:
 
 
 class MlxWhisperBackend:
-    """Local on-device STT via mlx-whisper."""
+    """Local on-device STT via mlx-whisper. Audio never leaves the machine."""
 
     def __init__(self, model: str, language: str = "",
                  languages: list[str] | None = None):
@@ -96,7 +103,10 @@ class MlxWhisperBackend:
 
 
 class OpenAICompatibleBackend:
-    """POST multipart to {base_url}/audio/transcriptions (OpenAI/Groq-style)."""
+    """POST multipart to {base_url}/audio/transcriptions (OpenAI/Groq-style).
+
+    Remote: wav bytes leave the Mac on every call.
+    """
 
     def __init__(self, base_url: str, api_key: str, model: str):
         self.base_url = base_url.rstrip("/")
@@ -122,6 +132,8 @@ class OpenAICompatibleBackend:
 
 class OpenRouterSTTBackend:
     """OpenRouter /audio/transcriptions: JSON body with base64 wav (NOT multipart).
+
+    Remote: base64 wav leaves the Mac on every call.
 
     Verified against the live API 2026-07-18:
       POST {BASE_URL}/audio/transcriptions
@@ -179,7 +191,7 @@ class OpenRouterSTTBackend:
 
 
 class DeepgramBackend:
-    """POST wav bytes to Deepgram's /v1/listen endpoint."""
+    """POST wav bytes to Deepgram's /v1/listen endpoint. Remote: audio leaves Mac."""
 
     def __init__(self, api_key: str, model: str = "nova-3"):
         self.api_key = api_key

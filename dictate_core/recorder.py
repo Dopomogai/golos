@@ -37,6 +37,11 @@ class Recorder:
         self._stop_lock = threading.Lock()
 
     def start(self) -> None:
+        """Open the PortAudio input stream and begin capturing.
+
+        May run on the main thread (hotkey press path): stream start is fast.
+        Idempotent under _stop_lock — a second start while active is ignored.
+        """
         with self._stop_lock:
             if self._stream is not None:
                 log.warning("Recorder.start() while already recording; ignoring.")
@@ -53,6 +58,8 @@ class Recorder:
             self._stream.start()
 
     def _callback(self, indata, frames, time_info, status):
+        # PortAudio IO thread: copy out of the shared buffer, then optional
+        # level callback. Never raise — a UI exception must not kill capture.
         block = indata[:, 0]
         with self._lock:
             self._chunks.append(block.copy())
@@ -63,6 +70,7 @@ class Recorder:
                 pass  # never let UI break the audio stream
 
     def _drain(self) -> np.ndarray:
+        """Take ownership of buffered chunks under _lock (caller holds _stop_lock)."""
         with self._lock:
             if not self._chunks:
                 return np.zeros(0, dtype=np.float32)

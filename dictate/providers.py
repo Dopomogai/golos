@@ -7,6 +7,10 @@ would LAUNCH it otherwise (and trigger Automation consent dialogs).
 
 First use of a browser/Finder provider may trigger a macOS Automation consent
 dialog — expected; denying simply disables that provider.
+
+Privacy: gathered fields (URLs, workspace paths, AX text) leave the Mac only
+when the formatter is enabled and the matching [context] toggle is on.
+include_visible=False skips AX text reads entirely (formatting disabled path).
 """
 
 import logging
