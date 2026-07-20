@@ -1,0 +1,4 @@
+# Optional on-device STT for Apple Silicon.
+-r requirements-cloud.txt
+mlx-whisper==0.4.3
+mlx==0.32.0

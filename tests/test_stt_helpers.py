@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import io
+import sys
 import wave
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -13,7 +15,11 @@ from dictate_core.stt import (
     MlxWhisperBackend,
     OpenAICompatibleBackend,
     OpenRouterSTTBackend,
+    DEFAULT_MLX_MODEL,
+    download_local_model,
     language_hint,
+    local_model_is_downloaded,
+    local_model_support,
     make_backend,
     validate_languages,
     wav_bytes,
@@ -59,15 +65,72 @@ def test_wav_bytes_clips_out_of_range():
     assert pcm[1] == -32767
 
 
-def test_make_backend_mlx():
+def test_make_backend_mlx_requires_supported_download(monkeypatch):
+    import dictate_core.stt as stt_mod
+    monkeypatch.setattr(stt_mod, "local_model_support", lambda: (True, ""))
+    monkeypatch.setattr(stt_mod, "local_model_is_downloaded", lambda model: True)
     backend = make_backend({"stt": {"backend": "mlx", "languages": ["en"]}}, lambda s: None)
     assert isinstance(backend, MlxWhisperBackend)
     assert backend.language == "en"
 
 
+def test_make_backend_mlx_refuses_unsupported_or_missing(monkeypatch):
+    import dictate_core.stt as stt_mod
+    cfg = {"stt": {"backend": "mlx"}}
+    monkeypatch.setattr(stt_mod, "local_model_support", lambda: (False, "Intel"))
+    assert make_backend(cfg, lambda s: None) is None
+    monkeypatch.setattr(stt_mod, "local_model_support", lambda: (True, ""))
+    monkeypatch.setattr(stt_mod, "local_model_is_downloaded", lambda model: False)
+    assert make_backend(cfg, lambda s: None) is None
+
+
+def test_mlx_transcribe_refuses_implicit_download(monkeypatch):
+    import dictate_core.stt as stt_mod
+    monkeypatch.setattr(stt_mod, "local_model_support", lambda: (True, ""))
+    monkeypatch.setattr(stt_mod, "local_model_is_downloaded", lambda model: False)
+    backend = MlxWhisperBackend(DEFAULT_MLX_MODEL)
+    with pytest.raises(RuntimeError, match="not downloaded"):
+        backend.transcribe(np.zeros(1600, dtype=np.float32))
+
+
 def test_make_backend_openrouter_requires_key():
     backend = make_backend({"stt": {"backend": "openrouter"}}, lambda s: None)
     assert backend is None
+
+
+def test_make_backend_defaults_to_cloud_first_openrouter():
+    assert make_backend({}, lambda s: None) is None
+
+
+def test_local_model_path_status_is_offline(tmp_path):
+    model = tmp_path / "model"
+    model.mkdir()
+    assert local_model_is_downloaded(str(model)) is False
+    (model / "config.json").write_text("{}")
+    (model / "weights.safetensors").write_bytes(b"weights")
+    assert local_model_is_downloaded(str(model)) is True
+
+
+def test_local_model_support_rejects_intel(monkeypatch):
+    import dictate_core.stt as stt_mod
+    monkeypatch.setattr(stt_mod.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(stt_mod.platform, "machine", lambda: "x86_64")
+    ok, reason = local_model_support()
+    assert ok is False
+    assert "Apple Silicon" in reason
+
+
+def test_explicit_local_download_uses_requested_repo(monkeypatch):
+    import dictate_core.stt as stt_mod
+    monkeypatch.setattr(stt_mod, "local_model_support", lambda: (True, ""))
+    calls = []
+    monkeypatch.setitem(
+        sys.modules,
+        "huggingface_hub",
+        SimpleNamespace(snapshot_download=lambda repo_id: calls.append(repo_id) or "/cache/model"),
+    )
+    assert download_local_model(DEFAULT_MLX_MODEL) == "/cache/model"
+    assert calls == [DEFAULT_MLX_MODEL]
 
 
 def test_make_backend_openrouter_with_key():

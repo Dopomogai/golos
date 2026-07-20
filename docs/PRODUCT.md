@@ -11,7 +11,7 @@ related_docs: [docs/GUIDE.md, docs/VISION.md, docs/PRODUCT_PAGE.md, README.md]
 **golos** is a small macOS menu-bar app that turns your voice into text
 anywhere a cursor can blink. Hold a key, talk, release — the text appears in
 whatever app you're in. It's a personal, open-source take on Wispr Flow:
-local-first, hackable Python, no account, no subscription.
+inspectable, configurable Python, no subscription.
 
 ## Key features
 
@@ -37,8 +37,9 @@ local-first, hackable Python, no account, no subscription.
   your dictionary or corrections list with a single confirmation. A live edit watcher
   can even offer it within seconds as a click-to-keep pill. Nothing is
   learned without your approval.
-- **Model choice** — local on-device Whisper (mlx) by default, or 9 curated
-  cloud transcription models via OpenRouter. A built-in benchmark harness
+- **Model choice** — 9 curated cloud transcription models via OpenRouter by
+  default, or an optional ~1.5 GB local Whisper download on Apple Silicon.
+  A built-in benchmark harness
   (`python -m dictate.bench`) measures WER and latency on *your* voice.
 - **History** — every dictation is logged locally (raw + final + context) in
   `history.jsonl`, browsable in Settings. The raw audio of each dictation is
@@ -46,7 +47,8 @@ local-first, hackable Python, no account, no subscription.
 
 ## Install
 
-Requirements: Apple Silicon Mac, macOS 13+, Python ≥ 3.11.
+Requirements: macOS 13+. The Apple Silicon build supports both OpenRouter and
+optional local MLX; the Intel beta build is cloud-only. Python ≥ 3.11 for source installs.
 
 ```sh
 cd ~/dictate
@@ -78,9 +80,10 @@ cd ~/dictate
 ```
 
 1. Hold `fn`, say "hello this is a test", release — text lands at the cursor.
-2. Without any API key everything works offline (local Whisper, raw insert).
-3. Add an OpenRouter key in Settings → General for cloud STT and the LLM
-   formatting pass. A green "✓ inserted" flash confirms each paste.
+2. Add an OpenRouter key during onboarding for cloud STT and formatting with
+   no model download.
+3. On Apple Silicon, optionally download the local model from Settings →
+   General for on-device STT. A green "✓ inserted" flash confirms each paste.
 
 ## Speed knobs
 
@@ -98,7 +101,7 @@ human-gated, never auto-applied.
 |---|---|---|
 | Stage 2 | off | LLM cleanup + structure + context |
 | Speed | fastest | +1–3 s |
-| Privacy | nothing leaves the machine | transcript + context go to the formatter API |
+| Privacy | skips formatter/context sharing; cloud STT still sends audio | transcript + allowed context go to the formatter API |
 
 Toggle with the **Format with LLM** checkbox in Settings → General
 (`[formatting] enabled`). You can also keep formatting on but disable

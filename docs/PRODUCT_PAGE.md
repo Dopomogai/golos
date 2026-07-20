@@ -17,10 +17,10 @@ types it into whatever app you're in — email, terminal, chat, IDE.
 
 **Subheads:**
 
-- **Faster than the keyboard you think you need.** 2–3× speaking speed, zero
-  typos, punctuation handled.
-- **Private by default.** On-device Whisper on Apple Silicon. No account, no
-  audio stored, no cloud required.
+- **Faster than the keyboard you think you need.** Speak naturally; optional
+  formatting handles punctuation, fillers, paragraphs, and lists.
+- **Cloud-first, local when you want it.** Start with OpenRouter—no model
+  download. Apple Silicon users can explicitly download on-device Whisper.
 - **It knows where you're typing.** dictate sees the app, the window, even
   the file you're editing — so "attach main dot pi" becomes `main.py`.
 
@@ -28,7 +28,7 @@ types it into whatever app you're in — email, terminal, chat, IDE.
 
 | 🎙 Hold-to-talk | 🌊 Live waveform wings | 🧠 Two-stage AI |
 |---|---|---|
-| Hold fn, speak, release. fn+Space for hands-free lock mode. | Your voice ripples from the camera notch while you speak. Hidden when idle. | Local STT first, then an LLM pass: fillers out, paragraphs and real lists in. |
+| Hold fn, speak, release. fn+Space for hands-free lock mode. | Your voice ripples from the camera notch while you speak. Hidden when idle. | Cloud or optional local STT, then an optional LLM pass: fillers out, paragraphs and real lists in. |
 
 | 📚 Learns your words | 📎 Real citations | ⚡ Two speeds |
 |---|---|---|
@@ -54,19 +54,24 @@ Same voice. Your choice per machine, per moment.
 
 ## Privacy
 
-- **Local-first**: the default speech-to-text runs entirely on your Mac
-  (mlx-whisper on Apple Silicon). No key, no cloud, no problem.
-- **What's shared, and when**: only if you enable the OpenRouter formatting
-  pass does the transcript plus app context (window title, current tab,
-  text near your cursor) go to the API you chose. One checkbox turns it all
-  off. Audio itself leaves only if you pick a cloud STT backend.
+- **OpenRouter first**: the default speech-to-text sends the recorded audio to
+  the cloud model you select. It starts without a large model download.
+- **Local is an explicit option**: Apple Silicon users can download the
+  on-device MLX model once (~1.5 GB). In that mode, transcription audio stays
+  on the Mac.
+- **What's shared, and when**: cloud STT sends audio for transcription. If
+  formatting is enabled, the transcript plus permitted app context goes to
+  the formatter; audio goes to the formatter only when its separate audio
+  assistance toggle is enabled.
 - **Your data stays put**: history, dictionary, and learned corrections are
   plain JSONL/text files in `~/.golos`. Delete them whenever you like.
 
 ## Requirements
 
-- macOS 13+ on Apple Silicon
-- ~1.5 GB disk for the local Whisper model (downloaded once)
+- macOS 13+
+- Apple Silicon: OpenRouter plus optional on-device MLX
+- Intel: cloud-only OpenRouter edition; no local MLX
+- Optional ~1.5 GB disk only when the local model is explicitly downloaded
 - Microphone, Input Monitoring, Accessibility permissions (guided setup)
 - Optional: an OpenRouter API key for cloud models + LLM formatting
 
@@ -101,8 +106,9 @@ Nothing is learned without your approval.
 
 ## Download
 
-**golos for macOS** — DMG, signed & notarized.
-Free for personal use. Source available.
+**golos for macOS** — separate Apple Silicon and Intel DMGs.
+Free and open-source under MIT. The current beta is unsigned, so first launch
+uses right-click → Open; do not describe it as signed or notarized yet.
 
 ---
 *Copy notes: hero animates the notch wings in a 6s loop; the raw/formatted

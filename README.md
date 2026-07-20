@@ -23,14 +23,15 @@ A minimal macOS push-to-talk dictation app, in Python + PyObjC
 - Notch-style floating bubble (Dynamic Island look: hugs the camera notch, expands
   with a live waveform while recording) or a draggable corner pill.
 - Menu-bar icon with Settings (General / Prompt / Learning / Dictionary / History) — no dock icon.
-- Local on-device STT by default; optional OpenRouter cloud STT and LLM formatting pass.
+- OpenRouter cloud STT works without downloading a local model; Apple Silicon
+  users can optionally download the ~1.5 GB MLX model for on-device STT.
 
 ## How it works
 
 1. **fn down** → audio capture starts (16 kHz mono) and the bubble turns red.
    The frontmost app's name / bundle id / window title is captured as context.
-2. **fn up** → the audio goes to STT (local mlx-whisper by default), with your
-   `dictionary.txt` terms passed as an `initial_prompt` for vocabulary biasing.
+2. **fn up** → the audio goes to the selected STT backend (OpenRouter by
+   default), with your `dictionary.txt` terms passed as a vocabulary hint.
 3. The raw transcript goes through a **formatting LLM pass** (OpenRouter by
    default): fillers and false starts removed, punctuation fixed, corrections
    from `corrections.tsv` applied, spoken filenames turned into real ones using
@@ -48,16 +49,20 @@ reload into the running pipeline immediately — no restart needed.
 
 ## Requirements
 
-- macOS on Apple Silicon (mlx-whisper requires it)
+- macOS 13+
+- Apple Silicon for the full build and optional local MLX model
+- Intel Macs use the cloud-only build (OpenRouter; local MLX is unavailable)
 - Python ≥ 3.11 (uses stdlib `tomllib`)
 
 ## Setup
 
 ```sh
-git clone https://github.com/andriisolovei/golos.git
+git clone https://github.com/Dopomogai/golos.git
 cd golos
 python3.11 -m venv .venv        # or any python ≥ 3.11
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -r requirements.txt        # OpenRouter, no local model
+# Apple Silicon only, when local STT is wanted:
+.venv/bin/pip install -r requirements-local.txt
 ```
 
 ## macOS permissions (required, one-time)
@@ -95,11 +100,15 @@ the bench harness).
 ## Build the .app + installer
 
 ```sh
-./build_app.sh        # py2app -> dist/golos.app
-./make_dmg.sh         # -> dist/golos-0.2.0.dmg (app + /Applications symlink)
+# Apple Silicon edition (install requirements-local.txt first):
+./build_app.sh
+./make_dmg.sh 0.3.0-apple-silicon
+# Intel/cloud-only edition (requires an x86_64 Python 3.11+):
+./build_intel_app.sh
+./make_dmg.sh 0.3.0-intel
 ```
 
-Requires `py2app` and `setuptools<80` (in requirements.txt). The bundle is
+Requires `py2app` and `setuptools<80` (in the requirements files). The bundle is
 unsigned — to run it: **right-click → Open** (Gatekeeper), then re-grant the
 three permissions (Microphone, Input Monitoring, Accessibility) to
 **golos.app** — it's a separate TCC identity from your terminal. The
@@ -108,7 +117,7 @@ notarization are the remaining steps for real distribution (docs/VISION.md).
 
 ## Install (from the DMG)
 
-1. Open `dist/golos-0.2.0.dmg`, drag **golos** onto **Applications**.
+1. Open the DMG for your architecture, then drag **golos** onto **Applications**.
 2. First launch: right-click → **Open** (unsigned build).
 3. Grant the three permissions to golos.app when the wizard asks.
 
@@ -141,7 +150,8 @@ The UI-free brain lives in the sibling package `dictate_core` (no AppKit —
 embeddable in your own apps/widgets):
 
 ```sh
-pip install -e .          # from the project root; extras: [mlx] [mic] [app]
+pip install -e ".[app]"       # cloud-first desktop app, no MLX
+pip install -e ".[app,mlx]"   # optional local STT on Apple Silicon
 ```
 
 ```python
@@ -189,7 +199,8 @@ Click the mic icon in the menu bar → **Settings…**. The menu also has:
 
 Four tabs (General, Prompt, Dictionary, History):
 
-- **General** — STT backend (`mlx` on-device, or `openrouter`), STT model,
+- **General** — STT backend (`openrouter` cloud-first, or `mlx` on-device),
+  an explicit **Download local (~1.5 GB)** button on supported Apple Silicon Macs, STT model,
   **Languages** (comma-separated, e.g. `en, uk`; empty = auto-detect),
   formatter model, OpenRouter API key, bubble style (`notch` / `corner`),
   **Input sensitivity** slider (0.5–2.5 — display gain for the recording
@@ -219,8 +230,8 @@ Four tabs (General, Prompt, Dictionary, History):
 The cloud features (STT backend `openrouter`, formatter provider `openrouter`)
 use one key: set `[openrouter] api_key` in Settings, or export
 `OPENROUTER_API_KEY` (the env var takes precedence). With no key at all the app
-still works fully offline: local mlx STT, and stage-2 formatting is skipped
-gracefully (raw transcript is inserted).
+prompts you to connect OpenRouter or deliberately select/download the optional
+local MLX backend on Apple Silicon; it never downloads model weights silently.
 
 **OpenRouter STT** posts to `https://openrouter.ai/api/v1/audio/transcriptions`
 with a JSON body — `{"model": id, "input_audio": {"data": <base64 wav>,

@@ -9,14 +9,17 @@ formatter send_audio path (stage 2) is separate and lives in formatter.py.
 import io
 import logging
 import os
+import platform
 import tempfile
 import wave
+from pathlib import Path
 
 import numpy as np
 
 log = logging.getLogger(__name__)
 
 SAMPLE_RATE = 16000
+DEFAULT_MLX_MODEL = "mlx-community/whisper-large-v3-turbo"
 
 LANG_NAMES = {
     "en": "English", "uk": "Ukrainian", "ru": "Russian", "de": "German",
@@ -48,6 +51,52 @@ def language_hint(langs: list[str]) -> str:
         return ""
     names = ", ".join(LANG_NAMES.get(c, c) for c in langs)
     return f"Languages: {names}."
+
+
+def local_model_support() -> tuple[bool, str]:
+    """Return whether this installation can run the optional MLX backend.
+
+    The public Apple Silicon app bundles the MLX runtime but downloads model
+    weights only on request. Cloud-only/Intel installs intentionally omit MLX.
+    """
+    if platform.system() != "Darwin" or platform.machine() not in ("arm64", "arm64e"):
+        return False, "Local MLX transcription requires Apple Silicon."
+    try:
+        import importlib.util
+        if importlib.util.find_spec("mlx_whisper") is None:
+            return False, "MLX runtime is not installed in this cloud-only build."
+    except (ImportError, ValueError):
+        return False, "MLX runtime is not installed in this cloud-only build."
+    return True, ""
+
+
+def local_model_is_downloaded(model: str = DEFAULT_MLX_MODEL) -> bool:
+    """Check local files/cache only; never contacts Hugging Face."""
+    model_path = Path(model).expanduser()
+    if model_path.is_dir():
+        return ((model_path / "config.json").is_file()
+                and ((model_path / "weights.safetensors").is_file()
+                     or (model_path / "weights.npz").is_file()))
+    try:
+        from huggingface_hub import try_to_load_from_cache
+        config = try_to_load_from_cache(model, "config.json")
+        weights = (try_to_load_from_cache(model, "weights.safetensors")
+                   or try_to_load_from_cache(model, "weights.npz"))
+        return bool(config and weights)
+    except (ImportError, OSError, ValueError):
+        return False
+
+
+def download_local_model(model: str = DEFAULT_MLX_MODEL) -> str:
+    """Explicitly download optional MLX model weights; returns cache path."""
+    supported, reason = local_model_support()
+    if not supported:
+        raise RuntimeError(reason)
+    try:
+        from huggingface_hub import snapshot_download
+    except ImportError as e:
+        raise RuntimeError("Local-model downloader is not installed.") from e
+    return str(snapshot_download(repo_id=model))
 
 
 def write_wav(path: str, audio: np.ndarray, sample_rate: int = SAMPLE_RATE) -> None:
@@ -88,7 +137,14 @@ class MlxWhisperBackend:
                          else (language or None))
 
     def transcribe(self, audio: np.ndarray, prompt: str = "") -> str:
-        import mlx_whisper  # deferred: importing pulls in mlx
+        supported, reason = local_model_support()
+        if not supported:
+            raise RuntimeError(reason)
+        if not local_model_is_downloaded(self.model):
+            raise RuntimeError(
+                "Local model is not downloaded. Open Settings → General and "
+                "click ‘Download local (~1.5 GB)’ first.")
+        import mlx_whisper  # deferred: cloud-only installs never import mlx
 
         hint = language_hint(self.languages)
         if hint:
@@ -227,11 +283,20 @@ class DeepgramBackend:
 def make_backend(cfg: dict, env_key) -> object | None:
     """Factory: build the STT backend selected in config. env_key(section) -> api key."""
     stt = cfg.get("stt", {})
-    backend = stt.get("backend", "mlx")
+    backend = stt.get("backend", "openrouter")
     languages = validate_languages(stt.get("languages", []))
     if backend == "mlx":
+        model = stt.get("mlx_model", DEFAULT_MLX_MODEL)
+        supported, reason = local_model_support()
+        if not supported:
+            log.error("Local STT unavailable: %s", reason)
+            return None
+        if not local_model_is_downloaded(model):
+            log.error("Local STT selected but model is not downloaded. Use "
+                      "Settings → General → Download local (~1.5 GB).")
+            return None
         return MlxWhisperBackend(
-            model=stt.get("mlx_model", "mlx-community/whisper-large-v3-turbo"),
+            model=model,
             language=stt.get("language", ""),
             languages=languages,
         )

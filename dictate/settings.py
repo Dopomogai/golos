@@ -18,6 +18,7 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 WINDOW_W, WINDOW_H = 620.0, 460.0
+LATEST_RELEASE_URL = "https://github.com/Dopomogai/golos/releases/latest"
 
 # ObjC class names are process-global: define each exactly once.
 _class_cache: dict = {}
@@ -83,6 +84,13 @@ def build_status_item(on_settings, on_reload=None, on_onboarding=None,
             def openOnboarding_(self, sender):
                 if self._cb_onboarding:
                     self._cb_onboarding()
+
+            def checkForUpdates_(self, sender):
+                """Open the canonical release channel; unsigned betas update manually."""
+                from AppKit import NSWorkspace
+                from Foundation import NSURL
+                NSWorkspace.sharedWorkspace().openURL_(
+                    NSURL.URLWithString_(LATEST_RELEASE_URL))
 
             def testInsertion_(self, sender):
                 from .insert import insert_text
@@ -155,6 +163,11 @@ def build_status_item(on_settings, on_reload=None, on_onboarding=None,
         "Welcome / Setup…", "openOnboarding:", "")
     ob_item.setTarget_(target)
     menu.addItem_(ob_item)
+
+    update_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+        "Check for Updates…", "checkForUpdates:", "")
+    update_item.setTarget_(target)
+    menu.addItem_(update_item)
 
     test_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
         "Test insertion", "testInsertion:", "")
@@ -569,10 +582,16 @@ def build_settings_window(app_controller):
             v.addSubview_(make_label("STT backend", 20, y))
             self.backend_popup = NSPopUpButton.alloc().initWithFrame_pullsDown_(
                 NSMakeRect(180, y - 3, 180, 26), False)
-            self.backend_popup.addItemsWithTitles_(["mlx", "openrouter"])
+            self.backend_popup.addItemsWithTitles_(["openrouter", "mlx"])
             self.backend_popup.setTarget_(self)
             self.backend_popup.setAction_("backendChanged:")
             v.addSubview_(self.backend_popup)
+            self.local_model_button = NSButton.alloc().initWithFrame_(
+                NSMakeRect(380, y - 3, 190, 26))
+            self.local_model_button.setBezelStyle_(1)
+            self.local_model_button.setTarget_(self)
+            self.local_model_button.setAction_("downloadLocalModel:")
+            v.addSubview_(self.local_model_button)
             y -= 40
 
             v.addSubview_(make_label("STT model", 20, y))
@@ -821,9 +840,16 @@ def build_settings_window(app_controller):
         def _load_general(self):
             cfg = self.app_controller.cfg
             stt = cfg.get("stt", {})
-            backend = stt.get("backend", "mlx")
+            backend = stt.get("backend", "openrouter")
+            from dictate_core.stt import local_model_support
+            local_supported, _ = local_model_support()
+            mlx_item = self.backend_popup.itemWithTitle_("mlx")
+            if mlx_item is not None:
+                mlx_item.setEnabled_(local_supported)
+            if backend == "mlx" and not local_supported:
+                backend = "openrouter"
             self.backend_popup.selectItemWithTitle_(
-                backend if backend in ("mlx", "openrouter") else "mlx")
+                backend if backend in ("mlx", "openrouter") else "openrouter")
             self._load_stt_model_value()
             self.fmt_model_combo.setStringValue_(
                 cfg.get("formatting", {}).get("model", DEFAULT_CHAT_MODEL))
@@ -845,6 +871,7 @@ def build_settings_window(app_controller):
                 1 if cfg.get("formatting", {}).get("enabled", True) else 0)
             self.fast_checkbox.setState_(
                 1 if cfg.get("formatting", {}).get("fast_mode", False) else 0)
+            self._update_local_model_button()
 
         def _load_stt_model_value(self):
             cfg = self.app_controller.cfg
@@ -889,13 +916,82 @@ def build_settings_window(app_controller):
 
         def backendChanged_(self, sender):
             self._load_stt_model_value()
+            self._update_local_model_button()
+
+        def _local_model_name(self):
+            if self.backend_popup.titleOfSelectedItem() == "mlx":
+                return str(self.stt_model_combo.stringValue())
+            return str(self.app_controller.cfg.get("stt", {}).get(
+                "mlx_model", "mlx-community/whisper-large-v3-turbo"))
+
+        def _update_local_model_button(self):
+            from dictate_core.stt import (
+                local_model_is_downloaded,
+                local_model_support,
+            )
+            supported, reason = local_model_support()
+            if not supported:
+                self.local_model_button.setTitle_("Local model unavailable")
+                self.local_model_button.setEnabled_(False)
+                self.local_model_button.setToolTip_(reason)
+                return
+            if local_model_is_downloaded(self._local_model_name()):
+                self.local_model_button.setTitle_("Local model ✓ ready")
+                self.local_model_button.setEnabled_(False)
+                self.local_model_button.setToolTip_(
+                    "Optional MLX model weights are already downloaded.")
+            else:
+                self.local_model_button.setTitle_("Download local (~1.5 GB)")
+                self.local_model_button.setEnabled_(True)
+                self.local_model_button.setToolTip_(
+                    "Optional. OpenRouter works without this download.")
+
+        def downloadLocalModel_(self, sender):
+            from dictate_core.stt import download_local_model
+            model = self._local_model_name()
+            self.local_model_button.setEnabled_(False)
+            self.local_model_button.setTitle_("Downloading…")
+            self.status_label.setStringValue_(
+                "Downloading optional local model; OpenRouter remains available.")
+
+            def work():
+                try:
+                    download_local_model(model)
+                except Exception as e:
+                    AppHelper.callAfter(self._local_model_download_failed, str(e))
+                else:
+                    AppHelper.callAfter(self._local_model_downloaded)
+
+            threading.Thread(target=work, daemon=True).start()
+
+        def _local_model_downloaded(self):
+            self._update_local_model_button()
+            self.status_label.setStringValue_("Local model downloaded and ready.")
+
+        def _local_model_download_failed(self, message):
+            self._update_local_model_button()
+            self.status_label.setStringValue_(f"local download failed: {message}")
 
         def sensitivityChanged_(self, sender):
             self.sens_label.setStringValue_(f"{self.sens_slider.doubleValue():.1f}")
 
         def saveGeneral_(self, sender):
-            from dictate_core.stt import validate_languages
+            from dictate_core.stt import (
+                local_model_is_downloaded,
+                local_model_support,
+                validate_languages,
+            )
             backend = self.backend_popup.titleOfSelectedItem()
+            if backend == "mlx":
+                supported, reason = local_model_support()
+                if not supported:
+                    self.status_label.setStringValue_(reason)
+                    return
+                if not local_model_is_downloaded(
+                        str(self.stt_model_combo.stringValue())):
+                    self.status_label.setStringValue_(
+                        "Download the local model before selecting MLX.")
+                    return
             langs = validate_languages(
                 str(self.lang_field.stringValue()).split(","))
             updates = {

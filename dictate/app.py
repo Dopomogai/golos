@@ -397,6 +397,9 @@ class AppController:
         try:
             if self.stt is None:
                 log.error("No STT backend available.")
+                AppHelper.callAfter(
+                    self.bubble.notice,
+                    "connect OpenRouter or download local STT", "warn")
                 return
             prompt = ", ".join(self.dictionary_terms)
             raw = self.stt.transcribe(audio, prompt=prompt)
@@ -541,7 +544,8 @@ def _check_audio_model(formatter) -> None:
                         "Pick an audio-capable model (e.g. gemini-2.5-flash).",
                         formatter.model)
     except Exception as e:
-        log.info("Could not verify formatter model audio support: %s", e)
+        log.info("Could not verify formatter model audio support: %s", e,
+                 exc_info=True)
 
 
 def _env_key(section):

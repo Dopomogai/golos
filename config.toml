@@ -54,7 +54,7 @@ suggestions = "suggestions.jsonl"
 dismissed = "dismissed.jsonl"
 
 [stt.openrouter]
-model = "qwen/qwen3-asr-flash-2026-02-10"
+model = "deepgram/nova-3"
 
 [stt.cloud]
 base_url = "https://api.openai.com/v1"

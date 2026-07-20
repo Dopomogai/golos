@@ -1,6 +1,6 @@
 """Onboarding wizard (v2): branded 680x480 window with a dark sidebar.
 
-7 pages: Welcome → Permissions → Hold key → OpenRouter key → Formatting
+7 pages: Welcome → Permissions → Hold key → OpenRouter cloud/local choice → Formatting
 choice → Try it → Done. Shown on first run ([app] onboarded not set) and
 from the menu ("Welcome / Setup…"). ObjC classes are defined once per
 process; the window activates the app while open (accessory policy resumes
@@ -317,6 +317,10 @@ def _class():
                 self.showPage_(self._page - 1)
 
         def goNext_(self, sender):
+            if self._page == 3 and not self._stt_ready():
+                self._key_status.setStringValue_(
+                    "Connect OpenRouter, or explicitly download the local model first.")
+                return
             if self._page == 4:
                 self._save_formatting_choice()
             if self._page < N_PAGES - 1:
@@ -457,10 +461,10 @@ def _class():
 
         def _page_apikey(self):
             v = NSView.alloc().initWithFrame_(self.page_area.bounds())
-            v.addSubview_(label("OpenRouter API key (optional)", 24, 356, CONTENT_W, 24, 18, True, TITLE_COLOR))
+            v.addSubview_(label("Connect OpenRouter", 24, 356, CONTENT_W, 24, 18, True, TITLE_COLOR))
             v.addSubview_(label(
-                "Enables cloud transcription and the AI formatting pass. "
-                "Without it, local on-device Whisper works fully offline.",
+                "Recommended: cloud transcription works immediately with no model download. "
+                "On Apple Silicon you may explicitly download the local model instead.",
                 24, 322, CONTENT_W, 36, 12, False, HINT_COLOR))
             self._key_field = NSSecureTextField.alloc().initWithFrame_(
                 NSMakeRect(24, 270, CONTENT_W, 26))
@@ -472,15 +476,40 @@ def _class():
             sbtn.setTarget_(self)
             sbtn.setAction_("saveKey:")
             v.addSubview_(sbtn)
-            kbtn = NSButton.alloc().initWithFrame_(NSMakeRect(180, 220, 140, 30))
-            kbtn.setTitle_("Skip for now")
+            kbtn = NSButton.alloc().initWithFrame_(NSMakeRect(180, 220, 230, 30))
+            kbtn.setTitle_("Download local (~1.5 GB)")
             kbtn.setBezelStyle_(1)
             kbtn.setTarget_(self)
-            kbtn.setAction_("goNext:")
+            kbtn.setAction_("chooseLocal:")
+            from dictate_core.stt import local_model_support
+            local_supported, local_reason = local_model_support()
+            kbtn.setEnabled_(local_supported)
+            if not local_supported:
+                kbtn.setToolTip_(local_reason)
             v.addSubview_(kbtn)
+            self._local_download_btn = kbtn
             self._key_status = label("", 24, 190, CONTENT_W, 20, 12)
             v.addSubview_(self._key_status)
+            if self._stt_ready():
+                self._key_status.setStringValue_("✓ transcription is configured")
             return v
+
+        def _stt_ready(self):
+            from .openrouter import get_api_key
+            from dictate_core.stt import (
+                DEFAULT_MLX_MODEL,
+                local_model_is_downloaded,
+                local_model_support,
+            )
+            cfg = self.app_controller.cfg
+            backend = cfg.get("stt", {}).get("backend", "openrouter")
+            if backend == "openrouter":
+                return bool(get_api_key(cfg))
+            if backend == "mlx":
+                supported, _ = local_model_support()
+                model = cfg.get("stt", {}).get("mlx_model", DEFAULT_MLX_MODEL)
+                return supported and local_model_is_downloaded(model)
+            return False
 
         def saveKey_(self, sender):
             key = str(self._key_field.stringValue()).strip()
@@ -498,12 +527,58 @@ def _class():
                         self._key_status.setStringValue_, f"✗ invalid: {e}")
                 else:
                     from .config import update_config
-                    update_config({"openrouter": {"api_key": key}})
+                    update_config({
+                        "openrouter": {"api_key": key},
+                        "stt": {"backend": "openrouter"},
+                    })
                     AppHelper.callAfter(self.app_controller.apply_settings)
                     AppHelper.callAfter(self._key_status.setStringValue_,
                                         "✓ saved and validated")
 
             threading.Thread(target=work, daemon=True).start()
+
+        def chooseLocal_(self, sender):
+            from dictate_core.stt import (
+                DEFAULT_MLX_MODEL,
+                download_local_model,
+                local_model_is_downloaded,
+            )
+            model = self.app_controller.cfg.get("stt", {}).get(
+                "mlx_model", DEFAULT_MLX_MODEL)
+            if local_model_is_downloaded(model):
+                self._activate_local_model()
+                return
+            sender.setEnabled_(False)
+            sender.setTitle_("Downloading…")
+            self._key_status.setStringValue_(
+                "Downloading optional local model. You can keep using OpenRouter meanwhile.")
+
+            def work():
+                try:
+                    download_local_model(model)
+                except Exception as e:
+                    AppHelper.callAfter(self._local_download_failed, str(e))
+                else:
+                    AppHelper.callAfter(self._activate_local_model)
+
+            threading.Thread(target=work, daemon=True).start()
+
+        def _activate_local_model(self):
+            try:
+                from .config import update_config
+                update_config({"stt": {"backend": "mlx"}})
+                self.app_controller.apply_settings()
+                self._local_download_btn.setTitle_("Local model ✓ ready")
+                self._local_download_btn.setEnabled_(False)
+                self._key_status.setStringValue_(
+                    "✓ local transcription is downloaded and selected")
+            except Exception as e:
+                self._local_download_failed(str(e))
+
+        def _local_download_failed(self, message):
+            self._local_download_btn.setTitle_("Download local (~1.5 GB)")
+            self._local_download_btn.setEnabled_(True)
+            self._key_status.setStringValue_(f"Local download failed: {message}")
 
         # -- formatting choice ------------------------------------------------
 
@@ -521,8 +596,8 @@ def _class():
             v.addSubview_(self._fmt_ai)
             self._fmt_raw = CardView.alloc().initWithFrame_(NSMakeRect(242, 160, 194, 140))
             self._fmt_raw._title = "Raw & instant"
-            self._fmt_raw._caption = ("Exactly what you said, inserted as fast "
-                                      "as possible. Nothing leaves the Mac.")
+            self._fmt_raw._caption = ("Skips the formatting pass for the fastest "
+                                      "insert. Transcription still follows your STT backend.")
             self._fmt_raw._on_select = lambda: self._select_fmt(False)
             v.addSubview_(self._fmt_raw)
             self._select_fmt(fmt_on)

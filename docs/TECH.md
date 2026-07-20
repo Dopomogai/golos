@@ -182,9 +182,9 @@ consumed by the tap while configured) and rebinding is live via
 
 ## Security & privacy model
 
-- **Local by default**: mlx STT on-device; with no API key nothing leaves
-  the machine. `mlx-community/whisper-large-v3-turbo` is cached in
-  ~/.cache/huggingface.
+- **Cloud-first, explicit local option**: OpenRouter is the shipped STT
+  backend. On Apple Silicon, the user can explicitly download the optional
+  MLX weights into `~/.cache/huggingface`; Intel/cloud-only builds omit MLX.
 - **State** lives in `~/.golos/` (migrated from `~/.dictate` on first run
   after the rename, copy-once; config is chmod 600). The single-instance
   lock is `~/.golos/dictate.lock` (flock, released on process death). Raw
@@ -211,7 +211,7 @@ consumed by the tap while configured) and rebinding is live via
 |---|---|---|
 | `[hotkey] hold_key` | `"fn"` | `fn` / `right_option` / `right_command` / `f5` (live rebind) |
 | `[hotkey] toggle_combo` | `"fn+space"` | or `"double_fn"`; key+Space always works |
-| `[stt] backend` | `"mlx"` | `mlx` / `openrouter` / `openai_compatible` / `deepgram` |
+| `[stt] backend` | `"openrouter"` | `openrouter` / `mlx` / `openai_compatible` / `deepgram` |
 | `[stt] languages` | `[]` | e.g. `["en", "uk"]`; empty = auto-detect |
 | `[stt] mlx_model` | `mlx-community/whisper-large-v3-turbo` | local model |
 | `[stt.openrouter] model` | `deepgram/nova-3` | curated list in `openrouter.py` |
