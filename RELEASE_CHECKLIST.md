@@ -44,6 +44,9 @@ file dist/golos.app/Contents/MacOS/golos
 file dist/golos.app/Contents/MacOS/golos
 ```
 
+`make_dmg.sh` builds a Finder drag-to-install window (dark Golos background,
+golos.app → Applications). Spot-check the mounted DMG visually before publish.
+
 Before release, preserve both DMGs, restore the Apple Silicon app as
 `dist/golos.app`, and verify on clean user profiles:
 
