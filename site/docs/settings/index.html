@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Complete guide to golos Settings: History, General, Prompt, Learning, Dictionary, and config-only options.">
+  <meta name="theme-color" content="#080b12">
+  <title>Settings — Golos Help Center</title>
+  <link rel="canonical" href="https://golos.dopomogai.com/docs/settings/">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="../../golos-mark.svg">
+  <link rel="stylesheet" href="../docs.css">
+</head>
+<body class="docs-page" data-docs-page="settings">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="docs-header">
+    <nav class="docs-nav" aria-label="Primary navigation">
+      <a class="brand" href="https://golos.dopomogai.com/" aria-label="golos home">
+        <img class="brand-mark" src="../../golos-mark.svg" width="29" height="29" alt="" aria-hidden="true">
+        <span>golos</span>
+      </a>
+      <div class="nav-links">
+        <a href="https://golos.dopomogai.com/">Home</a>
+        <a href="../" aria-current="page">Docs</a>
+        <a href="https://golos.dopomogai.com/#download">Download</a>
+      </div>
+      <a class="button button-small" href="https://github.com/Dopomogai/golos/releases/latest">Releases</a>
+    </nav>
+  </header>
+
+  <div class="docs-shell">
+    <aside class="docs-sidebar" aria-label="Help topics">
+      <p class="sidebar-kicker">Help Center</p>
+      <nav class="sidebar-nav">
+        <a href="../">Overview</a>
+        <a href="../getting-started/">Getting started</a>
+        <a href="./" aria-current="page">Settings</a>
+        <a href="../workflows/">Workflows</a>
+        <a href="../better-results/">Better results</a>
+        <a href="../privacy/">Privacy &amp; data</a>
+        <a href="../troubleshooting/">Troubleshooting</a>
+      </nav>
+      <nav class="sidebar-toc" aria-label="On this page">
+        <p class="sidebar-kicker">On this page</p>
+        <a href="#open">Open Settings</a>
+        <a href="#history">History</a>
+        <a href="#general">General</a>
+        <a href="#prompt">Prompt</a>
+        <a href="#learning">Learning</a>
+        <a href="#dictionary">Dictionary</a>
+        <a href="#config-only">Config-only settings</a>
+        <a href="#privacy-notes">Privacy &amp; truth notes</a>
+      </nav>
+    </aside>
+
+    <main id="main" class="docs-article">
+      <header class="page-hero">
+        <p class="kicker">Reference</p>
+        <h1>Settings</h1>
+        <p class="lede">
+          The Settings window is golos’s control surface: recent dictations and recovery,
+          speech and formatting options, what context the model may see, optional learning
+          review, and your personal dictionary. Everything below is verified against the
+          current app UI and config surface.
+        </p>
+        <p class="version-badge" title="Documentation version">Applies to v0.3.1</p>
+      </header>
+
+      <section id="open" class="docs-section">
+        <h2>Open Settings</h2>
+        <ol class="step-list">
+          <li>Click the golos chakra glyph in the macOS menu bar.</li>
+          <li>Choose <strong>Settings…</strong>.</li>
+          <li>The window titled <strong>golos Settings</strong> opens with five tabs.
+            <strong>History</strong> is first and selected by default each time you open it.</li>
+        </ol>
+        <div class="callout callout-info">
+          <p><strong>Accessory app.</strong> golos has no Dock icon. Closing Settings returns
+          focus to the previous app; the menu-bar item stays available.</p>
+        </div>
+        <p>Tab order in the window:</p>
+        <ol>
+          <li><a href="#history">History</a> — home dashboard</li>
+          <li><a href="#general">General</a> — STT, formatter, API key, bubble, hold key</li>
+          <li><a href="#prompt">Prompt</a> — context sharing and system prompt</li>
+          <li><a href="#learning">Learning</a> — optional post-edit reviewer</li>
+          <li><a href="#dictionary">Dictionary</a> — terms and wrong→right corrections</li>
+        </ol>
+      </section>
+
+      <!-- ========== HISTORY ========== -->
+      <section id="history" class="docs-section">
+        <h2>History</h2>
+        <p>
+          History is the default home surface. It reads a local append-only log
+          (<code>~/.golos/history.jsonl</code>) of every transcription attempt on this Mac.
+          Nothing in History is uploaded by this screen itself.
+        </p>
+
+        <figure class="screenshot-frame">
+          <img
+            src="../images/settings-history.png"
+            alt="Settings History tab showing recent dictations table, selected dictation detail with Raw and Final text, and suggestions from edits with approve and dismiss actions"
+            width="1200"
+            height="750"
+            loading="lazy">
+          <figcaption>History tab — recent dictations, detail pane, and edit suggestions.</figcaption>
+        </figure>
+
+        <h3 id="history-grouped">Grouped attempts</h3>
+        <p>
+          The table shows <strong>one derived row per dictation run</strong>
+          (<code>run_id</code>), not every raw JSONL line. Retries append new attempt lines
+          linked by the same <code>run_id</code>; originals are never rewritten or deleted.
+          Grouping is display-only.
+        </p>
+        <ul>
+          <li>Newest runs appear first.</li>
+          <li>When a run was retried, the detail header can show
+            <strong>N attempts</strong> and the merged latest raw/final/status.</li>
+          <li>Legacy lines without a <code>run_id</code> appear as individual rows
+            (<code>attempts_count = 1</code>).</li>
+          <li>Columns: <strong>Time</strong>, <strong>App</strong>,
+            <strong>Raw → Final</strong> (or a single text when they match).
+            Non-success statuses are prefixed, e.g. <code>[failed]</code>.</li>
+        </ul>
+
+        <h3 id="history-detail">Raw, final, and context detail</h3>
+        <p>
+          Select a row to inspect it. The detail pane is read-only and typically includes:
+        </p>
+        <ul>
+          <li><strong>Header</strong> — timestamp, app name, status, stage (if not complete),
+            attempt count when greater than one.</li>
+          <li><strong>RAW</strong> — speech-to-text transcript (what STT produced).</li>
+          <li><strong>FINAL</strong> — text that was prepared for insertion (after optional
+            formatting and corrections).</li>
+          <li><strong>ERROR</strong> — present when the attempt failed at a pipeline stage
+            (<code>stt</code>, <code>format</code>, or <code>insert</code>).</li>
+          <li><strong>CONTEXT</strong> — truncated formatter context captured for that run
+            (app, window, providers, and enabled text roles).</li>
+          <li><strong>Meta flags</strong> when relevant: fast mode, format fallback,
+            audio retained, multi-attempt count.</li>
+        </ul>
+        <div class="callout callout-warn">
+          <p><strong>What “success” means.</strong> A successful history line means golos
+          <em>posted</em> the insertion (typed or pasted into the frontmost field). It does
+          <strong>not</strong> verify that the target app accepted or displayed the text.
+          macOS or the host app can still drop or mishandle posted input.</p>
+        </div>
+
+        <h3 id="history-actions">Copy, Retry, Show audio</h3>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Control</th>
+              <th>What it does</th>
+              <th>What it does not do</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Copy text</strong></td>
+              <td>Copies the best available text (prefers <em>final</em>, falls back to
+                <em>raw</em>) to the clipboard without changing keyboard focus.</td>
+              <td>Does not insert into another app; does not modify history.</td>
+            </tr>
+            <tr>
+              <td><strong>Retry</strong></td>
+              <td>Re-runs the failed or recoverable pipeline stage on a worker thread for
+                the selected run. On success, a new attempt is appended and History
+                refreshes; status shows that text is ready to copy.</td>
+              <td><strong>Never auto-inserts</strong> into the Settings window or the
+                frontmost app. You must Copy (or dictate again) deliberately. If live
+                dictation owns the pipeline, Retry reports busy and writes no attempt.</td>
+            </tr>
+            <tr>
+              <td><strong>Show audio</strong></td>
+              <td>Reveals the retained WAV in Finder when a recording file still exists
+                on disk (<code>audio_retained</code> is honest — path alone is not enough).</td>
+              <td>Does nothing useful if recordings were not kept or the file was deleted
+                (<em>No retained audio</em>).</td>
+            </tr>
+            <tr>
+              <td><strong>Refresh</strong></td>
+              <td>Reloads history rows and suggestions from disk.</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><strong>Check for edits</strong></td>
+              <td>Manually triggers edit capture against a recent insertion so
+                suggestion pairs can appear sooner.</td>
+              <td>Does not promote anything without your approval below.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="history-suggestions">Suggestions approval</h3>
+        <p>
+          When you hand-edit an insertion, golos may propose short
+          <strong>wrong → right</strong> pairs. They aggregate in
+          <strong>Suggestions from your edits</strong> (columns: Wrong, Right, count,
+          Last app). Sources include the deterministic text-diff path, the optional
+          learning reviewer, and live edit cues after insertion.
+        </p>
+        <p>Select a suggestion, then choose exactly one action:</p>
+        <ul>
+          <li><strong>Add to corrections</strong> — writes the pair to
+            <code>corrections.tsv</code> and dismisses the suggestion so the formatter
+            rewrites that mistake next time.</li>
+          <li><strong>Add to dictionary</strong> — adds the <em>right</em> term to
+            <code>dictionary.txt</code> (biases future STT/formatting) and dismisses
+            the suggestion.</li>
+          <li><strong>Dismiss</strong> — records the pair as dismissed without teaching
+            the dictionary or corrections files.</li>
+        </ul>
+        <div class="callout callout-info">
+          <p><strong>Human gate.</strong> Nothing is learned automatically. Live cue
+          pills and History suggestions both require an explicit accept or promote
+          action. You can also use the menu item
+          <strong>Add selection to dictionary</strong> for a word you select in any app
+          (requires Accessibility so the selection can be read).</p>
+        </div>
+      </section>
+
+      <!-- ========== GENERAL ========== -->
+      <section id="general" class="docs-section">
+        <h2>General</h2>
+        <p>
+          Speech recognition, optional LLM formatting, the OpenRouter API key, and the
+          menu-bar bubble / hold key. Click <strong>Save</strong> to apply; most changes
+          take effect live. Bubble <em>style</em> needs an app restart.
+        </p>
+
+        <figure class="screenshot-frame">
+          <img
+            src="../images/settings-general.png"
+            alt="Settings General tab with speech recognition backend and model, formatting model and fast mode toggles, secure OpenRouter API key field, bubble style, hold key, sensitivity slider, and status words checkbox"
+            width="1200"
+            height="750"
+            loading="lazy">
+          <figcaption>General tab — STT, formatting, API key, bubble, and hotkey.</figcaption>
+        </figure>
+
+        <h3 id="general-stt">Speech recognition</h3>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Control</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>STT backend</strong></td>
+              <td>
+                <code>openrouter</code> (default, cloud) or <code>mlx</code>
+                (optional on-device Whisper on Apple Silicon). MLX is disabled in the
+                popup when local support is unavailable (e.g. Intel builds).
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Download local (~1.5&nbsp;GB)</strong></td>
+              <td>
+                Explicit optional download of MLX model weights. OpenRouter continues to
+                work without it. Dictation never starts this download silently. When the
+                model is already present the button shows
+                <em>Local model ✓ ready</em> and is disabled.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>STT model</strong></td>
+              <td>
+                Editable combo. For OpenRouter, a curated list of verified transcription
+                models is offered (default <code>deepgram/nova-3</code>). For MLX, the
+                model id string (default
+                <code>mlx-community/whisper-large-v3-turbo</code>). You must download
+                the local model before saving with backend <code>mlx</code>.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Languages</strong></td>
+              <td>
+                Comma-separated codes such as <code>en, uk</code>. Empty means
+                auto-detect. Language handling still depends on the selected STT model;
+                treat this as a preference, not a universal guarantee.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="general-formatting">Formatting</h3>
+        <ul>
+          <li><strong>Formatter model</strong> — chat model used for cleanup (OpenRouter by
+            default). <strong>Fetch models</strong> refreshes listings from OpenRouter
+            when a key is available.</li>
+          <li><strong>Format with LLM</strong> — when unchecked, golos inserts the raw
+            transcript (fastest path; no formatting network call). Corrections may still
+            apply depending on pipeline path; full LLM cleanup is off.</li>
+          <li><strong>Fast mode</strong> — skips LLM cleanup for short dictations so short
+            inserts feel instant; local corrections still apply. Word threshold is
+            config-only (<code>fast_mode_max_words</code>, default 10).</li>
+        </ul>
+
+        <h3 id="general-api">OpenRouter API key</h3>
+        <p>
+          The key field is a <strong>secure text field</strong> (characters masked while
+          typing). It is stored in your local config under
+          <code>~/.golos/</code> (file mode restricted). Environment variable
+          <code>OPENROUTER_API_KEY</code> wins over the file when set.
+        </p>
+        <div class="callout callout-warn">
+          <p><strong>Redact before sharing.</strong> Never paste your API key, full
+          <code>config.toml</code>, personal audio, or history excerpts into bug reports,
+          screenshots for support, or public issues. Prefer “key is set / not set” and
+          redact transcripts.</p>
+        </div>
+
+        <h3 id="general-bubble">Bubble &amp; hotkey</h3>
+        <ul>
+          <li><strong>Bubble style</strong> — <code>notch</code> (menu-bar strip on
+            notched Macs) or <code>corner</code> (small pill). Restart required after
+            changing style.</li>
+          <li><strong>Hold key</strong> — push-to-talk key:
+            <code>fn</code>, <code>right_option</code>, <code>right_command</code>, or
+            <code>f5</code>. Rebinding applies live (no restart). While F5 is the hold
+            key, the event tap swallows F5 so it does not fire other system shortcuts.</li>
+          <li><strong>Input sensitivity</strong> — display gain for the recording
+            waveform only (slider 0.5–2.5). Does not change microphone gain in macOS.</li>
+          <li><strong>Show status words in the top animation</strong> — when off, the
+            recording/processing/success animations still run, but status labels such as
+            processing or inserted are hidden.</li>
+        </ul>
+        <p>
+          Hands-free lock is <kbd>hold key</kbd>+Space (and optionally double-tap when
+          configured). The toggle combo itself is
+          <a href="#config-only">config-only</a>, not a General popup.
+        </p>
+      </section>
+
+      <!-- ========== PROMPT ========== -->
+      <section id="prompt" class="docs-section">
+        <h2>Prompt</h2>
+        <p>
+          Controls what the formatting model may read, plus the system prompt template.
+          Turning a context toggle off means golos does not read that source and does not
+          send it — “Off = never read, never leaves this Mac.”
+        </p>
+
+        <figure class="screenshot-frame">
+          <img
+            src="../images/settings-prompt.png"
+            alt="Settings Prompt tab with context sharing checkboxes for app, cursor text, focused field, visible text, browser, VS Code and Finder, answer mode and formatter audio toggles, and system prompt template editor"
+            width="1200"
+            height="750"
+            loading="lazy">
+          <figcaption>Prompt tab — context toggles, answer mode, formatter audio, prompt editor.</figcaption>
+        </figure>
+
+        <h3 id="prompt-context">Context toggles</h3>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Toggle</th>
+              <th>What it shares with the formatter</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Context providers (master switch)</strong></td>
+              <td>Master enable for providers and AX text reads. Off disables the whole
+                context package independently of formatting.</td>
+            </tr>
+            <tr>
+              <td><strong>Frontmost app &amp; window title</strong></td>
+              <td>Active application identity and window title (tone and filename
+                hints).</td>
+            </tr>
+            <tr>
+              <td><strong>Text before cursor (input field)</strong></td>
+              <td>Up to ~500 characters before the caret for continuation placement.</td>
+            </tr>
+            <tr>
+              <td><strong>Focused field text (full input)</strong></td>
+              <td>Up to ~4000 characters of the draft you are producing in the focused
+                field — not surrounding chrome.</td>
+            </tr>
+            <tr>
+              <td><strong>Surrounding on-screen text (citations)</strong></td>
+              <td>Up to ~4000 characters of normalized visible reading context
+                <em>outside</em> the focused field. Used for comment/citation style
+                output when your dictation refers to what is on screen. Best-effort;
+                empty when inaccessible.</td>
+            </tr>
+            <tr>
+              <td><strong>Browser page (title &amp; URL)</strong></td>
+              <td>Supported browsers: current tab title and URL.</td>
+            </tr>
+            <tr>
+              <td><strong>VS Code workspace files</strong></td>
+              <td>Workspace folder and a capped file list derived from the window title.</td>
+            </tr>
+            <tr>
+              <td><strong>Finder selection &amp; window</strong></td>
+              <td>Front Finder window and selection paths.</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout callout-info">
+          <p><strong>Focused draft vs surrounding text.</strong> These are separate
+          roles. Focused field text is what you are writing; visible text is surrounding
+          on-screen reading context only. Context is permission- and provider-dependent —
+          never promised for every app.</p>
+        </div>
+
+        <h3 id="prompt-answer">Answer mode</h3>
+        <p>
+          <strong>Answer obvious questions from context (instead of transcribing)</strong>
+          — when on, the formatter may answer a clear question using available context
+          instead of only cleaning your words. When off (default), golos always aims to
+          transcribe exactly what you said (after normal cleanup rules).
+        </p>
+
+        <h3 id="prompt-audio">Formatter audio</h3>
+        <p>
+          <strong>Also send the audio to the formatter</strong> attaches the original WAV
+          so the model can recover from a bad transcript. Tradeoffs:
+        </p>
+        <ul>
+          <li><strong>Privacy</strong> — audio leaves this Mac on the format call (in
+            addition to cloud STT if you use OpenRouter STT).</li>
+          <li><strong>Cost</strong> — multimodal format calls usually cost more than
+            text-only.</li>
+          <li><strong>Model</strong> — needs an audio-capable chat model (e.g. a Gemini
+            flash class model that accepts <code>input_audio</code>).</li>
+        </ul>
+
+        <h3 id="prompt-editor">System prompt template</h3>
+        <p>
+          Editable template stored under <code>~/.golos/</code> (default
+          <code>prompt.md</code>). Placeholders:
+        </p>
+        <ul>
+          <li><code>{{mode_rules}}</code> — framing for transcribe-only vs answer mode</li>
+          <li><code>{{dictionary}}</code> — terms from dictionary.txt</li>
+          <li><code>{{corrections}}</code> — wrong→right pairs</li>
+          <li><code>{{context_block}}</code> — assembled context payload</li>
+          <li><code>{{context_rules}}</code> — instructions for using that context</li>
+        </ul>
+        <p>
+          <strong>Save prompt</strong> writes toggles + template and reloads settings.
+          <strong>Reset to default</strong> restores the built-in template file.
+        </p>
+      </section>
+
+      <!-- ========== LEARNING ========== -->
+      <section id="learning" class="docs-section">
+        <h2>Learning</h2>
+        <p>
+          The Learning tab configures an <strong>optional OpenRouter reviewer</strong>
+          that runs after you manually edit a recent insert. It is off by default for
+          privacy. Deterministic text-diff learning still works when the reviewer is off
+          or fails.
+        </p>
+
+        <figure class="screenshot-frame">
+          <img
+            src="../images/settings-learning.png"
+            alt="Settings Learning tab with learning reviewer enable switch, reviewer model field, send original audio checkbox, minimum confidence field, and reviewer system prompt editor"
+            width="1200"
+            height="750"
+            loading="lazy">
+          <figcaption>Learning tab — optional reviewer, model, audio, confidence, prompt.</figcaption>
+        </figure>
+
+        <h3 id="learning-controls">Reviewer controls</h3>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Control</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Learning reviewer</strong></td>
+              <td>When enabled, after a stable pause in the edited field, an independent
+                OpenRouter model may propose structured wrong→right candidates from raw
+                transcript, inserted text, and your edit. Default: off.</td>
+            </tr>
+            <tr>
+              <td><strong>Reviewer model</strong></td>
+              <td>Chat model id, independent of the formatter model (default is an
+                audio-capable Gemini flash-lite class id).</td>
+            </tr>
+            <tr>
+              <td><strong>Send the original audio</strong></td>
+              <td>When on and a retained WAV exists, the recording may leave this Mac
+                with the review request. Needs recording retention
+                (<code>keep_recordings</code> — config-only). When the file is missing,
+                review continues text-only.</td>
+            </tr>
+            <tr>
+              <td><strong>Min confidence</strong></td>
+              <td>0–1 floor (default <code>0.55</code>). Lower-confidence candidates are
+                discarded before they reach Suggestions.</td>
+            </tr>
+            <tr>
+              <td><strong>Reviewer system prompt</strong></td>
+              <td>Saved to <code>~/.golos/learning_prompt.md</code> (or the path in
+                <code>reviewer_prompt_file</code>). <strong>Save learning</strong> /
+                <strong>Reset prompt</strong> update settings and the file.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="learning-approval">Human approval only</h3>
+        <ul>
+          <li>The reviewer <strong>never auto-promotes</strong> pairs into dictionary or
+            corrections.</li>
+          <li>Validated candidates become suggestions you approve in History (or via the
+            live cue pill when live cues are enabled).</li>
+          <li>Evidence gates still apply: wrong must appear in raw/inserted text; right
+            must appear in the edited field; length bounds apply. With audio, low
+            string-similarity pairs may pass when the audio supports them.</li>
+          <li>At most one reviewer attempt is intended per insertion; failures fall back
+            to the offline text-diff path.</li>
+        </ul>
+        <div class="callout callout-warn">
+          <p><strong>Privacy &amp; cost.</strong> Enabling the reviewer sends bounded edit
+          evidence (and optionally audio) to OpenRouter. That is separate from STT and
+          formatter traffic. Keep it off for a privacy-minimal setup, together with local
+          MLX STT and formatting disabled if you want fully local dictation on Apple
+          Silicon.</p>
+        </div>
+      </section>
+
+      <!-- ========== DICTIONARY ========== -->
+      <section id="dictionary" class="docs-section">
+        <h2>Dictionary</h2>
+        <p>
+          Two local files teach golos your vocabulary. Edit them here with inline tables,
+          or on disk under <code>~/.golos/</code>.
+        </p>
+
+        <figure class="screenshot-frame">
+          <img
+            src="../images/settings-dictionary.png"
+            alt="Settings Dictionary tab with terms table for dictionary.txt and corrections table of wrong to right pairs for corrections.tsv with add remove and save buttons"
+            width="1200"
+            height="750"
+            loading="lazy">
+          <figcaption>Dictionary tab — terms vs wrong→right corrections.</figcaption>
+        </figure>
+
+        <h3 id="dictionary-terms">Terms (<code>dictionary.txt</code>)</h3>
+        <ul>
+          <li>One term per line.</li>
+          <li><strong>Bias recognition and formatting</strong> — fed to STT as a prompt /
+            initial prompt so preferred spellings of names and jargon are more likely,
+            and listed for the formatter.</li>
+          <li>Use for product names, people, file stems, domain words you want spelled
+            correctly up front.</li>
+          <li><strong>+</strong> / <strong>−</strong> add or remove rows;
+            <strong>Save terms</strong> writes the file.</li>
+        </ul>
+
+        <h3 id="dictionary-corrections">Corrections (<code>corrections.tsv</code>)</h3>
+        <ul>
+          <li>Each row is <strong>Wrong</strong> → <strong>Right</strong>
+            (tab-separated on disk).</li>
+          <li>Applied as exact rewrites for known STT/format mistakes
+            (e.g. <code>wisper</code> → <code>Wispr</code>).</li>
+          <li>Different job from terms: terms bias upstream spelling; corrections fix
+            mistakes after they appear.</li>
+          <li><strong>Save corrections</strong> writes the file.</li>
+        </ul>
+
+        <h3 id="dictionary-reload">Live reload</h3>
+        <p>
+          Saving terms or corrections calls the app’s dictionary reload immediately —
+          you do not need to restart golos for the new lists to take effect. Promoting a
+          suggestion from History or accepting a live cue also reloads after writing the
+          relevant file. Comment lines starting with <code>#</code> in either file are
+          preserved on save from Settings.
+        </p>
+      </section>
+
+      <!-- ========== CONFIG-ONLY ========== -->
+      <section id="config-only" class="docs-section">
+        <h2>Config-only settings (not in the UI)</h2>
+        <p>
+          These keys live in <code>~/.golos/config.toml</code> (or the project
+          <code>config.toml</code> defaults before migration). Edit carefully; keep a
+          backup copy first. There is <strong>no launch-at-login</strong> setting in
+          golos — use macOS Login Items yourself if you want that behavior.
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Key</th>
+              <th>Default / notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Recording retention</td>
+              <td><code>[audio] keep_recordings</code></td>
+              <td><code>true</code> — save each dictation WAV under
+                <code>~/.golos/recordings/</code>. Set <code>false</code> to stop
+                archiving; History Retry for STT and audio-attached review need retained
+                files.</td>
+            </tr>
+            <tr>
+              <td>Audio device</td>
+              <td><code>[audio] device</code></td>
+              <td><code>0</code> = system default input device index.</td>
+            </tr>
+            <tr>
+              <td>Input method</td>
+              <td><code>[insert] method</code></td>
+              <td><code>auto</code> | <code>type</code> | <code>paste</code>. Auto types
+                single-line and pastes multi-line.</td>
+            </tr>
+            <tr>
+              <td>Clipboard restore</td>
+              <td><code>[insert] restore_clipboard</code></td>
+              <td><code>false</code> by default (paste keeps the transcript). Escape hatch
+                restores the previous clipboard after a delay.</td>
+            </tr>
+            <tr>
+              <td>Hotkey combo</td>
+              <td><code>[hotkey] toggle_combo</code></td>
+              <td><code>fn+space</code> or <code>double_fn</code>; hold+Space always works
+                alongside double-tap mode.</td>
+            </tr>
+            <tr>
+              <td>Learning master</td>
+              <td><code>[learning] enabled</code></td>
+              <td>Suggestion loop on/off (not the same as the reviewer checkbox).</td>
+            </tr>
+            <tr>
+              <td>Edit window</td>
+              <td><code>[learning] edit_window_seconds</code></td>
+              <td><code>600</code> — how long after insert edits can be associated.</td>
+            </tr>
+            <tr>
+              <td>Live cues</td>
+              <td><code>[learning] live_cues</code> /
+                <code>live_cue_seconds</code></td>
+              <td>Clickable wrong→right pill after a stable field pause
+                (default on / ~8 s). Not on the Learning tab.</td>
+            </tr>
+            <tr>
+              <td>Reviewer timeout</td>
+              <td><code>[learning] reviewer_timeout</code></td>
+              <td>Network timeout for the optional reviewer (seconds).</td>
+            </tr>
+            <tr>
+              <td>Fast mode threshold</td>
+              <td><code>[formatting] fast_mode_max_words</code></td>
+              <td><code>10</code> — short-dictation cutoff when Fast mode is on.</td>
+            </tr>
+            <tr>
+              <td>Formatter debug</td>
+              <td><code>[formatting] debug</code></td>
+              <td>Logs the complete prompt (sensitive — avoid in shared logs).</td>
+            </tr>
+            <tr>
+              <td>Prompt paths</td>
+              <td><code>prompt_file</code> /
+                <code>reviewer_prompt_file</code></td>
+              <td>Filenames under <code>~/.golos/</code>; contents are edited in UI.</td>
+            </tr>
+            <tr>
+              <td>Alt STT backends</td>
+              <td><code>openai_compatible</code>, <code>deepgram</code> sections</td>
+              <td>Present in config/schema for advanced setups; General UI focuses on
+                OpenRouter and MLX.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ========== PRIVACY / TRUTH ========== -->
+      <section id="privacy-notes" class="docs-section">
+        <h2>Privacy &amp; truth notes</h2>
+        <ul>
+          <li><strong>Success = insertion posted, not verified.</strong> Green success /
+            a success history status means golos sent keystrokes or a paste — not that
+            the destination app confirmed the text.</li>
+          <li><strong>Cloud STT sends audio</strong> whenever backend is OpenRouter (or
+            another cloud STT), even if formatting is off.</li>
+          <li><strong>Formatter audio</strong> and <strong>reviewer audio</strong> are
+            extra opt-in paths with privacy and cost implications; both need retained
+            recordings when audio is requested.</li>
+          <li><strong>Fully local</strong> (Apple Silicon only): MLX backend with local
+            weights downloaded, formatting off, learning reviewer off. Context toggles
+            can stay off as well.</li>
+          <li><strong>Sanitize support material:</strong> no API keys, no personal WAV
+            files, no full history dumps, no unredacted focused-field text from private
+            apps.</li>
+          <li>For a full data map, see
+            <a href="../privacy/">Privacy &amp; data</a>.</li>
+        </ul>
+      </section>
+
+      <nav class="docs-prev-next" aria-label="Adjacent guides">
+        <a class="prev" href="../getting-started/">
+          <span class="pn-label">Previous</span>
+          <span class="pn-title">Getting started</span>
+        </a>
+        <a class="next" href="../workflows/">
+          <span class="pn-label">Next</span>
+          <span class="pn-title">Workflows</span>
+        </a>
+      </nav>
+
+      <footer class="docs-article-footer">
+        <p>
+          <a href="../">Golos Help Center</a>
+          · <a href="https://github.com/Dopomogai/golos">Source</a>
+          · <a href="https://github.com/Dopomogai/golos/releases/latest">v0.3.1 releases</a>
+        </p>
+      </footer>
+    </main>
+  </div>
+
+  <script src="../docs.js" defer></script>
+</body>
+</html>
