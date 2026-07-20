@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  @purpose: Canonical Golos web mark — variant A Vishuddha chakra (16-petal waveform ring)
+  @why: Mirrors assets/make_icon.py variant A for the dependency-free product page and favicon
+  @role: brand asset
+  @stability: stable
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none" role="img" aria-hidden="true">
+  <rect width="1024" height="1024" rx="230.4" fill="#0d1224"/>
+  <g transform="translate(512 512)">
+    <rect x="302.08" y="-28.16" width="163.84" height="56.32" rx="28.16" fill="#5c9efa" transform="rotate(0)"/>
+    <rect x="302.08" y="-28.16" width="107.52" height="56.32" rx="28.16" fill="#5aa0f8" transform="rotate(22.5)"/>
+    <rect x="302.08" y="-28.16" width="163.84" height="56.32" rx="28.16" fill="#54a6f2" transform="rotate(45)"/>
+    <rect x="302.08" y="-28.16" width="107.52" height="56.32" rx="28.16" fill="#4caeea" transform="rotate(67.5)"/>
+    <rect x="302.08" y="-28.16" width="163.84" height="56.32" rx="28.16" fill="#42b8e0" transform="rotate(90)"/>
+    <rect x="302.08" y="-28.16" width="107.52" height="56.32" rx="28.16" fill="#39c1d7" transform="rotate(112.5)"/>
+    <rect x="302.08" y="-28.16" width="163.84" height="56.32" rx="28.16" fill="#30cace" transform="rotate(135)"/>
+    <rect x="302.08" y="-28.16" width="107.52" height="56.32" rx="28.16" fill="#2bcfc9" transform="rotate(157.5)"/>
+    <rect x="302.08" y="-28.16" width="163.84" height="56.32" rx="28.16" fill="#29d1c7" transform="rotate(180)"/>
+    <rect x="302.08" y="-28.16" width="107.52" height="56.32" rx="28.16" fill="#2bcfc9" transform="rotate(202.5)"/>
+    <rect x="302.08" y="-28.16" width="163.84" height="56.32" rx="28.16" fill="#30cace" transform="rotate(225)"/>
+    <rect x="302.08" y="-28.16" width="107.52" height="56.32" rx="28.16" fill="#39c1d7" transform="rotate(247.5)"/>
+    <rect x="302.08" y="-28.16" width="163.84" height="56.32" rx="28.16" fill="#42b8e0" transform="rotate(270)"/>
+    <rect x="302.08" y="-28.16" width="107.52" height="56.32" rx="28.16" fill="#4caeea" transform="rotate(292.5)"/>
+    <rect x="302.08" y="-28.16" width="163.84" height="56.32" rx="28.16" fill="#54a6f2" transform="rotate(315)"/>
+    <rect x="302.08" y="-28.16" width="107.52" height="56.32" rx="28.16" fill="#5aa0f8" transform="rotate(337.5)"/>
+  </g>
+  <circle cx="512" cy="512" r="200.448" fill="none" stroke="#e0edff" stroke-opacity="0.25" stroke-width="12.288"/>
+  <circle cx="512" cy="512" r="148.48" fill="#e0edff"/>
+</svg>

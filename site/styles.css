@@ -23,9 +23,8 @@ button { font: inherit; }
 .nav-shell { position: sticky; top: 0; z-index: 40; padding: 12px 24px; backdrop-filter: blur(18px); background: rgba(8, 11, 18, .72); border-bottom: 1px solid rgba(255,255,255,.05); }
 .nav { max-width: var(--max); margin: auto; display: flex; align-items: center; justify-content: space-between; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 730; letter-spacing: -.03em; }
-.brand-mark { width: 29px; height: 29px; display: flex; align-items: center; justify-content: center; gap: 2px; border: 1px solid rgba(186,255,104,.3); border-radius: 9px; background: rgba(186,255,104,.08); }
-.brand-mark i { width: 2px; height: 8px; border-radius: 2px; background: var(--lime); }
-.brand-mark i:nth-child(2) { height: 15px; }
+.brand-mark { width: 29px; height: 29px; display: block; flex: 0 0 auto; border-radius: 8px; object-fit: contain; }
+footer .brand-mark { width: 24px; height: 24px; border-radius: 7px; }
 .nav-links { display: flex; gap: 30px; color: #bcc2cd; font-size: 14px; }
 .nav-links a:hover, footer a:hover { color: var(--lime); }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 54px; padding: 0 24px; border: 1px solid var(--lime); border-radius: 12px; color: #0a1208; background: var(--lime); font-weight: 720; box-shadow: 0 0 35px rgba(186,255,104,.12); transition: transform .2s, background .2s; }
