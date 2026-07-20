@@ -18,5 +18,5 @@ python3 -m http.server 8000 --directory site
 
 Then open <http://localhost:8000>. Deploy the contents of this directory as
 the `/golos` route (or as its own static site). Repository and installer links
-target `Dopomogai/golos`; the download CTA targets the `v0.3.0` release page,
-which offers separate Apple Silicon and Intel beta assets once published.
+target `Dopomogai/golos`; the download CTA targets the latest release page,
+which offers separate Apple Silicon and Intel beta assets.

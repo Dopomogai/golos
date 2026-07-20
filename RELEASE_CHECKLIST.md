@@ -8,19 +8,19 @@ related_docs: [docs/PRODUCT_PAGE.md, site/README.md, docs/VISION.md, README.md]
 ---
 # golos — release checklist
 
-Source is public at <https://github.com/Dopomogai/golos>. v0.2.0 is the current
-unsigned beta. This checklist is the repeatable path to the public v0.3.0
-cloud-first release; signing/notarization remains a separate founder-owned gate.
+Source is public at <https://github.com/Dopomogai/golos>. v0.3.0 is public;
+v0.3.1 is the first polish update. This is the repeatable patch-release path;
+signing/notarization remains a separate founder-owned gate.
 
 ## 1. Repository and release branch
 
-The repository and initial public push are complete. For v0.3.0, work on a
+The repository and initial public push are complete. For v0.3.1, work on a
 feature branch until both architecture builds and tests pass. Never commit
 `~/.golos`, a populated API key, build output, or personal JSONL/WAV data.
 
 ```sh
 cd ~/dictate
-git switch -c release/v0.3.0
+git switch -c release/v0.3.1
 git status --short
 rg -n 'sk-or-v1-|api_key = "[^" ]+' --glob '!dist/**' --glob '!build/**' .
 ./.venv/bin/pytest -q
@@ -35,12 +35,12 @@ uses OpenRouter only.
 ```sh
 # Apple Silicon: cloud + optional local
 ./build_app.sh
-./make_dmg.sh 0.3.0-apple-silicon
+./make_dmg.sh 0.3.1-apple-silicon
 file dist/golos.app/Contents/MacOS/golos
 
 # Intel: cloud-only (requires an x86_64 Python and Rosetta on the build Mac)
 ./build_intel_app.sh
-./make_dmg.sh 0.3.0-intel
+./make_dmg.sh 0.3.1-intel
 file dist/golos.app/Contents/MacOS/golos
 ```
 
@@ -54,18 +54,18 @@ Before release, preserve both DMGs, restore the Apple Silicon app as
 - hold/release, immediate repeat, fn+Space lock, Esc cancel, processing/success
   animations, insertion, and correction approval all work.
 
-## 3. Publish v0.3.0
+## 3. Publish v0.3.1
 
 ```sh
 git add -A
 git status --short
-git commit -m "golos 0.3.0 — cloud-first Mac release"
-git push -u origin release/v0.3.0
+git commit -m "golos 0.3.1 — context, learning, and visual polish"
+git push -u origin release/v0.3.1
 # Merge after review, then tag/release from main.
-gh release create v0.3.0 \
-  dist/golos-0.3.0-apple-silicon.dmg \
-  dist/golos-0.3.0-intel.dmg \
-  --repo Dopomogai/golos --title "golos 0.3.0" --generate-notes
+gh release create v0.3.1 \
+  dist/golos-0.3.1-apple-silicon.dmg \
+  dist/golos-0.3.1-intel.dmg \
+  --repo Dopomogai/golos --title "golos 0.3.1" --generate-notes
 ```
 
 The release notes must say: macOS 13+; Intel is cloud-only; Apple Silicon can
@@ -84,7 +84,7 @@ Source copy: `docs/PRODUCT_PAGE.md`. Mapping to site blocks:
 | Privacy section | "Privacy" |
 | Requirements strip | "Requirements" |
 | FAQ accordion | "FAQ" (5 questions) |
-| Download CTA | "Download" (v0.3.0 release page with architecture choice) |
+| Download CTA | "Download" (latest release page with architecture choice) |
 
 The implementation is in `Dopomogai/dopomogai-web#26`. Grant
 `dopomogai-agent` repository **Write** access (not Admin) to update/merge it,
@@ -102,13 +102,13 @@ codesign --deep --force --options runtime \
 codesign --verify --deep --strict --verbose=2 dist/golos.app
 
 # package + notarize each architecture build
-./make_dmg.sh 0.3.0-apple-silicon
+./make_dmg.sh 0.3.1-apple-silicon
 codesign --sign "Developer ID Application: Andrii Solovei (TEAMID)" \
-  dist/golos-0.3.0-apple-silicon.dmg
-xcrun notarytool submit dist/golos-0.3.0-apple-silicon.dmg \
+  dist/golos-0.3.1-apple-silicon.dmg
+xcrun notarytool submit dist/golos-0.3.1-apple-silicon.dmg \
   --apple-id "APPLE_ID_EMAIL" --team-id "TEAMID" --password "APP_SPECIFIC_PW" \
   --wait
-xcrun stapler staple dist/golos-0.3.0-apple-silicon.dmg
+xcrun stapler staple dist/golos-0.3.1-apple-silicon.dmg
 ```
 
 Verify a fresh machine: `spctl -a -t exec -vv dist/golos.app` → "accepted".

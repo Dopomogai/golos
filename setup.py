@@ -52,8 +52,8 @@ OPTIONS = {
         "CFBundleName": "golos",
         "CFBundleDisplayName": "golos",
         "CFBundleIdentifier": "com.softprom.golos",
-        "CFBundleShortVersionString": "0.3.0",
-        "CFBundleVersion": "300",
+        "CFBundleShortVersionString": "0.3.1",
+        "CFBundleVersion": "301",
         "LSMinimumSystemVersion": "13.0",
         "LSUIElement": True,  # accessory app: no dock icon
         "NSMicrophoneUsageDescription":

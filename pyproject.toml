@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dictate"
-version = "0.3.0"
+version = "0.3.1"
 description = "Push-to-talk dictation for macOS, plus dictate_core: an embeddable voice pipeline library"
 requires-python = ">=3.11"
 dependencies = ["httpx", "numpy"]
@@ -54,7 +54,7 @@ omit = [
 show_missing = true
 skip_covered = false
 # Floor only — set at or below the measured honest baseline in docs/TESTING.md
-# (combined dictate+dictate_core branch coverage ~25% as of 2026-07-20).
+# (combined dictate+dictate_core branch coverage 34.19% as of 2026-07-21).
 # Raise only after intentional coverage gains; never omit hard production files
 # just to inflate the number.
 fail_under = 24

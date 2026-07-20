@@ -97,7 +97,9 @@ samples for the benchmark harness; copy or symlink them into `samples/`.
   coverage of the visible overlap, longest common block ≥ 12 chars, or ≥ 8
   with stricter coverage; short whole-field near-misses when the field is
   essentially the recent short insertion) and each pair must look like a
-  near-miss (similarity ≥ 0.5 or containment, ≤ 6 tokens).
+  near-miss (similarity ≥ 0.5 or containment, ≤ 6 tokens). Short proper
+  names (e.g. Mercy→Mercey, 5 chars) are valid — the 8-char floor is only
+  for locating text in the field, not a token-length minimum.
   A live **edit watcher** also polls the field for 3 min after each insertion:
   pause after a manual fix and a clickable cue pill (`wrong → right ✓?`)
   appears — click to keep the correction instantly (`[learning] live_cues`).
@@ -120,12 +122,17 @@ When `[context] enabled = true`, the formatter receives, per app:
 - **VS Code**: workspace folder (from the window title, located under ~,
   ~/Documents, ~/Documents/GitHub, ~/Projects) + up to 200 files.
 - **Finder**: front window + selection paths.
-- **Everywhere**: app name, bundle id, window title, up to 500 chars of
-  **text before the cursor** (to continue your sentence), and up to 4000
-  chars of normalized **visible text** (box-drawing glyphs stripped, space
-  runs collapsed). When your dictation comments on the visible text, the
-  formatter starts the output with a short verbatim `> quote`, then your
-  comment; it never quotes text that isn't on screen.
+- **Everywhere**: app name, bundle id, window title, plus three separate
+  text roles (Settings → Prompt toggles, default on):
+  - up to 500 chars of **text before the cursor** (continuation placement)
+  - up to 4000 chars of **focused field text** (full draft in the focused
+    input — what you are producing)
+  - up to 4000 chars of normalized **visible text** (surrounding/on-screen
+    reading context only; not the focused field; box-drawing glyphs
+    stripped, space runs collapsed; empty when inaccessible)
+  When your dictation comments on the visible text, the formatter starts
+  the output with a short verbatim `> quote`, then your comment; it never
+  quotes text that isn't in that surrounding context.
 
 **Privacy**: context and transcripts leave the machine only when LLM
 formatting is enabled. `[formatting] enabled = false` (or the Settings
@@ -157,9 +164,11 @@ to light/dark menu bars; SF Symbol fallback if the file is missing).
   LLM** checkbox (raw mode when off), **Fast mode** checkbox (short
   dictations skip the LLM), Save applies live.
 - **Dictionary**: terms table + corrections table (+/−, inline edit, Save).
-- **History**: every dictation (newest first, resizable columns) with the
-  full raw/final/context detail; Suggestions table with promote/dismiss;
-  Check-for-edits and Refresh buttons.
+- **History** (first tab, default): home dashboard of every dictation
+  (newest first, resizable columns) with raw/final/context detail;
+  status/error badges, Copy text, safe Retry (a new attempt, no automatic
+  insert), and Show audio for retained WAVs. Suggestions keep
+  promote/dismiss; Check-for-edits and Refresh remain available.
 - **Prompt**: context-sharing checkboxes (what may reach the formatter) and
   the system-prompt template editor (placeholders
   {{dictionary}} {{corrections}} {{context_block}} {{context_rules}}).
@@ -182,9 +191,9 @@ at startup and in the Permissions submenu.
 
 ```sh
 ./build_app.sh                      # Apple Silicon -> dist/golos.app
-./make_dmg.sh 0.3.0-apple-silicon
+./make_dmg.sh 0.3.1-apple-silicon
 ./build_intel_app.sh                # Intel cloud-only -> dist/golos.app
-./make_dmg.sh 0.3.0-intel
+./make_dmg.sh 0.3.1-intel
 ```
 
 **Install from the DMG**: open it, drag **golos** onto **Applications**,
@@ -247,12 +256,16 @@ Build notes: requires `setuptools<80`; `build_app.sh` temporarily hides
 | `[formatting] debug` | `false` | true = log the complete prompt |
 | `[bubble] style` | `"notch"` | or `"corner"` (restart to apply) |
 | `[bubble] sensitivity` | `1.0` | waveform display gain, 0.5–2.5 |
+| `[bubble] show_text` | `true` | status words on top animation; false keeps animation only |
 | `[learning] enabled` / `edit_window_seconds` | `true` / `600` | suggestion loop |
 | `[learning] live_cues` / `live_cue_seconds` | `true` / `8` | click-to-keep edit cues |
 | `[learning] reviewer_enabled` | `false` | optional post-edit OpenRouter review |
 | `[learning] reviewer_model` / `reviewer_send_audio` | audio-capable default / `true` | independent model; audio leaves Mac when on |
 | `[learning] reviewer_prompt_file` / `reviewer_min_confidence` | `learning_prompt.md` / `0.55` | editable prompt + confidence floor |
 | `[context] enabled` | `true` | providers + AX text reads |
+| `[context] focused_field_text` | `true` | full focused-input draft |
+| `[context] visible_text` | `true` | surrounding on-screen text only |
+| `[context] text_before_cursor` | `true` | pre-caret continuation slice |
 | `[insert] method` | `"auto"` | `auto` / `type` / `paste` |
 | `[insert] restore_clipboard` | `false` | true = restore old clipboard after 1.5 s |
 | `[audio] device` | `0` | sounddevice input index |

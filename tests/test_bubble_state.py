@@ -34,9 +34,15 @@ class _View:
     def __init__(self):
         self.states = []
         self._on_click = None
+        self._label_override = None
+        self._show_text = True
 
     def setState_(self, state):
         self.states.append(state)
+        self._label_override = None
+
+    def setNeedsDisplay_(self, flag=True):
+        pass
 
 
 class _WingsView:
@@ -44,6 +50,8 @@ class _WingsView:
         self.modes = []
         self._on_collapse_done = None
         self.collapse_started = False
+        self._success_label = "✓ inserted"
+        self._show_text = True
 
     def setMode_(self, mode):
         self.modes.append(mode)
@@ -52,6 +60,9 @@ class _WingsView:
         self.collapse_started = True
 
     def stopAnimation(self):
+        pass
+
+    def setNeedsDisplay_(self, flag=True):
         pass
 
 
@@ -63,6 +74,7 @@ def _bubble():
     bubble._notice_surface = "pill"
     bubble._geometry = (100, 200, 900)
     bubble._collapse = 0.0
+    bubble._show_text = True
     bubble._levels = []
     bubble._ema = 0.0
     bubble.panel = _Panel()
@@ -106,11 +118,47 @@ def test_success_to_immediate_new_recording_visibility():
     assert bubble.wings.alpha == 1.0
 
 
+def test_partial_success_label_truthful():
+    """STATUS_PARTIAL insert uses '✓ inserted raw' without breaking success mode."""
+    bubble = _bubble()
+    bubble.set_state("success", success_label="✓ inserted raw")
+    assert bubble._state == "success"
+    assert bubble.wings_view.modes[-1] == "success"
+    assert bubble.wings_view._success_label == "✓ inserted raw"
+    assert bubble.view._label_override == "✓ inserted raw"
+    # Default success still uses the green inserted label.
+    bubble.set_state("success")
+    assert bubble.wings_view._success_label == "✓ inserted"
+    assert bubble.view._label_override == "✓ inserted"
+
+
+def test_success_label_suppressed_when_show_text_false():
+    """show_text=false keeps success state/animation path; labels stay settable."""
+    bubble = _bubble()
+    bubble.set_show_text(False)
+    assert bubble._show_text is False
+    bubble.set_state("success", success_label="✓ inserted raw")
+    assert bubble._state == "success"
+    assert bubble.wings_view.modes[-1] == "success"
+    # Label values are stored for drawing; gap/pill draw paths honor show_text.
+    assert bubble.wings_view._success_label == "✓ inserted raw"
+    assert bubble.wings_view._show_text is False
+    assert bubble.view._show_text is False
+
+
 def test_idle_hides_wings_when_up():
     bubble = _bubble()
     bubble.wings.visible = True
     bubble.set_state("idle")
     assert bubble._state == "idle"
+    assert bubble.wings.visible is False
+
+
+def test_idle_hides_wings_even_if_legacy_collapse_flag_is_stale():
+    bubble = _bubble()
+    bubble._collapse = 0.8
+    bubble.wings.visible = True
+    bubble.set_state("idle")
     assert bubble.wings.visible is False
 
 

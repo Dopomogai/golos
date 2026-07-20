@@ -41,8 +41,36 @@ def test_render_context_block_labels_and_visible_text():
     assert "Bundle ID: com.tinyspeck.slackmacgap" in block
     assert "Window title: #dev" in block
     assert "VISIBLE TEXT" in block
+    assert "surrounding/on-screen" in block
     assert "hello context" in block
     assert "custom_key: custom value" in block
+
+
+def test_render_context_block_separates_focused_and_visible():
+    """focused_field_text and visible_text must stay distinct labeled blocks."""
+    draft = "draft sentence in the input field"
+    surrounding = "message the user is reading on screen"
+    block = render_context_block({
+        "app_name": "Slack",
+        "text_before_cursor": "draft sentence",
+        "focused_field_text": draft,
+        "visible_text": surrounding,
+    })
+    assert "FOCUSED FIELD TEXT" in block
+    assert "what they are producing" in block
+    assert draft in block
+    assert "VISIBLE TEXT" in block
+    assert "surrounding/on-screen" in block
+    assert surrounding in block
+    # Continuation slice still labeled and quoted.
+    assert "Text already in the input before the cursor" in block
+    assert '"draft sentence"' in block
+    # Roles must not collapse into one another.
+    focused_idx = block.index("FOCUSED FIELD TEXT")
+    visible_idx = block.index("VISIBLE TEXT")
+    assert focused_idx < visible_idx
+    assert block.index(draft) < visible_idx
+    assert block.index(surrounding) > visible_idx
 
 
 def test_render_context_block_empty():
@@ -55,8 +83,20 @@ def test_render_context_rules_conditional():
     assert "CONTEXT describes" in refs
     cont = render_context_rules({"text_before_cursor": "hi"})
     assert "Continue naturally" in cont
+    focused = render_context_rules({"focused_field_text": "draft body"})
+    assert "FOCUSED FIELD TEXT" in focused
+    assert "composing" in focused or "producing" in focused
     cite = render_context_rules({"visible_text": "body"})
     assert "VISIBLE TEXT" in cite or "Quote the VISIBLE" in cite
+    # Both roles can appear together without collapsing rules.
+    both = render_context_rules({
+        "focused_field_text": "draft",
+        "visible_text": "screen",
+        "text_before_cursor": "pre",
+    })
+    assert "Continue naturally" in both
+    assert "FOCUSED FIELD TEXT" in both
+    assert "VISIBLE TEXT" in both or "Quote the VISIBLE" in both
 
 
 def test_formatter_disabled_without_key_passthrough():
@@ -98,14 +138,19 @@ def test_build_system_prompt_transcribe_mode():
     prompt = fmt.build_system_prompt({
         "app_name": "Slack",
         "window_title": "#dev",
+        "focused_field_text": "my draft here",
         "visible_text": "look here",
+        "text_before_cursor": "my draft",
     })
     assert "transcription cleaner" in prompt
     assert "NEVER answer" in prompt
     assert "golos" in prompt
     assert '"teh" -> "the"' in prompt
     assert "Application: Slack" in prompt
+    assert "my draft here" in prompt
     assert "look here" in prompt
+    assert "FOCUSED FIELD TEXT" in prompt
+    assert "VISIBLE TEXT" in prompt
     assert "cleaned dictation" in prompt.lower() or "Remember:" in prompt
 
 

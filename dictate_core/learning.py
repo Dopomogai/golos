@@ -9,7 +9,10 @@ Heuristics and false-positive guards (suggest_pairs / pair_is_plausible):
   insertion (scope + similarity), without relaxing the 8/12-char anchors
   used to locate short text inside large/embedded fields;
 - near-miss similarity gate so mis-anchored spans (e.g. 'We'→'likely') drop;
-- token runs only for replace ops; pure appends/prepends yield no pairs.
+- token runs only for replace ops; pure appends/prepends yield no pairs;
+- when a replace block is unbalanced (trailing/leading field chrome after a
+  short proper-name edit), fall back to per-token near-miss alignment so a
+  5-char name like Mercy→Mercey is not dropped — never an 8-char token min.
 All processing is local — no network, no AppKit.
 """
 
@@ -56,14 +59,59 @@ def _strip_punct(s: str) -> str:
     return s.strip(_PUNCT + " \t")
 
 
+def _token_similarity(a: str, b: str) -> float:
+    """Case-insensitive similarity of two tokens (punctuation stripped)."""
+    al, bl = _strip_punct(a).lower(), _strip_punct(b).lower()
+    if not al or not bl:
+        return 0.0
+    ratio = difflib.SequenceMatcher(None, al, bl, autojunk=False).ratio()
+    if al in bl or bl in al:
+        return max(ratio, 0.51)
+    return ratio
+
+
+def _near_miss_token_pairs(
+    wrong_toks: list[str], right_toks: list[str],
+) -> list[tuple[str, str]]:
+    """1:1 greedy near-miss pairs inside an unbalanced replace block.
+
+    Used when field chrome trails a short edit (e.g. Mercy. → Mercey. -- sig):
+    the contiguous multi-token right side fails pair_is_plausible, but the
+    real correction is still a single near-miss token. Min token length is 2
+    chars (not 8) so proper names like Mercy stay eligible.
+    """
+    used: set[int] = set()
+    pairs: list[tuple[str, str]] = []
+    for wrong in wrong_toks:
+        if len(_strip_punct(wrong)) < 2:
+            continue
+        best_j: int | None = None
+        best_ratio = 0.0
+        for j, right in enumerate(right_toks):
+            if j in used or len(_strip_punct(right)) < 2:
+                continue
+            ratio = _token_similarity(wrong, right)
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_j = j
+        if best_j is not None and best_ratio >= 0.5:
+            used.add(best_j)
+            pairs.append((wrong, right_toks[best_j]))
+    return pairs
+
+
 def extract_replacement_pairs(inserted: str, edited: str) -> list[tuple[str, str]]:
     """Token-diff two texts and return (wrong, right) replacement pairs.
 
     Tokens are matched punctuation-insensitively ("tomorrow" == "tomorrow?"),
     so punctuation-only edits don't create noise; case stays significant
     ("wisper" != "Wispr") since capitalization fixes are worth learning.
-    Contiguous replaced token runs become one pair ("wisper flow" -> "Wispr
-    Flow"). Pairs where either side is shorter than 2 chars are ignored.
+    Contiguous replaced token runs with equal token counts become one pair
+    ("wisper flow" -> "Wispr Flow") when still a near-miss. Unbalanced
+    replace blocks (extra field tokens after a short name fix) fall back to
+    per-token near-miss alignment so Mercy→Mercey is kept and trailing
+    chrome is not. Pairs where either side is shorter than 2 chars are
+    ignored — there is no 8-character token minimum.
     """
     a = norm_text(inserted).split()
     b = norm_text(edited).split()
@@ -74,11 +122,22 @@ def extract_replacement_pairs(inserted: str, edited: str) -> list[tuple[str, str
     for tag, i1, i2, j1, j2 in sm.get_opcodes():
         if tag != "replace":
             continue
-        wrong = " ".join(a[i1:i2])
-        right = " ".join(b[j1:j2])
-        if len(_strip_punct(wrong)) < 2 or len(_strip_punct(right)) < 2:
+        wrong_toks = a[i1:i2]
+        right_toks = b[j1:j2]
+        if not wrong_toks or not right_toks:
             continue
-        pairs.append((wrong, right))
+        wrong = " ".join(wrong_toks)
+        right = " ".join(right_toks)
+        if (len(wrong_toks) == len(right_toks)
+                and len(_strip_punct(wrong)) >= 2
+                and len(_strip_punct(right)) >= 2):
+            ok, _ = pair_is_plausible(wrong, right)
+            if ok:
+                pairs.append((wrong, right))
+                continue
+        # Unequal counts, or equal-count but implausible as a whole span:
+        # keep only near-miss token pairs (short proper names amid chrome).
+        pairs.extend(_near_miss_token_pairs(wrong_toks, right_toks))
     return pairs
 
 

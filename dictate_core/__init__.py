@@ -107,10 +107,18 @@ class VoicePipeline:
         return self._stt.transcribe(audio, prompt=", ".join(self._terms))
 
     def format(self, text: str, *, app_name="", bundle_id="", window_title="",
-               visible_text="", text_before_cursor="") -> str:
-        """Stage-2 LLM formatting; passthrough when disabled or keyless."""
+               visible_text="", text_before_cursor="",
+               focused_field_text="") -> str:
+        """Stage-2 LLM formatting; passthrough when disabled or keyless.
+
+        Context roles stay separate: focused_field_text is the full draft in
+        the focused input; text_before_cursor is the pre-caret slice;
+        visible_text is surrounding/on-screen reading context only.
+        """
         ctx = {"app_name": app_name, "bundle_id": bundle_id,
                "window_title": window_title}
+        if focused_field_text:
+            ctx["focused_field_text"] = focused_field_text
         if visible_text:
             ctx["visible_text"] = visible_text
         if text_before_cursor:

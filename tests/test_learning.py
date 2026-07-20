@@ -128,6 +128,41 @@ def test_long_insertion_embedded_still_learns():
     )
 
 
+def test_long_field_short_proper_name_mercy_mercey():
+    """Real case: long insertion, only a 5-char proper name edited, field has
+    surrounding chrome (email/body signature). Must capture Mercy→Mercey —
+    no 8-char token minimum may drop short names.
+    """
+    ins = (
+        "I'm talking about something specific, some words that are not "
+        "clearly known to an agent, but to a modern LLM. It could be a name "
+        "or anything that is yours to remember. \n\nFor example, a name "
+        "could be it. Let's say my cat's name is Mercy."
+    )
+    edited = ins.replace("Mercy", "Mercey")
+    # Exact field (watcher when the body *is* the insertion).
+    _assert_pairs(edited, ins, [("Mercy.", "Mercey.")], "exact field Mercy→Mercey")
+    # Embedded in a larger focused field (prefix + signature chrome).
+    field = ("Earlier email text goes here. " * 10) + edited + (
+        "\n--\nSignature block\n" * 3
+    )
+    pairs = suggest_pairs(field, ins)
+    assert ("Mercy.", "Mercey.") in pairs or ("Mercy", "Mercey") in pairs, (
+        f"long-field short proper name: expected Mercy→Mercey, got {pairs!r}"
+    )
+    # Must not swallow signature chrome into the right side.
+    for wrong, right in pairs:
+        if "Mercy" in wrong:
+            assert "Signature" not in right
+            assert "Earlier" not in right
+            assert len(_strip_for_test(right)) <= 8  # Mercey. at most
+
+
+def _strip_for_test(s: str) -> str:
+    import string
+    return s.strip(string.punctuation + " \t")
+
+
 def test_scroll_tolerance_tail_visible():
     ins = ("AAAA " * 20) + "the end has a typo wrd here"
     full = "the end has a typo word here"
@@ -183,6 +218,19 @@ def test_short_edit_refusal_logs_reason():
 
 def test_extract_replacement_min_length():
     assert extract_replacement_pairs("a b", "x b") == []
+
+
+def test_extract_short_name_amid_trailing_chrome():
+    """Unbalanced replace: short name + field chrome → only the name pair."""
+    pairs = extract_replacement_pairs("Mercy.", "Mercey. -- Signature block")
+    assert pairs == [("Mercy.", "Mercey.")], pairs
+
+
+def test_extract_five_char_name_no_eight_min():
+    """Five-character proper names are valid learning tokens."""
+    pairs = extract_replacement_pairs("Mercy", "Mercey")
+    assert pairs == [("Mercy", "Mercey")], pairs
+    assert all(len(w) < 8 and len(r) < 8 for w, r in pairs)
 
 
 def test_norm_text_collapses_whitespace():

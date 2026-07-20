@@ -158,6 +158,28 @@ def test_long_insertion_embedded_still_learns():
     )
 
 
+def test_long_field_short_proper_name_mercy_mercey():
+    """Long insertion, single 5-char name edit, surrounding field chrome."""
+    ins = (
+        "I'm talking about something specific, some words that are not "
+        "clearly known to an agent, but to a modern LLM. It could be a name "
+        "or anything that is yours to remember. \n\nFor example, a name "
+        "could be it. Let's say my cat's name is Mercy."
+    )
+    edited = ins.replace("Mercy", "Mercey")
+    _assert_pairs(edited, ins, [("Mercy.", "Mercey.")], "exact field Mercy→Mercey")
+    field = ("Earlier email text goes here. " * 10) + edited + (
+        "\n--\nSignature block\n" * 3
+    )
+    pairs = suggest_pairs(field, ins)
+    assert ("Mercy.", "Mercey.") in pairs or ("Mercy", "Mercey") in pairs, (
+        f"long-field short proper name: expected Mercy→Mercey, got {pairs!r}"
+    )
+    for wrong, right in pairs:
+        if "Mercy" in wrong:
+            assert "Signature" not in right and "Earlier" not in right
+
+
 def test_scroll_tolerance_tail_visible():
     ins = ("AAAA " * 20) + "the end has a typo wrd here"
     full = "the end has a typo word here"  # scrolled input: only tail visible
@@ -223,6 +245,16 @@ def test_extract_replacement_min_length():
     assert extract_replacement_pairs("a b", "x b") == []
 
 
+def test_extract_short_name_amid_trailing_chrome():
+    pairs = extract_replacement_pairs("Mercy.", "Mercey. -- Signature block")
+    assert pairs == [("Mercy.", "Mercey.")], pairs
+
+
+def test_extract_five_char_name_no_eight_min():
+    pairs = extract_replacement_pairs("Mercy", "Mercey")
+    assert pairs == [("Mercy", "Mercey")], pairs
+
+
 # ---------------------------------------------------------------------------
 
 CASES = [
@@ -245,11 +277,14 @@ CASES = [
     test_implausible_pair_helper,
     test_empty_inputs,
     test_long_insertion_embedded_still_learns,
+    test_long_field_short_proper_name_mercy_mercey,
     test_scroll_tolerance_tail_visible,
     test_eight_char_anchor_with_coverage,
     test_twelve_char_anchor_relaxed_coverage,
     test_short_edit_refusal_logs_reason,
     test_extract_replacement_min_length,
+    test_extract_short_name_amid_trailing_chrome,
+    test_extract_five_char_name_no_eight_min,
 ]
 
 

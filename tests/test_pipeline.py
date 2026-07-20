@@ -112,6 +112,36 @@ def test_pipeline_formatter_passthrough_disabled(tmp_path, inserts):
     assert inserts[0]["text"] == "hello world"
 
 
+def test_pipeline_partial_success_truthful_label(tmp_path, inserts):
+    """Format fallback + insert → STATUS_PARTIAL and '✓ inserted raw' label."""
+    fmt = FakeFormatter(fail=True)
+    controller = _controller(tmp_path, formatter=fmt)
+    controller._set_state("processing")
+    controller._pipeline()
+    assert inserts and inserts[0]["text"] == "hello world"
+    assert controller.state == "success"
+    assert controller.bubble._success_label == "✓ inserted raw"
+    assert "✓ inserted raw" in controller.bubble.success_labels
+    # Success → idle timer still scheduled (lifecycle intact).
+    assert any(
+        fn.__name__ == "_finish_success" or getattr(fn, "__name__", "") == "_finish_success"
+        for _d, fn, _a, _k in SyncAppHelper.later_calls
+    )
+    hist = Path(controller.history_path).read_text(encoding="utf-8")
+    assert '"status": "partial"' in hist or '"status":"partial"' in hist
+    assert "format_fallback" in hist
+
+
+def test_pipeline_full_success_default_inserted_label(tmp_path, inserts):
+    """Normal success keeps default green label (not 'inserted raw')."""
+    controller = _controller(tmp_path)
+    controller._set_state("processing")
+    controller._pipeline()
+    assert controller.state == "success"
+    assert controller.bubble._success_label == "✓ inserted"
+    assert controller.bubble._success_label != "✓ inserted raw"
+
+
 def test_pipeline_formatter_failure_returns_raw(tmp_path, inserts, monkeypatch):
     """Real Formatter + mocked httpx failure → raw passthrough."""
     from dictate_core.formatter import Formatter
@@ -148,6 +178,7 @@ def test_pipeline_formatter_failure_returns_raw(tmp_path, inserts, monkeypatch):
 
 
 def test_pipeline_cancellation_discards_insert(tmp_path, inserts):
+    """Esc after STT/format: no insert, idle; recovery history is in test_recovery."""
     controller = _controller(tmp_path)
     controller._set_state("processing")
     controller._cancel_requested = True
@@ -155,6 +186,7 @@ def test_pipeline_cancellation_discards_insert(tmp_path, inserts):
     assert inserts == []
     assert controller.state == "idle"
     assert controller._cancel_requested is False
+    assert controller.last_insertion is None
 
 
 def test_pipeline_insertion_failure(tmp_path, monkeypatch):
@@ -166,12 +198,16 @@ def test_pipeline_insertion_failure(tmp_path, monkeypatch):
     controller._pipeline()
     assert controller.state == "idle"
     assert controller.last_insertion is None
+    assert controller.bubble.notices
+    assert "couldn't insert" in controller.bubble.notices[-1][0]
+    assert controller.bubble.notices[-1][1] == "warn"
 
 
 def test_pipeline_history_failure_still_inserts(tmp_path, inserts, monkeypatch):
     def boom(*a, **k):
         raise OSError("disk full")
 
+    # Success history is written after insert confirms (main-thread path).
     monkeypatch.setattr("dictate.history.append_history", boom)
     controller = _controller(tmp_path)
     controller._set_state("processing")
@@ -194,6 +230,9 @@ def test_pipeline_empty_transcript(tmp_path, inserts):
     controller._pipeline()
     assert inserts == []
     assert controller.state == "idle"
+    assert controller.bubble.notices
+    assert "couldn't hear that" in controller.bubble.notices[-1][0]
+    assert controller.bubble.notices[-1][1] == "warn"
 
 
 def test_pipeline_no_stt_backend(tmp_path, inserts):
@@ -203,6 +242,34 @@ def test_pipeline_no_stt_backend(tmp_path, inserts):
     controller._pipeline()
     assert inserts == []
     assert controller.state == "idle"
+    assert controller.bubble.notices
+    assert "OpenRouter" in controller.bubble.notices[-1][0]
+    assert controller.bubble.notices[-1][1] == "warn"
+
+
+def test_pipeline_failure_notice_after_idle_not_dropped(tmp_path, inserts):
+    """Recovery notices must land after idle (Bubble idle-only guard)."""
+    controller = _controller(tmp_path, stt=FakeSTT(""))
+    controller._set_state("processing")
+    controller._pipeline()
+    # Idle must appear before/with the visible notice path.
+    assert "idle" in controller.bubble.states
+    idle_idx = controller.bubble.states.index("idle")
+    # Notice recorded (FakeBubble drops notices while non-idle).
+    assert len(controller.bubble.notices) == 1
+    assert controller.bubble.notices[0][1] == "warn"
+    # Final controller state is idle, not stuck processing.
+    assert controller.state == "idle"
+    assert idle_idx >= 0
+
+
+def test_pipeline_accidental_tap_no_recovery_notice(tmp_path, inserts):
+    """Short accidental tap stays silent — no History warn."""
+    controller = _controller(tmp_path, audio_len=100)
+    controller._set_state("processing")
+    controller._pipeline()
+    assert controller.state == "idle"
+    assert controller.bubble.notices == []
 
 
 def test_pipeline_fast_mode_skips_formatter(tmp_path, inserts):
@@ -232,3 +299,8 @@ def test_pipeline_stt_exception_returns_idle(tmp_path, inserts):
     controller._pipeline()
     assert inserts == []
     assert controller.state == "idle"
+    assert controller.bubble.notices
+    msg = controller.bubble.notices[-1][0].lower()
+    assert "speech recognition failed" in msg
+    assert "history" in msg
+    assert controller.bubble.notices[-1][1] == "warn"

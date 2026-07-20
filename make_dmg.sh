@@ -1,10 +1,10 @@
 #!/bin/bash
-# Build dist/golos-0.3.0.dmg: golos.app + /Applications symlink (drag-to-install).
+# Build a versioned DMG: golos.app + /Applications symlink (drag-to-install).
 # Requires the caller to build the intended architecture first.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION="${1:-0.3.0}"
+VERSION="${1:-0.3.1}"
 DMG="dist/golos-${VERSION}.dmg"
 STAGE="dist/dmg-stage"
 

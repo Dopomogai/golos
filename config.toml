@@ -5,7 +5,7 @@ toggle_combo = "fn+space"  # fn+space | double_fn (fn+space always works alongsi
 [stt]
 backend = "openrouter"
 mlx_model = "mlx-community/whisper-large-v3-turbo"
-language = ""
+languages = []             # e.g. ["en", "uk"]; empty = auto-detect
 
 [openrouter]
 api_key = ""  # set yours here or via Settings (stored in ~/.golos)
@@ -21,6 +21,7 @@ fast_mode_max_words = 10
 
 [bubble]
 style = "notch"
+show_text = true          # status words on top animation; false = animation only
 
 [learning]
 live_cues = true           # watch the field after insertion, offer corrections live
@@ -38,13 +39,17 @@ reviewer_min_confidence = 0.55
 
 [context]
 enabled = true
+# Sub-flags default true when omitted: app_info, text_before_cursor,
+# focused_field_text, visible_text, browser, vscode, finder.
+# focused_field_text = full draft in the focused input; visible_text =
+# surrounding/on-screen reading context only (never the focused field).
 
 [insert]
 method = "auto"           # auto | type | paste (auto: type for single-line, paste for multi-line)
 
 [audio]
 device = 0                 # 0 = default input
-keep_recordings = true     # save every dictation wav to ~/.dictate/recordings/
+keep_recordings = true     # save every dictation wav to ~/.golos/recordings/
 
 [paths]
 dictionary = "dictionary.txt"

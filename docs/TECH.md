@@ -26,16 +26,16 @@ keeps the shims + everything with UI or OS integration:
 | `app.py` | NSApplication setup, `AppController` state machine, instance lock, app-switch observer, threading boundaries |
 | `hotkeys.py` | 4 hold keys (fn/right_option/right_command via CGEventTap flagsChanged when active, NSEvent fallback; f5 via key events), CGEventTap swallowing Space + F5, double-tap detection, live rebind |
 | `bubble.py` | notch strip (recording wings / processing shimmer / success hill / notice / cue) + corner pill (NSPanel status-level UI) |
-| `context.py` | frontmost app/window/pid, text-before-cursor, normalized visible text (AX) |
+| `context.py` | frontmost app/window/pid; focused-field text, text-before-cursor, surrounding visible text (AX; roles kept separate) |
 | `providers.py` | per-app context: browser tab, VS Code workspace, Finder selection |
 | `learning.py` | edit capture (AX) → suggestion pairs, promote/dismiss, async wrapper |
 | `learning_reviewer.py` (core) | optional OpenRouter multimodal review after stable edits |
 | `editwatcher.py` | live edit cues: 2.5 s polling for 3 min, debounce, cue firing (workers for AX reads) |
-| `settings.py` | menu-bar status item (12-petal chakra glyph, 11 pt), Permissions submenu, 4-tab Settings window |
+| `settings.py` | menu-bar status item (12-petal chakra glyph, 11 pt), Permissions submenu, 5-tab Settings (History first/default) |
 | `onboarding.py` | 7-page branded wizard (sidebar, radio cards, hotkey test pad, try-it field) |
 | `permissions.py` | Accessibility/Input Monitoring/Microphone preflight + deep links |
 | `insert.py` | single-line: synthetic keystrokes; multi-line: clipboard + Cmd+V (pasteboard keeps the transcript) |
-| `history.py` | JSONL append (ts, app, bundle, raw, final, context, audio, fast) |
+| `history.py` | JSONL append + durable recovery (ts, app, bundle, raw, final, context, audio, fast, schema_version/run_id/stage/status/error/attempts); load/normalize/copy_ready/retry helpers |
 | `config.py` | tomllib read, toml write (`update_config`), char-array healing, `~/.golos` migration |
 | `bench.py` | STT benchmark harness (`record` / `run`) |
 
@@ -46,7 +46,47 @@ keeps the shims + everything with UI or OS integration:
 press ends `locked`)
 
 The lock is held on `AppController._lock`; the pipeline runs on a daemon
-thread; state transitions are logged.
+thread; state transitions are logged. **`_lock` is never held across network
+I/O** (STT/format) — only short critical sections at hotkey boundaries.
+
+### Pipeline ownership (live vs History retry)
+
+Live dictation and History retries share the same STT + formatter instances.
+`AppController` coordinates them with a second short lock
+(`_pipeline_coord` / `_pipeline_owner`):
+
+| Owner | Acquired by | Released |
+|---|---|---|
+| `live` | `_pipeline` before STT/format | `finally` after the worker body |
+| `history_retry` | `retry_failed_stage` before work | `finally` after the retry body |
+
+Acquisition is a flag set under a short critical section — **never** held
+across STT/format network I/O. History retry also refuses while state is
+`recording` / `locked` / `processing`. Desired UX:
+
+- Retry while live owns the pipeline (or is mid-recording/processing) →
+  `busy=True`, **no** history attempt line written.
+- Hotkey while a History retry owns the pipeline → do not start recording;
+  idle-safe notice `History retry is still running`.
+- Immediate re-press after a successful insertion is unchanged (success →
+  recording).
+
+### History home grouping
+
+Settings History home loads via `load_history_home` /
+`group_history_for_home`: **one derived latest row per `run_id`** using the
+same merge semantics as `latest_view_for_run` / `merge_attempt_views`.
+Legacy lines without `run_id` stay individual. On-disk JSONL is append-only
+— grouping is display-only. When `attempts_count > 1`, the detail pane
+shows the attempt count.
+
+### Partial success feedback
+
+When the formatter falls back to raw but insert succeeds (`status=partial`),
+the bubble success state uses label **`✓ inserted raw`** (green hill / fade
+lifecycle unchanged). With `[bubble] show_text = false` the animation still
+runs; the text is suppressed as usual. Full format success still shows
+`✓ inserted`.
 
 ## Hotkeys: event tap vs monitor
 
@@ -141,8 +181,38 @@ consumed by the tap while configured) and rebinding is live via
    into pasting the OLD clipboard — Universal Clipboard stalls;
    `restore_clipboard = true` restores after 1500 ms as an escape hatch).
    Success flashes the bubble; the insertion is remembered for learning.
-5. **History**: JSONL with the full context dict (`workspace_files`
-   truncated to 50 lines).
+5. **History / recovery**: append-only JSONL (`~/.golos/history.jsonl`) with
+   the full context dict (`workspace_files` truncated to 50 lines). Schema
+   v2 adds recovery fields while remaining backward compatible with legacy
+   success lines (no `schema_version`):
+
+   | Field | Notes |
+   |---|---|
+   | `schema_version` | `2` for new writes; missing → treated as legacy success |
+   | `run_id` / `attempt` / `kind` | stable run id; `attempt` 0 = original, retries append `kind=attempt` |
+   | `stage` | `stt` \| `format` \| `insert` \| `complete` |
+   | `status` | `success` \| `failed` \| `cancelled` \| `partial` |
+   | `error` | failure message when `status=failed` |
+   | `audio` / `audio_retained` | retained WAV path only when `[audio] keep_recordings`; never secret retention |
+   | `format_fallback` | true when formatter raised and raw was used |
+
+   Failures at STT / insert (including a non-trivial capture that returns an
+   empty transcript) are written immediately so a dictation does not
+   disappear. Success history is written **after** insert confirms (not when
+   insert is merely scheduled). Formatter soft-failures return raw, insert it,
+   and write `status=partial` + `format_fallback=true`.
+   **Processing-stage Esc** (cancel after STT/formatting, before insert)
+   appends one schema-v2 line with the same `run_id`, `status=cancelled`,
+   `stage=insert`, and honest `raw` / `final` / context / audio / `fast` /
+   `format_fallback` — never inserts, returns to idle. **Recording-stage Esc**
+   remains a pure abort/discard with no history line.
+   Retries (`AppController.retry_failed_stage`)
+   append new attempt lines and **never** rewrite the original failure.
+   Default retry does **not** re-insert into the frontmost app — copy-ready
+   text is returned for an explicit UI action (`insert=True` is the only
+   paste path, documented as current-focus only).
+   Settings runs retries on a worker, then refreshes History; its UI exposes
+   Copy text and Show audio but never automatic re-insertion.
 
 ## Learning gates (why suggestions aren't junk)
 
@@ -156,9 +226,14 @@ consumed by the tap while configured) and rebinding is live via
   8/12-char anchor. Otherwise skip with an INFO log. The field text is
   normalized like visible_text first; the anchor is shrunk to word
   boundaries and only head/tail regions are diffed — never the whole field
-  (except the short whole-field path above).
+  (except the short whole-field path above). The 8/12 floor is an **anchor
+  location** threshold only — replacement **tokens** only need ≥ 2 chars, so
+  a 5-character proper name (Mercy→Mercey) in a long paragraph is valid.
+  When the field has trailing chrome after a short edit, unbalanced replace
+  blocks fall back to per-token near-miss alignment so signature/UI text is
+  not swallowed into the pair.
   A live **edit watcher** (`[learning] live_cues`) polls the field every
-  2.5 s for 3 min after each insertion; a pair that survives two consecutive
+  1.0 s for 3 min after each insertion; a pair that survives two consecutive
   polls (user paused) becomes a clickable cue (`wrong → right ✓?` pill) —
   accepting promotes to corrections + dismisses it.
 - **Similarity gate**: keep a pair only if `SequenceMatcher.ratio() ≥ 0.5`
@@ -192,14 +267,17 @@ consumed by the tap while configured) and rebinding is live via
   `[audio] keep_recordings = false`.
 - **What can leave**: the transcript and the formatter context (app, window
   title, tab URL, workspace file list, ≤500 chars before the cursor,
-  ≤4000 chars of normalized visible text) — only when `[formatting] enabled = true`
-  and a key is configured. Cloud STT sends the audio to OpenRouter when
+  ≤4000 chars of focused field text, ≤4000 chars of surrounding visible
+  text — never PID) — only when `[formatting] enabled = true` and a key is
+  configured. Cloud STT sends the audio to OpenRouter when
   `backend = "openrouter"`. The optional learning reviewer may send a
   bounded edit excerpt (and a retained WAV when `reviewer_send_audio`)
   only if `[learning] reviewer_enabled = true`.
 - Off switches: `[formatting] enabled = false` (raw mode), `[context]
-  enabled = false` (no providers/AX reads), `[learning] enabled = false`,
-  `[learning] reviewer_enabled = false` (default).
+  enabled = false` (no providers/AX reads), per-field `[context]` toggles
+  (`focused_field_text`, `visible_text`, `text_before_cursor`, …),
+  `[learning] enabled = false`, `[learning] reviewer_enabled = false`
+  (default).
 - The API key lives in `config.toml` (plain text, user-only) or
   `OPENROUTER_API_KEY` (env wins). History/suggestions are local JSONL.
 - Permissions are preflighted at startup; the app never requests them
@@ -224,7 +302,7 @@ consumed by the tap while configured) and rebinding is live via
 | `[formatting] fast_mode` / `fast_mode_max_words` | `false` / `10` | skip LLM for short dictations |
 | `[formatting] debug` | `false` | logs the complete prompt |
 | `[formatting] prompt_file` | `"prompt.md"` | custom system-prompt template in `~/.golos` |
-| `[bubble] style` / `sensitivity` | `"notch"` / `1.0` | corner fallback / display gain 0.5–2.5 |
+| `[bubble] style` / `sensitivity` / `show_text` | `"notch"` / `1.0` / `true` | corner fallback / display gain 0.5–2.5 / animation-only option |
 | `[learning] enabled` / `edit_window_seconds` | `true` / `600` | suggestion loop |
 | `[learning] live_cues` / `live_cue_seconds` | `true` / `8` | click-to-keep edit cues |
 | `[learning] reviewer_enabled` | `false` | optional OpenRouter post-edit review (off for privacy) |
@@ -233,6 +311,9 @@ consumed by the tap while configured) and rebinding is live via
 | `[learning] reviewer_prompt_file` | `learning_prompt.md` | under `~/.golos/` |
 | `[learning] reviewer_min_confidence` | `0.55` | drop lower-confidence candidates |
 | `[context] enabled` | `true` | providers + AX text reads |
+| `[context] focused_field_text` | `true` | full focused-input draft (≤4000) |
+| `[context] visible_text` | `true` | surrounding on-screen text only (≤4000) |
+| `[context] text_before_cursor` | `true` | pre-caret slice (≤500) |
 | `[insert] method` / `restore_clipboard` | `"auto"` / `false` | type/paste override; clipboard restore escape hatch |
 | `[audio] device` / `keep_recordings` | `0` / `true` | sounddevice index; wav archive |
 | `[app] onboarded` | — | set by the wizard |

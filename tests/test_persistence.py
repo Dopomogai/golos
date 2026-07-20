@@ -197,6 +197,30 @@ def test_append_history_jsonl(tmp_path):
     assert rec["final"] == "final text"
     assert rec["fast"] is True
     assert "ts" in rec
+    # Schema v2 recovery fields (backward-compatible extras)
+    assert rec["schema_version"] == 2
+    assert rec["status"] == "success"
+    assert rec["stage"] == "complete"
+    assert rec["run_id"]
+    assert rec["audio_retained"] is False
+
+
+def test_audio_retained_requires_file_on_disk(tmp_path):
+    """Persisted audio_retained must not be true for a missing path."""
+    from dictate.history import append_history, load_history, normalize_record
+
+    missing = str(tmp_path / "nope.wav")
+    path = str(tmp_path / "history.jsonl")
+    append_history(
+        path, "Notes", "com.apple.Notes", "raw", "Final.",
+        audio=missing,
+    )
+    raw_line = json.loads(Path(path).read_text(encoding="utf-8").strip())
+    assert raw_line["audio"] == missing
+    assert raw_line["audio_retained"] is False
+    assert load_history(path)[0]["audio_retained"] is False
+    # Path present in dict alone still normalizes to not retained.
+    assert normalize_record({"audio": missing})["audio_retained"] is False
 
 
 def test_dictionary_and_corrections_roundtrip_temp(tmp_path):
