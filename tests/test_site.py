@@ -17,12 +17,12 @@ VISION = ROOT / "docs" / "VISION.md"
 README = ROOT / "README.md"
 
 APPLE_DMG = (
-    "https://github.com/Dopomogai/golos/releases/download/v0.3.1/"
-    "golos-0.3.1-apple-silicon.dmg"
+    "https://github.com/Dopomogai/golos/releases/download/v0.3.2/"
+    "golos-0.3.2-apple-silicon.dmg"
 )
 INTEL_DMG = (
-    "https://github.com/Dopomogai/golos/releases/download/v0.3.1/"
-    "golos-0.3.1-intel.dmg"
+    "https://github.com/Dopomogai/golos/releases/download/v0.3.2/"
+    "golos-0.3.2-intel.dmg"
 )
 
 
@@ -98,7 +98,7 @@ def test_platform_wording_not_stale_not_planned():
     vision = VISION.read_text(encoding="utf-8")
     assert "Explicitly parked" not in vision
     assert "Must-haves before public release" not in vision
-    assert "public" in vision.lower() and "0.3.1" in vision
+    assert "public" in vision.lower() and "0.3.2" in vision
     assert "Mac is supported today" in vision
 
     readme = README.read_text(encoding="utf-8")

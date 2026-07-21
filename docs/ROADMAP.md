@@ -12,7 +12,7 @@ Direction only. No ship dates, no promises.
 
 ## Shipped now
 
-Public **v0.3.1 Mac beta** (macOS 13+):
+Public **v0.3.2 Mac beta** (macOS 13+):
 
 - Separate **Apple Silicon** (cloud + optional local MLX) and **Intel**
   (cloud-only OpenRouter; no MLX) DMGs

@@ -11,7 +11,7 @@ related_docs: [README.md, CONTRIBUTING.md, docs/TECH.md, docs/PRODUCT.md]
 ## Supported versions
 
 Security reports are accepted for the **currently published macOS beta**
-(**v0.3.1** at the time of writing) and for the default branch of this
+(**v0.3.2** at the time of writing) and for the default branch of this
 repository. Older tags may not receive fixes.
 
 ## Product context (for reporters)

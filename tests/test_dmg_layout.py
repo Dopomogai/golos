@@ -314,5 +314,6 @@ def test_published_v031_assets_untouched_by_source_changes():
             continue
         # Touch-free: just assert presence; integration test never targets these paths.
         assert path.stat().st_size > 1_000_000
-    # Script default version token remains compatible with existing invocation.
-    assert 'VERSION="${1:-0.3.1}"' in _script() or "0.3.1" in _script()
+    # Script default follows the current release while explicit old versions
+    # remain supported by the positional argument.
+    assert 'VERSION="${1:-0.3.2}"' in _script()
