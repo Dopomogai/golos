@@ -18,11 +18,11 @@ A minimal macOS push-to-talk dictation app, in Python + PyObjC
 > [docs/VISION.md](docs/VISION.md) · [docs/ROADMAP.md](docs/ROADMAP.md) ·
 > [docs/PRODUCT_PAGE.md](docs/PRODUCT_PAGE.md) · [docs/TESTING.md](docs/TESTING.md)
 
-**Download (v0.3.1 beta DMGs — pick your architecture):**
+**Download (v0.3.2 beta DMGs — pick your architecture):**
 
-- [Apple Silicon](https://github.com/Dopomogai/golos/releases/download/v0.3.1/golos-0.3.1-apple-silicon.dmg)
+- [Apple Silicon](https://github.com/Dopomogai/golos/releases/download/v0.3.2/golos-0.3.2-apple-silicon.dmg)
   — cloud + optional local MLX
-- [Intel](https://github.com/Dopomogai/golos/releases/download/v0.3.1/golos-0.3.1-intel.dmg)
+- [Intel](https://github.com/Dopomogai/golos/releases/download/v0.3.2/golos-0.3.2-intel.dmg)
   — cloud-only OpenRouter
 
 Unsigned beta: first launch is **right-click → Open**. Release notes and
@@ -84,20 +84,24 @@ python3.11 -m venv .venv        # or any python ≥ 3.11
 .venv/bin/pip install -r requirements-local.txt
 ```
 
-## macOS permissions (required, one-time)
+## macOS permissions (required)
 
 macOS gates everything this app does. Grant **Terminal** (or iTerm, or whatever app
-launches `./dictate.sh`) the following in **System Settings → Privacy & Security**:
+launches `./dictate.sh`) — or **golos.app** for the DMG build — the following in
+**System Settings → Privacy & Security**:
 
 1. **Microphone** — for audio capture.
-2. **Input Monitoring** — for the global `fn` hotkey monitor.
-3. **Accessibility** — for the synthetic Cmd+V paste and reading the focused window title.
+2. **Input Monitoring** — for the global `fn` hotkey monitor and event tap.
+3. **Accessibility** — for synthetic type/paste insert and reading focused context.
+   Insert is **preflighted**: without Accessibility the result is saved in History
+   and a warning is shown — not a false green success.
 
 Also: **System Settings → Keyboard → "Press 🌐/fn key to" → Do Nothing** —
 otherwise pressing fn triggers macOS's own action (emoji picker / dictation)
 and the app can't use it reliably.
 
-After granting permissions, restart the terminal.
+After granting permissions — especially **Input Monitoring** — restart the
+terminal or relaunch **golos.app** so the event tap can install.
 
 **First run opens an onboarding wizard** that walks all of this with live ✓/✗
 checks (reopen anytime: menu-bar icon → "Welcome / Setup…").
@@ -105,13 +109,21 @@ checks (reopen anytime: menu-bar icon → "Welcome / Setup…").
 **Note for the bundled app:** `dist/golos.app` is a *separate* macOS
 identity from your terminal — you must grant the same three permissions to
 **golos.app** itself (the wizard appears on its first run too).
+Replacing an unsigned beta may require regranting permissions.
 (`dist/dictate.app` from earlier builds is superseded — delete it.)
+
+**Intermittent UI / insertion debugging:** do **not** restart first. Menu-bar
+chakra → **Export Diagnostics…** creates a redacted local zip (rotating logs
+under `~/.golos/logs/`; no keys, audio, or transcript/prompt/context content).
+Nothing uploads until you share the file. This preserves evidence; it does not
+claim every failure mode is fixed.
 
 ## Data files
 
 All mutable state lives in **`~/.golos/`**: `config.toml` (chmod 600 — it
 holds the API key), `dictionary.txt`, `corrections.tsv`, `history.jsonl`,
-`suggestions.jsonl`, `dismissed.jsonl`, `recordings/`, and `dictate.lock`.
+`suggestions.jsonl`, `dismissed.jsonl`, `recordings/`, `logs/` (rotating
+diagnostics), and `dictate.lock`.
 On first launch after the rename, the dictate-era **`~/.dictate/`** set is
 **copied** over (originals kept; only `samples/` stays in the project for
 the bench harness).
@@ -121,10 +133,10 @@ the bench harness).
 ```sh
 # Apple Silicon edition (install requirements-local.txt first):
 ./build_app.sh
-./make_dmg.sh 0.3.1-apple-silicon
+./make_dmg.sh 0.3.2-apple-silicon
 # Intel/cloud-only edition (requires an x86_64 Python 3.11+):
 ./build_intel_app.sh
-./make_dmg.sh 0.3.1-intel
+./make_dmg.sh 0.3.2-intel
 ```
 
 Requires `py2app` and `setuptools<80` (in the requirements files). The bundle is

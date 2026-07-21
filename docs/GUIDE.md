@@ -209,15 +209,22 @@ Microphone, Input Monitoring, Accessibility — granted in System Settings →
 Privacy & Security to the terminal **or** to **golos.app** (separate
 identities; the bundled app needs its own grants). Also set System
 Settings → Keyboard → "Press 🌐/fn key to" → **Do Nothing**. The app checks
-at startup and in the Permissions submenu.
+at startup and in the Permissions submenu. Accessibility is **preflighted**
+before insertion (missing grant → History keeps the result; no false green
+success). After granting **Input Monitoring**, relaunch so the event tap can
+install. Replacing an unsigned DMG may require regranting all three.
+
+**Intermittent strip / insert glitches:** menu → **Export Diagnostics…**
+before restarting. The redacted zip stays local until you share it; excludes
+keys, audio, transcript/prompt/context content.
 
 ## Installing (until notarization)
 
 ```sh
 ./build_app.sh                      # Apple Silicon -> dist/golos.app
-./make_dmg.sh 0.3.1-apple-silicon
+./make_dmg.sh 0.3.2-apple-silicon
 ./build_intel_app.sh                # Intel cloud-only -> dist/golos.app
-./make_dmg.sh 0.3.1-intel
+./make_dmg.sh 0.3.2-intel
 ```
 
 **Install from the DMG**: open it, drag **golos** onto **Applications**,
@@ -242,8 +249,8 @@ Build notes: requires `setuptools<80`; `build_app.sh` temporarily hides
   see `golos is already running (pid N)`, run `./dictate.sh quit` (or
   `restart`); stale pid files are removed automatically.
 - State lives in `~/.golos/` (config 600, dictionary, corrections,
-  history, suggestions, recordings, lock). The project dir only ships
-  defaults + `samples/`.
+  history, suggestions, recordings, rotating `logs/`, lock). The project
+  dir only ships defaults + `samples/`.
 
 ## Troubleshooting
 
@@ -261,7 +268,7 @@ Build notes: requires `setuptools<80`; `build_app.sh` temporarily hides
 
 ## Config reference (`~/.golos/config.toml`)
 
-Keys marked **config-only** have no Settings control in v0.3.1 (edit the file).
+Keys marked **config-only** have no Settings control in v0.3.2 (edit the file).
 UI coverage detail: [Help Center → Settings](https://golos.dopomogai.com/docs/settings/#config-only).
 
 | Key | Default | Meaning |

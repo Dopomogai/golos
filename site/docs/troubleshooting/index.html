@@ -81,12 +81,12 @@
         <p class="kicker">Troubleshooting</p>
         <h1>Fix it by symptom</h1>
         <p class="lede">
-          Safe, symptom-led checks for the golos v0.3.1 macOS beta. Prefer
+          Safe, symptom-led checks for the golos v0.3.2 macOS beta. Prefer
           re-granting permissions and History recovery over destructive cleanup.
           Never paste API keys, private transcripts, or audio into public reports.
         </p>
         <div class="page-hero-meta">
-          <span class="version-badge" title="Documentation applies to this public beta">Applies to v0.3.1</span>
+          <span class="version-badge" title="Documentation applies to this public beta">Applies to v0.3.2</span>
           <span class="muted" style="font-size:13px">Unsigned beta · macOS 13+</span>
         </div>
       </header>
@@ -96,10 +96,15 @@
         <div class="callout-body">
           <span class="callout-title">Quick triage</span>
           <p>
-            Quit from the menu-bar chakra icon (not only by closing Settings),
-            focus a real text field, and open menu <strong>Permissions</strong>
-            for live ✓/✗. Reopen <strong>Welcome / Setup…</strong> anytime for
-            the wizard checks.
+            For intermittent UI or insertion glitches, <strong>do not restart
+            first</strong>. Use the menu-bar chakra → <strong>Export Diagnostics…</strong>
+            so a redacted local zip captures the current session; then check
+            menu <strong>Permissions</strong> for live ✓/✗, focus a real text
+            field, and try <strong>Test insertion</strong>. Quit only from the
+            menu-bar icon (not only by closing Settings). Reopen
+            <strong>Welcome / Setup…</strong> anytime for the wizard checks.
+            Export does not fix every failure mode — it preserves evidence for
+            a report.
           </p>
         </div>
       </aside>
@@ -107,7 +112,7 @@
       <section id="app-will-not-open" class="docs-section">
         <h2>App will not open (Gatekeeper)</h2>
         <p>
-          Public v0.3.1 DMGs are an <strong>unsigned beta</strong>. macOS Gatekeeper
+          Public v0.3.2 DMGs are an <strong>unsigned beta</strong>. macOS Gatekeeper
           may block a normal double-click. Builds are not notarized; signing and a
           trustworthy update path are roadmap work, not current claims.
         </p>
@@ -256,6 +261,12 @@
             in General (display gain only). Also confirm the correct mic is allowed
             and that you are not muted at the system level.
           </li>
+          <li>
+            <strong>Strip vanishes mid-session</strong> (dictation still works):
+            visual-panel self-healing improved in v0.3.2, but not every glitch is
+            gone. Prefer <strong>Export Diagnostics…</strong> before restarting so
+            the redacted zip keeps visual-state metadata for a report.
+          </li>
         </ul>
       </section>
 
@@ -325,10 +336,18 @@
           target app accepted the text.
         </p>
         <ol class="step-list">
-          <li><strong>Accessibility</strong> must be granted to the running identity. Without it, synthetic typing/paste can be dropped silently. Menu → Permissions → Accessibility → grant → restart golos.</li>
-          <li>Focus a normal text field (not a locked PDF, empty desktop, or some secure fields). Compatibility is best-effort for standard macOS text fields — not a universal guarantee.</li>
+          <li>
+            <strong>Accessibility preflight.</strong> Before posting synthetic
+            keys, golos checks Accessibility. If it is missing, insert is
+            aborted (no false green success), History keeps the result, and the
+            bubble warns “Accessibility needed — result saved in History.”
+            Menu → <strong>Permissions</strong> → Accessibility → grant →
+            relaunch golos.
+          </li>
+          <li>Focus a normal text field (not a locked PDF, empty desktop, or some secure fields). Compatibility is best-effort for standard macOS text fields — not a universal guarantee. Green success still means events were <em>posted</em>, not that every app accepted them.</li>
           <li>Try menu <strong>Test insertion</strong> with a known-good field focused.</li>
           <li>Open Settings → <strong>History</strong>: if raw/final text is present, use <strong>Copy text</strong> and paste manually. Retry regenerates text but does <strong>not</strong> auto-insert into the app.</li>
+          <li>If the animation or strip misbehaves intermittently, <strong>Export Diagnostics…</strong> before restarting so the redacted zip retains session state.</li>
           <li>If the wrong older clipboard appeared in an older build, current default keeps the transcript on the pasteboard after multi-line paste (restoring the previous clipboard is opt-in and can race slow apps).</li>
         </ol>
         <aside class="callout callout--warning" aria-label="Warning">
@@ -338,7 +357,9 @@
             <p>
               Partial success label <code>✓ inserted raw</code> means formatting fell
               back to the raw transcript, but insert was still posted. Missing text in
-              the field is still an Accessibility/focus/delivery issue, not “STT failed.”
+              the field with green success is still a focus/delivery issue in the
+              target app — not “STT failed,” and not proof that Accessibility was
+              missing (that path no longer shows green success).
             </p>
           </div>
         </aside>
@@ -401,6 +422,9 @@
           macOS treats <strong>golos.app</strong> and your
           <strong>Terminal / iTerm</strong> (or other launcher) as
           <strong>separate identities</strong>. Grants to one do not apply to the other.
+          Replacing an <strong>unsigned</strong> DMG build can also create a new TCC
+          identity — you may need to regrant the three permissions even if they
+          looked fine before the update.
         </p>
         <div class="table-wrap">
           <table class="comparison-table">
@@ -417,11 +441,11 @@
               </tr>
               <tr>
                 <th scope="row">Input Monitoring</th>
-                <td>Global hold key and event tap (swallow Space / F5 when configured)</td>
+                <td>Global hold key and event tap (swallow Space / F5 when configured). After granting, <strong>relaunch</strong> golos so the tap can install.</td>
               </tr>
               <tr>
                 <th scope="row">Accessibility</th>
-                <td>Synthetic insert (type / Cmd+V) and reading focused context</td>
+                <td>Synthetic insert (type / Cmd+V) and reading focused context. Preflighted before insert so a missing grant does not look like success.</td>
               </tr>
             </tbody>
           </table>
@@ -434,7 +458,8 @@
             toggle is on but behavior is broken, turn it off, quit settings, turn it
             on again, or remove the row and re-add on next launch.</li>
           <li>Relaunch the same identity you granted (Applications → golos, or
-            <code>./dictate.sh</code>).</li>
+            <code>./dictate.sh</code>). This is especially important after granting
+            <strong>Input Monitoring</strong>.</li>
           <li>Confirm live ✓ in menu <strong>Permissions</strong> and finish
             <strong>Welcome / Setup…</strong> if anything is still ✗.</li>
           <li>Also set Keyboard → Press 🌐/fn key to → <strong>Do Nothing</strong>
@@ -454,45 +479,61 @@
       </section>
 
       <section id="diagnostics" class="docs-section">
-        <h2>Where to find diagnostics</h2>
+        <h2>Export Diagnostics… and local logs</h2>
         <p>
-          There is <strong>no durable packaged log file or export feature yet</strong>
-          in the beta app. Do not look for a made-up path under
-          <code>~/.golos/</code> for application logs — that directory holds config,
-          history, dictionary data, optional recordings, and the instance lock, not
-          a user-facing log export.
+          From v0.3.2, golos keeps <strong>private rotating logs</strong> under
+          <code>~/.golos/logs/</code> and offers an explicit menu command
+          <strong>Export Diagnostics…</strong> (menu-bar chakra icon). Prefer
+          export <em>before</em> restarting when the strip, animation, or insert
+          path misbehaves intermittently.
         </p>
-        <h3>What you can use today</h3>
+        <h3>How to export</h3>
+        <ol class="step-list">
+          <li>Reproduce the issue once if you can (optional but helpful).</li>
+          <li>Menu-bar chakra → <strong>Export Diagnostics…</strong>.</li>
+          <li>Choose where to save the zip (default name like
+            <code>golos-diagnostics-YYYYMMDD-HHMMSS.zip</code>).</li>
+          <li>Inspect the zip yourself. Share it only if you choose — nothing
+            uploads automatically.</li>
+        </ol>
+        <h3>What the bundle includes / excludes</h3>
+        <ul>
+          <li>
+            <strong>Includes:</strong> sanitized rotating logs; build / system /
+            permission metadata; allow-listed settings (no secrets); recent
+            History <em>run-status</em> metadata (status, stage, error strings,
+            lengths — not transcript text).
+          </li>
+          <li>
+            <strong>Excludes:</strong> API keys and credentials; transcript and
+            final text; focused / visible context content; custom prompts;
+            audio files. Do not re-add those when filing a public issue.
+          </li>
+        </ul>
+        <h3>Other useful surfaces</h3>
         <ul>
           <li>
             <strong>Settings → History</strong> — status, stage, error text, raw/final
-            when stored, Copy / Retry / Show audio. Best first stop for failed runs.
-          </li>
-          <li>
-            <strong>Source / developer runs</strong> —
-            <code>./dictate.sh</code> configures standard logging to the terminal
-            (INFO). Look for permission warnings, hotkey combo path
-            (<code>event tap (blocking)</code> vs <code>monitor (observe-only)</code>),
-            STT exceptions, and “Insertion posted …” lines. Redirect that terminal
-            session yourself if you need to save output.
-          </li>
-          <li>
-            <strong>Console.app</strong> — macOS may show process messages for
-            <strong>golos</strong> while it is running. Filter by process name and
-            copy only <em>sanitized</em> lines (no keys, no transcript bodies, no
-            file paths that include private text).
+            when stored, Copy / Retry / Show audio. Best first stop for a single failed run.
           </li>
           <li>
             <strong>Menu Permissions</strong> — live ✓/✗ plus deep links into System
-            Settings. Startup also logs missing permissions when running from source.
+            Settings. Startup also logs missing permissions.
+          </li>
+          <li>
+            <strong>Source / developer runs</strong> —
+            <code>./dictate.sh</code> still prints INFO to the terminal (permission
+            warnings, combo path <code>event tap (blocking)</code> vs
+            <code>monitor (observe-only)</code>, STT exceptions).
           </li>
         </ul>
         <aside class="callout callout--note" aria-label="Note">
           <span class="callout-icon" aria-hidden="true">i</span>
           <div class="callout-body">
             <p>
-              Optional formatter debug logging can include prompt content when enabled
-              in config — leave it off for normal use, and never share those logs
+              Diagnostics help investigate; they do not claim every UI or insertion
+              failure is fixed. Optional formatter debug logging in config can include
+              prompt content — leave it off for normal use, and never share those logs
               publicly.
             </p>
           </div>
@@ -510,13 +551,13 @@
         </p>
         <h3>Include</h3>
         <ul>
-          <li>Version (v0.3.1 or about string / commit if source-built)</li>
+          <li>Version (v0.3.2 or about string / commit if source-built)</li>
           <li>Architecture (Apple Silicon or Intel) and macOS version</li>
           <li>Whether you run <strong>golos.app</strong> or a terminal source launch</li>
           <li>Hold key setting and Permissions ✓/✗ summary (three toggles)</li>
           <li>Clear steps to reproduce and what you expected</li>
           <li>Sanitized History stage/error strings (e.g. “stt returned empty transcript”) without the transcript text</li>
-          <li>Sanitized Console or terminal log snippets with secrets redacted</li>
+          <li>Optional: the redacted <strong>Export Diagnostics…</strong> zip (you inspected it first)</li>
         </ul>
         <h3>Never include</h3>
         <ul>
@@ -524,6 +565,7 @@
           <li>Private dictation text, window titles that expose secrets, or personal names you care about</li>
           <li>Audio files or links to personal recordings under <code>~/.golos/recordings/</code></li>
           <li>Screenshots of Settings that show a filled-in key field</li>
+          <li>Unredacted formatter-debug logs or prompt dumps</li>
         </ul>
         <p>
           Contributions and PR expectations:
@@ -549,7 +591,7 @@
       <img class="brand-mark" src="../../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
       <span>golos</span>
     </a>
-    <p>Help Center · Applies to v0.3.1 · Troubleshooting</p>
+    <p>Help Center · Applies to v0.3.2 · Troubleshooting</p>
     <div class="docs-footer-links">
       <a href="../">Docs home</a>
       <a href="https://golos.dopomogai.com/#download">Download</a>

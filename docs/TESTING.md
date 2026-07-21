@@ -17,7 +17,8 @@ golos (`dictate` + `dictate_core`). It does **not** claim full coverage.
 | **Pure / unit** | Learning, dictionary, formatter prompts/local corrections, WAV/STT helpers, OpenRouter key helpers | Live STT/LLM quality, mic capture |
 | **Headless app state** | Idle/recording/locked/processing/success transitions, stale timers, cancel | Real NSApplication run loop |
 | **Hotkey matrix** | fn/right modifiers, F5, Space swallow, tap recovery, monitor fallback | Input Monitoring permission, real CGEventTap on hardware |
-| **Bubble model** | Collapse generation, stale callback rejection, success→recording visibility | Real NSPanel/CoreAnimation drawing |
+| **Bubble model** | Collapse generation, stale callback rejection, success→recording visibility, self-heal enforce paths | Real NSPanel/CoreAnimation drawing |
+| **Diagnostics** | Redacted support-zip contents, secret scrubbing, history metadata only | Live menu Save panel, real `~/.golos/logs` on a user machine |
 | **Persistence** | Config heal/normalize, history JSONL, dict/corrections on **temp paths** | Live `~/.golos` migration on a user machine |
 | **Recovery** | Failed-run JSONL (STT/format/insert), legacy load compat, retry w/wo audio, copy-ready, no auto-insert; home grouping by `run_id`; busy retry vs live coordination | Real Settings UI retry buttons, live paste into apps |
 | **Pipeline contracts** | Success, formatter passthrough/failure, cancel, insert/history failure (all mocked); partial success → `✓ inserted raw` | Live OpenRouter/Deepgram, Accessibility insert, clipboard |
@@ -241,19 +242,24 @@ Run against **`dist/golos.app`** (or the installed app), **not** only the
 terminal venv. Permissions must be granted to **golos.app** itself.
 
 1. **Permissions** — Microphone, Input Monitoring, Accessibility all ✓ in
-   System Settings (and onboarding wizard shows green).
+   System Settings (and onboarding wizard shows green). After granting Input
+   Monitoring, relaunch the app. A replaced unsigned build may need regrant.
 2. **fn hold** — Hold fn: bubble/wings show recording; release: processing →
    text inserts at cursor in a plain text field (TextEdit / Notes).
 3. **Lock** — fn+Space (or configured toggle): locked recording continues
    after release; single fn press stops and processes.
 4. **Processing** — Visible processing state after release; no permanent hang.
-5. **Insert** — Single-line types; multi-line pastes; no wrong clipboard paste;
-   success UI means events posted (not target-app verified delivery).
-   Menu Test insertion posts `✅ golos insertion test`
-   into a slow app (default: clipboard keeps transcript).
+5. **Insert + Accessibility preflight** — Single-line types; multi-line pastes;
+   no wrong clipboard paste; success UI means events posted (not target-app
+   verified delivery). With Accessibility denied: no green success, History
+   keeps the result, warning notice. Menu Test insertion posts
+   `✅ golos insertion test` into a slow app (default: clipboard keeps transcript).
 6. **Rapid repeat** — Immediately press fn again during the green success
-   flash: new recording starts; strip does not disappear permanently.
-7. **Edit learning** — Insert a misheard word, fix it in-field; cue or
+   flash: new recording starts; strip does not disappear permanently
+   (visual-panel self-heal; do not claim every UI glitch is gone).
+7. **Export Diagnostics…** — Menu creates a local redacted zip; inspect that it
+   excludes keys/audio/transcript/prompt/context content; nothing auto-uploads.
+8. **Edit learning** — Insert a misheard word, fix it in-field; cue or
    suggestions appear / promote to `corrections.tsv` as designed; no crash.
 
 Optional: Esc cancels mid-recording; Settings live-reload dictionary; quit from

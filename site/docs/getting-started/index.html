@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Install golos v0.3.1 on macOS: pick Apple Silicon or Intel, grant permissions, finish onboarding, and dictate your first words.">
+  <meta name="description" content="Install golos v0.3.2 on macOS: pick Apple Silicon or Intel, grant permissions, finish onboarding, and dictate your first words.">
   <meta name="theme-color" content="#080b12">
   <meta property="og:title" content="Getting started — golos Help">
-  <meta property="og:description" content="Install golos v0.3.1 on macOS: pick Apple Silicon or Intel, grant permissions, finish onboarding, and dictate your first words.">
+  <meta property="og:description" content="Install golos v0.3.2 on macOS: pick Apple Silicon or Intel, grant permissions, finish onboarding, and dictate your first words.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://golos.dopomogai.com/docs/getting-started/">
   <title>Getting started — golos Help</title>
@@ -64,7 +64,7 @@
     <main id="main" class="docs-article">
       <header class="page-hero">
         <p class="kicker">Install &amp; first run</p>
-        <p class="version-badge">Applies to v0.3.1</p>
+        <p class="version-badge">Applies to v0.3.2</p>
         <h1>Getting started</h1>
         <p class="lede">
           Get golos from a DMG into Applications, open the unsigned beta safely,
@@ -75,7 +75,7 @@
 
       <div class="callout callout--note" role="note">
         <strong>Beta, unsigned builds.</strong>
-        v0.3.1 ships as unsigned DMGs. First launch is
+        v0.3.2 ships as unsigned DMGs. First launch is
         <strong>right-click → Open</strong>. This release is
         <strong>not</strong> Developer ID signed or notarized, and updates are
         manual via GitHub Releases — not automatic in-app replacement.
@@ -103,7 +103,7 @@
               <tr>
                 <td><strong>Apple Silicon</strong></td>
                 <td>
-                  <a href="https://github.com/Dopomogai/golos/releases/download/v0.3.1/golos-0.3.1-apple-silicon.dmg">golos-0.3.1-apple-silicon.dmg</a>
+                  <a href="https://github.com/Dopomogai/golos/releases/download/v0.3.2/golos-0.3.2-apple-silicon.dmg">golos-0.3.2-apple-silicon.dmg</a>
                 </td>
                 <td>
                   Cloud via OpenRouter by default. Optional on-device STT after
@@ -114,7 +114,7 @@
               <tr>
                 <td><strong>Intel</strong></td>
                 <td>
-                  <a href="https://github.com/Dopomogai/golos/releases/download/v0.3.1/golos-0.3.1-intel.dmg">golos-0.3.1-intel.dmg</a>
+                  <a href="https://github.com/Dopomogai/golos/releases/download/v0.3.2/golos-0.3.2-intel.dmg">golos-0.3.2-intel.dmg</a>
                 </td>
                 <td>
                   <strong>Cloud-only.</strong> OpenRouter transcription only.
@@ -186,7 +186,7 @@
         <div class="callout callout--warning" role="note">
           <strong>Do not expect a signed or notarized installer yet.</strong>
           Signing and notarization are planned distribution work, not part of
-          this beta. Right-click → Open is the supported path for v0.3.1.
+          this beta. Right-click → Open is the supported path for v0.3.2.
         </div>
       </section>
 
@@ -235,8 +235,8 @@
                   the learning loop after you edit.
                 </td>
                 <td>
-                  Transcription can still run, but paste/insert is blocked and
-                  context reads fail.
+                  Transcription still runs; insert is aborted before posting
+                  (preflight), History keeps the text, context reads fail.
                 </td>
               </tr>
             </tbody>
@@ -251,11 +251,21 @@
           dictation, or another action, and golos cannot use it reliably.
         </p>
         <p>
-          After granting permissions, quit golos from the menu-bar icon and
-          reopen it so TCC grants fully apply. Use menu-bar →
+          After granting permissions — especially <strong>Input Monitoring</strong> —
+          quit golos from the menu-bar icon and reopen it so TCC grants fully
+          apply and the event tap can install. Use menu-bar →
           <strong>Permissions</strong> for live ✓/✗ status, or
-          <strong>Test insertion</strong> to paste a probe string at the cursor.
+          <strong>Test insertion</strong> to post a probe string at the cursor.
+          Missing Accessibility is preflighted before insert: the result is kept
+          in History with a warning instead of a false green success.
         </p>
+        <div class="callout callout--note" role="note">
+          <strong>Replacing an unsigned build.</strong>
+          Dragging a new <strong>golos.app</strong> over an older beta may need
+          the three permissions regranted (macOS can treat the binary as a new
+          identity). If hotkeys or insert break after an update, re-check
+          Permissions and relaunch.
+        </div>
       </section>
 
       <section id="onboarding" aria-labelledby="onboarding-title">
@@ -441,7 +451,7 @@
       <section id="checklist" aria-labelledby="checklist-title">
         <h2 id="checklist-title">First-five-minutes checklist</h2>
         <ol class="step-list checklist">
-          <li>Confirmed Apple Silicon vs Intel and downloaded the matching v0.3.1 DMG.</li>
+          <li>Confirmed Apple Silicon vs Intel and downloaded the matching v0.3.2 DMG.</li>
           <li>Dragged <strong>golos</strong> to Applications.</li>
           <li>Opened with <strong>right-click → Open</strong> (unsigned beta).</li>
           <li>Granted Microphone, Input Monitoring, and Accessibility to <strong>golos.app</strong>.</li>
@@ -480,7 +490,7 @@
       <img class="brand-mark" src="../../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
       <span>golos</span>
     </a>
-    <p>Open-source push-to-talk dictation for macOS · Help for v0.3.1</p>
+    <p>Open-source push-to-talk dictation for macOS · Help for v0.3.2</p>
     <div class="docs-footer-links">
       <a href="../">Help center</a>
       <a href="https://golos.dopomogai.com/#download">Download</a>

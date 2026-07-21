@@ -64,10 +64,10 @@
         <p class="lede">
           golos is cloud-first by default, with an explicit local STT option on Apple Silicon.
           Formatting, context reads, retained audio, and the optional learning reviewer are separate switches.
-          This page maps the real data paths in v0.3.1 — not marketing claims.
+          This page maps the real data paths in v0.3.2 — not marketing claims.
         </p>
         <div class="page-hero-meta">
-          <span class="version-badge" title="Documentation applies to this public beta">Applies to v0.3.1</span>
+          <span class="version-badge" title="Documentation applies to this public beta">Applies to v0.3.2</span>
           <span class="muted" style="font-size:13px">macOS 13+ · no built-in sync or encryption layer</span>
         </div>
       </header>
@@ -335,6 +335,16 @@
                 <td>
                   Layout <code>YYYY-MM-DD/HHMMSS_mmm.wav</code>. Only written when
                   <code>[audio] keep_recordings = true</code> (default).
+                </td>
+              </tr>
+              <tr>
+                <th scope="row"><code>~/.golos/logs/</code></th>
+                <td>Private rotating application logs</td>
+                <td>
+                  Local only. Menu <strong>Export Diagnostics…</strong> builds a
+                  redacted zip from these plus system/permission metadata —
+                  nothing uploads until you share the file. Export excludes API
+                  keys, audio, and transcript/prompt/context content.
                 </td>
               </tr>
               <tr>
@@ -650,7 +660,7 @@ rm -R ~/.golos/recordings</code></pre>
       <img class="brand-mark" src="../../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
       <span>golos</span>
     </a>
-    <p>Help Center · Applies to v0.3.1 · Privacy &amp; data</p>
+    <p>Help Center · Applies to v0.3.2 · Privacy &amp; data</p>
     <div class="docs-footer-links">
       <a href="../">Docs home</a>
       <a href="https://golos.dopomogai.com/#download">Download</a>

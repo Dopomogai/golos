@@ -284,14 +284,17 @@ consumed by the tap while configured) and rebinding is live via
   (default).
 - The API key lives in `config.toml` (plain text, user-only) or
   `OPENROUTER_API_KEY` (env wins). History/suggestions are local JSONL.
-- Permissions are preflighted at startup; the app never requests them
-  programmatically — the user grants in System Settings.
+- Permissions are preflighted at startup and again before insertion
+  (Accessibility); the app never requests them programmatically — the user
+  grants in System Settings. Rotating logs live under `~/.golos/logs/`;
+  **Export Diagnostics…** builds a redacted support zip on demand (no
+  telemetry; excludes keys, audio, transcript/prompt/context content).
 
 ## Config reference (`config.toml`)
 
 Public end-user UI maps are in the Help Center
 ([Settings](https://golos.dopomogai.com/docs/settings/)); this table is the
-code/config contract. **config-only** = no Settings control in v0.3.1.
+code/config contract. **config-only** = no Settings control in v0.3.2.
 
 | Key | Default | Notes |
 |---|---|---|

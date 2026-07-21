@@ -9,7 +9,7 @@
   <meta property="og:description" content="Docs for golos push-to-talk dictation on macOS: install, permissions, settings, privacy, and troubleshooting.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://golos.dopomogai.com/docs/">
-  <title>Golos Help Center — docs for v0.3.1</title>
+  <title>Golos Help Center — docs for v0.3.2</title>
   <link rel="canonical" href="https://golos.dopomogai.com/docs/">
   <link rel="icon" type="image/svg+xml" sizes="any" href="../golos-mark.svg">
   <link rel="stylesheet" href="docs.css">
@@ -40,7 +40,7 @@
         Hold <kbd>fn</kbd>, speak, release; text is posted to the compatible frontmost text field.
       </p>
       <div class="page-hero-meta">
-        <span class="version-badge" title="Documentation applies to this public beta">Applies to v0.3.1</span>
+        <span class="version-badge" title="Documentation applies to this public beta">Applies to v0.3.2</span>
         <span class="muted" style="font-size:13px">macOS 13+ · Apple Silicon &amp; Intel</span>
       </div>
     </header>
@@ -71,7 +71,7 @@
     <section class="docs-section" aria-labelledby="topics-heading">
       <div class="docs-section-heading">
         <h2 id="topics-heading">Browse by topic</h2>
-        <p>Guides for day-to-day use of the v0.3.1 Mac beta</p>
+        <p>Guides for day-to-day use of the v0.3.2 Mac beta</p>
       </div>
       <ul class="docs-cards">
         <li data-docs-item data-docs-keywords="getting started install setup permissions onboarding first run dmg right-click open gatekeeper microphone accessibility input monitoring fn key apple silicon intel">
@@ -119,12 +119,12 @@
             <span class="card-arrow">Open guide →</span>
           </a>
         </li>
-        <li data-docs-item data-docs-keywords="troubleshooting nothing pasted fn broken already running no bubble permissions logs insertion test gatekeeper">
+        <li data-docs-item data-docs-keywords="troubleshooting nothing pasted fn broken already running no bubble permissions logs insertion test gatekeeper export diagnostics accessibility preflight">
           <a class="docs-card" href="troubleshooting/">
             <span class="docs-card-icon" aria-hidden="true">06</span>
             <p class="docs-card-kicker">Fix it</p>
             <h3>Troubleshooting</h3>
-            <p>Nothing inserts, <kbd>fn</kbd> does nothing, “already running”, idle bubble, and how to read permissions status.</p>
+            <p>Nothing inserts, permissions regrant, Export Diagnostics, and how to report a safe bug without sharing secrets.</p>
             <span class="card-arrow">Open guide →</span>
           </a>
         </li>
@@ -140,7 +140,7 @@
         <li>
           <a class="quick-link" href="https://golos.dopomogai.com/#download">
             <strong>Download</strong>
-            <span>Apple Silicon and Intel DMGs for v0.3.1 on the product page</span>
+            <span>Apple Silicon and Intel DMGs for v0.3.2 on the product page</span>
           </a>
         </li>
         <li>
@@ -158,7 +158,7 @@
         <li>
           <a class="quick-link" href="https://github.com/Dopomogai/golos/releases/latest" target="_blank" rel="noopener noreferrer">
             <strong>Release notes</strong>
-            <span>v0.3.1 assets, checksums, and changelog on GitHub Releases</span>
+            <span>v0.3.2 assets, checksums, and changelog on GitHub Releases</span>
           </a>
         </li>
       </ul>
@@ -168,7 +168,7 @@
       <div class="beta-notice" role="note">
         <h2 id="beta-heading">Beta notice</h2>
         <p>
-          This help center describes the public <strong>v0.3.1</strong> Mac beta.
+          This help center describes the public <strong>v0.3.2</strong> Mac beta.
           Expect rough edges. Read these constraints before you install:
         </p>
         <ul>
@@ -178,7 +178,8 @@
           <li><strong>Updates are manual</strong> — download a newer DMG from the release page. There is no automatic update installer in this beta.</li>
           <li><strong>Windows desktop and mobile</strong> are in the pipeline with no announced date. Mac is supported today.</li>
           <li><strong>Fully local</strong> processing requires Apple Silicon with the local MLX model, <strong>Format with LLM</strong> off, and the optional learning reviewer off. Cloud STT still sends audio when you use OpenRouter.</li>
-          <li>A green <strong>✓ inserted</strong> flash means the paste path ran — it is not a guarantee that every app or text field accepted the text correctly.</li>
+          <li>A green <strong>✓ inserted</strong> flash means insert events were posted after Accessibility preflight — not a guarantee that every app or text field accepted the text.</li>
+          <li>Intermittent UI or insertion glitches: menu → <strong>Export Diagnostics…</strong> before restarting. Bundles stay local until you share them and exclude keys, audio, and transcript/prompt/context content.</li>
           <li>Context-aware citations and path resolution are best-effort from accessible context; they are not guaranteed in every app.</li>
         </ul>
       </div>
@@ -199,7 +200,7 @@
         <li>
           <div>
             <strong class="step-title">Permissions</strong>
-            <p>Grant Microphone, Input Monitoring, and Accessibility to <strong>golos.app</strong>. Set Keyboard → “Press 🌐/fn key to” → <strong>Do Nothing</strong>.</p>
+            <p>Grant Microphone, Input Monitoring, and Accessibility to <strong>golos.app</strong>, then relaunch (especially after Input Monitoring). Set Keyboard → “Press 🌐/fn key to” → <strong>Do Nothing</strong>.</p>
           </div>
         </li>
         <li>
@@ -272,7 +273,7 @@
       <img class="brand-mark" src="../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
       <span>golos</span>
     </a>
-    <p>Help Center · Applies to v0.3.1 · Made in Ukraine</p>
+    <p>Help Center · Applies to v0.3.2 · Made in Ukraine</p>
     <div class="docs-footer-links">
       <a href="https://golos.dopomogai.com/">Home</a>
       <a href="https://golos.dopomogai.com/#download">Download</a>
