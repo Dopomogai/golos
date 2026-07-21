@@ -37,19 +37,31 @@ def _frontmost_name() -> str:
     return "unknown app"
 
 
-def _check_ax() -> None:
+def _check_ax() -> bool:
+    """Return whether macOS currently trusts this exact app identity.
+
+    Unsigned development and DMG builds can each have a separate TCC entry.
+    Posting events without this permission produces a false-looking success:
+    Quartz accepts the events, but macOS silently drops them.
+    """
     try:
         from ApplicationServices import AXIsProcessTrusted
         if not AXIsProcessTrusted():
             log.error(
                 "Accessibility permission NOT granted — macOS will SILENTLY DROP "
                 "this insertion. Fix: System Settings → Privacy & Security → "
-                "Accessibility, enable your terminal, then restart dictate. "
+                "Accessibility, enable golos.app (or its launching terminal), "
+                "then restart golos. "
                 "Open now with: open \"%s\"",
                 "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
             )
+            return False
+        return True
     except Exception:
-        pass
+        # Preserve the prior best-effort behavior if the permission API itself
+        # is unavailable; the Quartz import below remains the platform guard.
+        log.warning("Could not preflight Accessibility permission.", exc_info=True)
+        return True
 
 
 def _type_text(text: str) -> None:
@@ -126,8 +138,9 @@ def insert_text(text: str, method: str = "auto",
                 restore_clipboard: bool = False) -> bool:
     """Insert `text` into the frontmost application.
 
-    Returns True after posting events (macOS may still drop them without
-    Accessibility — we cannot observe delivery). Call on the main thread when
+    Returns True after posting events. Missing Accessibility is detected before
+    posting and returns False; a compatible target can still reject events, so
+    True is not proof of target-app delivery. Call on the main thread when
     possible; paste path sleeps and must not run under a held AppKit lock.
     """
     if not text:
@@ -138,12 +151,13 @@ def insert_text(text: str, method: str = "auto",
         log.error("PyObjC not available; cannot insert text.")
         return False
 
+    if not _check_ax():
+        return False
+
     target = _frontmost_name()
     if method == "auto":
         method = "paste" if "\n" in text else "type"
     log.info("Inserting %d chars into %s (method=%s)", len(text), target, method)
-    _check_ax()
-
     if method == "type":
         _type_text(text)
     else:

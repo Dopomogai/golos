@@ -98,7 +98,13 @@ def build_status_item(on_settings, on_reload=None, on_onboarding=None,
 
             def testInsertion_(self, sender):
                 from .insert import insert_text
-                insert_text("✅ golos insertion test")
+                ok = insert_text("✅ golos insertion test")
+                if self._on_notice:
+                    if ok:
+                        self._on_notice("test insertion posted", "success")
+                    else:
+                        self._on_notice(
+                            "Accessibility needed — open Permissions", "warn")
 
             def addSelectionToDictionary_(self, sender):
                 from .learning import read_selection, promote_to_dictionary

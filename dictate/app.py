@@ -722,10 +722,18 @@ class AppController:
                     AppHelper.callLater(1.2, self._finish_success, success_gen)
                 else:
                     try:
+                        from .permissions import check_accessibility
+                        missing_accessibility = not check_accessibility()
+                    except Exception:
+                        missing_accessibility = False
+                    insert_error = (
+                        "Accessibility permission missing"
+                        if missing_accessibility else "insertion failed")
+                    try:
                         append_failure(
                             self.history_path,
                             stage=STAGE_INSERT,
-                            error="insertion failed",
+                            error=insert_error,
                             app_name=snap["app_name"],
                             bundle_id=snap["bundle_id"],
                             raw_text=snap["raw"],
@@ -739,8 +747,11 @@ class AppController:
                         )
                     except Exception as e:
                         log.warning("Could not write insert-failure history: %s", e)
-                    self._idle_then_notice(
-                        "couldn't insert — open History to copy", "warn")
+                    notice = (
+                        "Accessibility needed — result saved in History"
+                        if missing_accessibility
+                        else "couldn't insert — open History to copy")
+                    self._idle_then_notice(notice, "warn")
 
             AppHelper.callAfter(insert_and_flash)
             insert_scheduled = True
@@ -1208,6 +1219,19 @@ def _env_key(section):
     return env_key(section)
 
 
+def _needs_onboarding(cfg: dict, permission_status: dict) -> bool:
+    """Reopen setup when this exact binary lacks a required macOS grant.
+
+    The config is shared under ~/.golos, but TCC permissions belong to the
+    executable identity. A DMG app therefore must not inherit an old
+    `onboarded = true` flag and silently skip its own permission setup.
+    """
+    from .permissions import granted
+    if not cfg.get("app", {}).get("onboarded"):
+        return True
+    return any(not granted(value) for value in permission_status.values())
+
+
 def run_app(cfg):
     """Set up NSApplication and enter the run loop (blocks)."""
     import os
@@ -1240,7 +1264,7 @@ def run_app(cfg):
              len(dictionary_terms), len(corrections))
 
     from .permissions import log_report
-    log_report()
+    permission_status = log_report()
 
     stt_backend = make_backend(cfg, env_key)
     formatter = Formatter(cfg, dictionary_terms, corrections)
@@ -1345,9 +1369,15 @@ def run_app(cfg):
     # at the next timer tick at the latest).
     _install_signal_handlers(app)
 
-    # First run: onboarding wizard (permissions, fn key, API key).
-    if not cfg.get("app", {}).get("onboarded"):
+    # First run, or a new executable identity without its own TCC grants:
+    # reopen setup. The latter is common when moving from a terminal/dev build
+    # to the unsigned DMG app while keeping the same ~/.golos configuration.
+    if _needs_onboarding(cfg, permission_status):
         AppHelper.callAfter(controller.open_onboarding)
+        if cfg.get("app", {}).get("onboarded"):
+            AppHelper.callAfter(
+                bubble.notice,
+                "Permissions needed for this copy of golos", "warn", 3.0)
 
     log.info("dictate running. Hold %s to talk; %s+Space toggles locked mode.",
              cfg.get("hotkey", {}).get("hold_key", "fn"),

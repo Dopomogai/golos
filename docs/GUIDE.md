@@ -164,9 +164,11 @@ See also [Help Center → Privacy](https://golos.dopomogai.com/docs/privacy/).
   1.5 s, with a warning logged).
 - `[insert] method = "auto" | "type" | "paste"` overrides the per-text choice
   (**config-only** — not a Settings control).
-- Return value / green success = events **posted**. Without Accessibility,
-  macOS can silently drop them; the destination app is not polled for delivery.
-  Menu **Test insertion** posts `✅ golos insertion test`.
+- Missing Accessibility is preflighted before insertion; the completed result
+  is saved as an insert failure in History instead of showing green success.
+  Return value / green success = events **posted**, not destination-app
+  confirmation; a custom or incompatible field may still reject them. Menu
+  **Test insertion** posts `✅ golos insertion test`.
 
 ## Settings (menu-bar chakra icon)
 

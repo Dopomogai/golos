@@ -34,7 +34,7 @@ keeps the shims + everything with UI or OS integration:
 | `settings.py` | menu-bar status item (chakra template glyph, 14 pt; `mic.fill` fallback), Permissions submenu, 5-tab Settings (History first/default); **Fetch models** lives on General |
 | `onboarding.py` | 7-page branded wizard (welcome → permissions → hold key → OpenRouter/local → formatting → try it → done) |
 | `permissions.py` | Accessibility/Input Monitoring/Microphone preflight + deep links |
-| `insert.py` | single-line: synthetic keystrokes; multi-line: clipboard + Cmd+V (pasteboard keeps the transcript); returns True after events are **posted**, not after target-app delivery |
+| `insert.py` | Accessibility preflight; single-line synthetic keystrokes; multi-line clipboard + Cmd+V (pasteboard keeps transcript); True means events **posted**, not target-app delivery |
 | `history.py` | JSONL append + durable recovery (ts, app, bundle, raw, final, context, audio, fast, schema_version/run_id/stage/status/error/attempts); load/normalize/copy_ready/retry helpers |
 | `config.py` | tomllib read, toml write (`update_config`), char-array healing, `~/.golos` migration |
 | `bench.py` | STT benchmark harness (`record` / `run`) |
@@ -180,8 +180,10 @@ consumed by the tap while configured) and rebinding is live via
    the pasteboard keeps the transcript (restoring raced slow target apps
    into pasting the OLD clipboard — Universal Clipboard stalls;
    `restore_clipboard = true` restores after 1500 ms as an escape hatch).
-   Success flashes the bubble after events are posted (not app-confirmed
-   delivery); the insertion is remembered for learning.
+   Missing Accessibility aborts first, writes a recoverable insert failure to
+   History, and shows a permission warning. Otherwise success flashes after
+   events are posted (not app-confirmed delivery); the insertion is remembered
+   for learning.
 5. **History / recovery**: append-only JSONL (`~/.golos/history.jsonl`) with
    the full context dict (`workspace_files` truncated to 50 lines). Schema
    v2 adds recovery fields while remaining backward compatible with legacy

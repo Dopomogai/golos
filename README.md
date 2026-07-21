@@ -56,8 +56,10 @@ Product page source: [`site/`](site/) (direct architecture chooser at
    goes via the clipboard + synthetic Cmd+V — and the clipboard then simply
    keeps the transcript (restoring the old clipboard raced slow apps into
    pasting the OLD content; `[insert] restore_clipboard = true` opts back in).
-   Green "✓ inserted" means events were posted, not that the target app
-   verified delivery (macOS can silently drop them without Accessibility).
+   Missing Accessibility now stops before posting and preserves the result as
+   an insert failure in History. Green "✓ inserted" means the permission
+   preflight passed and events were posted—not that the target app verified
+   delivery; custom or incompatible fields can still reject synthetic input.
 5. Every dictation is appended to `history.jsonl`
    (`ts`, `app`, `bundle_id`, `raw`, `final`).
 
@@ -216,9 +218,9 @@ missing). Day-to-day UI walkthrough:
 The menu also has:
 
 - **Test insertion** — posts `✅ golos insertion test` at the current cursor
-  (Accessibility + type/paste path). Success means insertion *events were
-  posted*; macOS may still drop them without Accessibility, and the target
-  app does not confirm delivery.
+  (Accessibility + type/paste path). Missing Accessibility produces a warning;
+  success means insertion *events were posted*, while the target app still
+  does not confirm delivery.
 - **Permissions ▸** — live ✓/✗ for Accessibility, Input Monitoring and
   Microphone (refreshed each time the menu opens); clicking a ✗ item opens the
   matching System Settings pane. The same three checks run at startup and log
