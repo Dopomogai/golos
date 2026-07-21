@@ -8,6 +8,7 @@ GOLOS_INCLUDE_MLX="${GOLOS_INCLUDE_MLX:-1}"
 GOLOS_ARCH="${GOLOS_ARCH:-}"
 GOLOS_DIST_DIR="${GOLOS_DIST_DIR:-dist}"
 GOLOS_BUILD_DIR="${GOLOS_BUILD_DIR:-build}"
+# GOLOS_VERSION / GOLOS_BUILD are read by setup.py for isolated patch/RC builds.
 
 validate_output_dir() {
     case "$1" in
