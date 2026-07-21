@@ -15,6 +15,36 @@ import threading
 log = logging.getLogger(__name__)
 
 
+class CoalescedLevelBridge:
+    """Keep at most one audio-level callback queued on the AppKit main loop."""
+
+    def __init__(self, bubble, call_after):
+        self.bubble = bubble
+        self.call_after = call_after
+        self._lock = threading.Lock()
+        self._latest = 0.0
+        self._scheduled = False
+
+    def submit(self, rms: float) -> None:
+        with self._lock:
+            self._latest = float(rms)
+            if self._scheduled:
+                return
+            self._scheduled = True
+        try:
+            self.call_after(self._drain)
+        except Exception:
+            with self._lock:
+                self._scheduled = False
+            raise
+
+    def _drain(self) -> None:
+        with self._lock:
+            value = self._latest
+            self._scheduled = False
+        self.bubble.push_level(value)
+
+
 class AppController:
     """Owns dictation state and wires hotkeys → recorder → STT → format → insert.
 
@@ -116,7 +146,11 @@ class AppController:
         except TypeError:
             # Older / fake bubbles that only accept the state name.
             self.bubble.set_state(state)
-        log.info("State: %s", state)
+        try:
+            visual = self.bubble.diagnostic_snapshot()
+        except Exception as exc:
+            visual = {"snapshot_error": type(exc).__name__}
+        log.info("State: %s visual=%s", state, visual)
         if self.on_state_change is not None:
             try:
                 self.on_state_change(state)
@@ -272,7 +306,7 @@ class AppController:
             promote_to_corrections(paths["corrections"], wrong, right)
             dismiss_pair(paths["dismissed"], wrong, right)
             self.reload_dictionary()
-            log.info("Cue accepted: %r -> %r added to corrections.", wrong, right)
+            log.info("Cue accepted and added to corrections.")
         except Exception as e:
             log.warning("Could not accept cue: %s", e)
 
@@ -577,7 +611,7 @@ class AppController:
                 _fail_visible(
                     "speech recognition failed — open History for details")
                 return
-            log.info("Raw transcript: %r", raw)
+            log.debug("Raw transcript: %r", raw)
             if not raw:
                 # A >0.3s capture reached STT but produced nothing. Persist it:
                 # this can be genuine silence, but it can also be a provider
@@ -627,7 +661,7 @@ class AppController:
                         format_fallback = bool(
                             getattr(self.formatter, "last_fallback", False))
             if final != raw:
-                log.info("Formatted: %r", final)
+                log.debug("Formatted: %r", final)
 
             if self._cancel_requested:
                 # Processing-stage Esc: STT/format already ran; persist a
@@ -1296,15 +1330,14 @@ def run_app(cfg):
     bubble.set_show_text(cfg.get("bubble", {}).get("show_text", True))
 
     device = cfg.get("audio", {}).get("device", 0) or None
-    recorder = Recorder(
-        device=device,
-        on_level=lambda rms: AppHelper.callAfter(bubble.push_level, rms),
-    )
+    level_bridge = CoalescedLevelBridge(bubble, AppHelper.callAfter)
+    recorder = Recorder(device=device, on_level=level_bridge.submit)
 
     controller = AppController(
         cfg, recorder, stt_backend, formatter, bubble,
         dictionary_terms, corrections, paths["history"],
     )
+    controller._level_bridge = level_bridge  # keep the coalescer alive
 
     # Live edit cues: watch the target field after each insertion.
     if cfg.get("learning", {}).get("live_cues", True):

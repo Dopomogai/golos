@@ -355,6 +355,13 @@ def _bubble_classes():
         # -- modes -------------------------------------------------------------
 
         def setMode_(self, mode):
+            # A new semantic mode owns the strip. A collapse from the previous
+            # recording must never keep mutating its geometry underneath it.
+            if self._collapse_timer is not None:
+                self._collapse_timer.invalidate()
+                self._collapse_timer = None
+            self._collapse = 0.0
+            self._on_collapse_done = None
             self._mode = mode
             self._mode_start = time.monotonic()
             self._shimmer_phase = 0.0
@@ -709,6 +716,7 @@ class Bubble:
         self.wings_view = None
         self._sensitivity = 1.0
         self._show_text = True
+        self._last_enforce_ok = True
 
         # NonactivatingPanel: the cue pill is clickable WITHOUT stealing focus.
         self._pill_style_mask = (NSWindowStyleMaskBorderless
@@ -779,6 +787,118 @@ class Bubble:
         self.wings.setContentView_(self.wings_view)
         self.wings.setAlphaValue_(0.0)
 
+    def _discard_wings(self) -> None:
+        """Drop a stale strip so AppKit/WindowServer state is recreated."""
+        if self.wings_view is not None:
+            self.wings_view.stopAnimation()
+        if self.wings is not None:
+            self.wings.orderOut_(None)
+            try:
+                self.wings.close()
+            except Exception:
+                pass
+        self.wings = None
+        self.wings_view = None
+
+    @staticmethod
+    def _geometry_changed(old, new, tolerance: float = 0.5) -> bool:
+        if old is None or new is None:
+            return old != new
+        return any(abs(float(a) - float(b)) > tolerance
+                   for a, b in zip(old, new))
+
+    def _refresh_live_geometry(self) -> None:
+        """Refresh cached notch coordinates on every non-idle show path."""
+        if self.style != "notch":
+            return
+        live = notch_geometry()
+        if live is None:
+            # A transient auxiliary-area read may return None even on a notch;
+            # only fall back after the live screen itself reports no notch.
+            if self.is_notch and has_notch():
+                return
+            if self.is_notch:
+                log.warning("Live screen has no notch; falling back to corner pill.")
+                self._discard_wings()
+                self.is_notch = False
+                self._geometry = None
+                self.view._is_notch = False
+                from AppKit import NSScreen
+                from Foundation import NSMakePoint
+                x, y = self._origin(NSScreen.mainScreen())
+                self.panel.setFrameOrigin_(NSMakePoint(x, y))
+            return
+        if self.is_notch and not self._geometry_changed(self._geometry, live):
+            return
+        old = self._geometry
+        self.is_notch = True
+        self._geometry = live
+        log.warning("Bubble geometry changed: cached=%s live=%s; rebuilding strip.",
+                    old, live)
+        self._discard_wings()
+        if self._state in RECORDING_STATES + ("processing", "success"):
+            self._ensure_wings()
+            self._restore_wings_mode()
+        from AppKit import NSScreen
+        from Foundation import NSMakePoint
+        self.view._is_notch = True
+        x, y = self._origin(NSScreen.mainScreen())
+        self.panel.setFrameOrigin_(NSMakePoint(x, y))
+
+    @staticmethod
+    def _panel_on_screen(panel) -> bool:
+        if panel is None:
+            return False
+        try:
+            from AppKit import NSScreen
+            frame = panel.frame()
+            x1, y1 = float(frame.origin.x), float(frame.origin.y)
+            x2 = x1 + float(frame.size.width)
+            y2 = y1 + float(frame.size.height)
+            for screen in NSScreen.screens():
+                sf = screen.frame()
+                sx1, sy1 = float(sf.origin.x), float(sf.origin.y)
+                sx2 = sx1 + float(sf.size.width)
+                sy2 = sy1 + float(sf.size.height)
+                if min(x2, sx2) - max(x1, sx1) > 1.0 \
+                        and min(y2, sy2) - max(y1, sy1) > 1.0:
+                    return True
+        except Exception:
+            # If AppKit cannot expose screens, visibility+alpha remain the
+            # best available preflight and should not force rebuild loops.
+            return True
+        return False
+
+    @classmethod
+    def _panel_ok(cls, panel) -> bool:
+        try:
+            return (panel is not None and bool(panel.isVisible())
+                    and float(panel.alphaValue()) >= 0.99
+                    and cls._panel_on_screen(panel))
+        except Exception:
+            return False
+
+    def _restore_wings_mode(self) -> None:
+        """Restore a newly created strip from the current semantic state."""
+        if self._state in RECORDING_STATES:
+            self._show_wings_mode("recording")
+        elif self._state == "processing":
+            self._show_wings_mode("processing")
+        elif self._state == "success":
+            self._show_wings_mode("success")
+
+    def _recreate_failed_wings(self) -> None:
+        old_window = int(self.wings.windowNumber()) if self.wings is not None else None
+        self._discard_wings()
+        self._ensure_wings()
+        self._restore_wings_mode()
+        self.wings.orderFrontRegardless()
+        self.wings.setAlphaValue_(1.0)
+        self.wings.displayIfNeeded()
+        log.warning("Bubble strip recreated: old_window=%s new_window=%s state=%s ok=%s",
+                    old_window, int(self.wings.windowNumber()), self._state,
+                    self._panel_ok(self.wings))
+
     def set_sensitivity(self, value: float) -> None:
         """Display gain for the recording waveform ([bubble] sensitivity,
         0.5-2.5). Live-updates the wings view when it exists."""
@@ -799,6 +919,63 @@ class Bubble:
             self.wings_view._show_text = self._show_text
             self.wings_view.setNeedsDisplay_(True)
 
+    def diagnostic_snapshot(self) -> dict:
+        """Content-free visual state for rotating logs and race diagnosis."""
+        def panel_state(panel):
+            if panel is None:
+                return None
+            try:
+                frame = panel.frame()
+                return {
+                    "window": int(panel.windowNumber()),
+                    "visible": bool(panel.isVisible()),
+                    "alpha": round(float(panel.alphaValue()), 3),
+                    "level": int(panel.level()),
+                    "frame": [
+                        round(float(frame.origin.x), 1),
+                        round(float(frame.origin.y), 1),
+                        round(float(frame.size.width), 1),
+                        round(float(frame.size.height), 1),
+                    ],
+                    "on_screen": self._panel_on_screen(panel),
+                }
+            except Exception as exc:
+                return {"snapshot_error": type(exc).__name__}
+
+        try:
+            from Foundation import NSThread
+            thread_main = bool(NSThread.isMainThread())
+        except Exception:
+            thread_main = None
+        try:
+            from AppKit import NSScreen
+            screen_count = len(NSScreen.screens())
+        except Exception:
+            screen_count = None
+        return {
+            "state": self._state,
+            "style": self.style,
+            "is_notch": self.is_notch,
+            "has_geometry": self._geometry is not None,
+            "show_text": self._show_text,
+            "vis_gen": self._vis_gen,
+            "notice_gen": self._notice_gen,
+            "pill": panel_state(self.panel),
+            "wings": panel_state(self.wings),
+            "wings_mode": getattr(self.wings_view, "_mode", None),
+            "collapse_timer": bool(
+                self.wings_view is not None
+                and self.wings_view._collapse_timer is not None),
+            "shimmer_timer": bool(
+                self.wings_view is not None
+                and self.wings_view._shimmer_timer is not None),
+            "enforce_ok": self._last_enforce_ok,
+            "geometry_cached": self._geometry,
+            "geometry_live": notch_geometry() if self.is_notch else None,
+            "thread_main": thread_main,
+            "screen_count": screen_count,
+        }
+
     # -- visibility (DETERMINISTIC — animations are cosmetic only) ------------
     #
     # `_enforce_visibility` is the single source of truth for panel
@@ -811,6 +988,9 @@ class Bubble:
 
     def _enforce_visibility(self) -> None:
         """Set final panel visibility from the state matrix. Synchronous."""
+        if self._state != "idle":
+            self._refresh_live_geometry()
+        enforce_ok = True
         if self._geometry is not None:
             # Notch path: strip handles real states; notice may use strip
             # (notice) or pill (cue).
@@ -827,13 +1007,26 @@ class Bubble:
                              and self._notice_surface == "pill"))
             if show_strip:
                 self._ensure_wings()
+                self.wings.setLevel_(self._NSStatusWindowLevel)
+                self.wings.setCollectionBehavior_(self._collection_behavior)
                 self.wings.orderFrontRegardless()
                 self.wings.setAlphaValue_(1.0)
+                self.wings.displayIfNeeded()
+                if not self._panel_ok(self.wings):
+                    before = self.diagnostic_snapshot()
+                    log.warning("Bubble strip show verification failed: %s", before)
+                    if self._state in RECORDING_STATES + ("processing", "success"):
+                        self._recreate_failed_wings()
+                    enforce_ok = self._panel_ok(self.wings)
             elif self.wings is not None:
                 self.wings.orderOut_(None)
             if show_pill:
+                self.panel.setLevel_(self._NSStatusWindowLevel)
+                self.panel.setCollectionBehavior_(self._collection_behavior)
                 self.panel.orderFrontRegardless()
                 self.panel.setAlphaValue_(1.0)
+                self.panel.displayIfNeeded()
+                enforce_ok = enforce_ok and self._panel_ok(self.panel)
             else:
                 self.panel.orderOut_(None)
         else:
@@ -841,8 +1034,16 @@ class Bubble:
             if self._state == "idle":
                 self.panel.orderOut_(None)
             else:
+                self.panel.setLevel_(self._NSStatusWindowLevel)
+                self.panel.setCollectionBehavior_(self._collection_behavior)
                 self.panel.orderFrontRegardless()
                 self.panel.setAlphaValue_(1.0)
+                self.panel.displayIfNeeded()
+                enforce_ok = self._panel_ok(self.panel)
+        self._last_enforce_ok = enforce_ok
+        if not enforce_ok:
+            log.error("Bubble visibility remains unhealthy: %s",
+                      self.diagnostic_snapshot())
 
     def _show_panel(self, panel, duration=0.0):
         # Visibility is set by _enforce_visibility; this only fades in
@@ -865,9 +1066,18 @@ class Bubble:
         """Generation-guarded collapse completion: re-mode only if no newer
         state arrived mid-sweep; visibility re-derived afterwards either way."""
         if gen != self._vis_gen:
+            log.info("Bubble collapse callback stale: gen=%s current=%s",
+                     gen, self._vis_gen)
             return
-        self._show_wings_mode("processing")
+        if (self._state == "processing" and self.wings_view is not None
+                and self.wings_view._mode != "processing"):
+            self._show_wings_mode("processing")
         self._enforce_visibility()
+
+    def _schedule_collapse_backup(self, gen: int) -> None:
+        from PyObjCTools import AppHelper
+        AppHelper.callLater(COLLAPSE_SECONDS + 0.05,
+                            self._collapse_done, gen)
 
     def set_state(self, state: str, *, success_label: str | None = None) -> None:
         """Main thread only. Drive bubble/wings from the controller state name.
@@ -912,7 +1122,7 @@ class Bubble:
             # Notch machines: the strip is the single status surface; the
             # menu-row pill only appears for edit cues (clickable).
             if state == "idle":
-                if wings_up:
+                if self.wings_view is not None:
                     self.wings_view.stopAnimation()
             elif state in RECORDING_STATES:
                 self._show_wings_mode("recording")
@@ -922,6 +1132,10 @@ class Bubble:
                     self.wings_view._on_collapse_done = \
                         lambda gen=self._vis_gen: self._collapse_done(gen)
                     self.wings_view.startCollapse()
+                    # NSTimer uses the default run-loop mode and can stall
+                    # while a menu/modal loop is active. This common-mode
+                    # callLater is a generation-guarded backup handoff.
+                    self._schedule_collapse_backup(self._vis_gen)
                 else:
                     self._show_wings_mode("processing")
             elif state == "success":
@@ -974,7 +1188,7 @@ class Bubble:
         states (recording/processing/success).
         """
         if self._state not in ("idle", "notice", "suggestion"):
-            log.info("cue skipped (state=%s): %s → %s", self._state, wrong, right)
+            log.info("cue skipped (state=%s)", self._state)
             return
         pair = f"{wrong} → {right}"
         if len(pair) > 26:
@@ -1000,8 +1214,7 @@ class Bubble:
         cannot be replaced by a stale suggestion timer.
         """
         if self._state not in ("idle", "notice", "suggestion"):
-            log.info("suggestion_ready skipped (state=%s): %s → %s",
-                     self._state, wrong, right)
+            log.info("suggestion_ready skipped (state=%s)", self._state)
             return
         self._notice_gen += 1
         gen = self._notice_gen

@@ -34,6 +34,7 @@ keeps the shims + everything with UI or OS integration:
 | `settings.py` | menu-bar status item (chakra template glyph, 14 pt; `mic.fill` fallback), Permissions submenu, 5-tab Settings (History first/default); **Fetch models** lives on General |
 | `onboarding.py` | 7-page branded wizard (welcome → permissions → hold key → OpenRouter/local → formatting → try it → done) |
 | `permissions.py` | Accessibility/Input Monitoring/Microphone preflight + deep links |
+| `diagnostics.py` | private rotating logs + explicit redacted support-zip export; no telemetry/transcript/context/audio content |
 | `insert.py` | Accessibility preflight; single-line synthetic keystrokes; multi-line clipboard + Cmd+V (pasteboard keeps transcript); True means events **posted**, not target-app delivery |
 | `history.py` | JSONL append + durable recovery (ts, app, bundle, raw, final, context, audio, fast, schema_version/run_id/stage/status/error/attempts); load/normalize/copy_ready/retry helpers |
 | `config.py` | tomllib read, toml write (`update_config`), char-array healing, `~/.golos` migration |

@@ -196,7 +196,8 @@ light/dark menu bars; SF Symbol `mic.fill` only if the glyph asset is missing).
 - **Learning**: optional OpenRouter reviewer controls (off by default; never
   auto-promotes). Live cues are config-only (see below).
 - Menu: Settings…, Welcome / Setup…, Test insertion, Add selection to
-  dictionary, Permissions ▸ (live ✓/✗ + deep links), Quit.
+  dictionary, Permissions ▸ (live ✓/✗ + deep links), Export Diagnostics…,
+  Check for Updates…, Quit.
 - **Onboarding**: 7-page branded wizard (dark sidebar with page dots:
   welcome → permissions with live checks → hold-key select with a live test
   pad → OpenRouter key / optional local download → formatting radio cards →
@@ -251,12 +252,12 @@ Build notes: requires `setuptools<80`; `build_app.sh` temporarily hides
 | Old clipboard pasted instead of transcript | pasteboard restore raced the app | Fixed: clipboard now keeps the transcript (update) |
 | Nothing inserted at all | Accessibility missing | Permissions submenu → grant, restart app |
 | fn+Space types a space | event tap inactive (no Input Monitoring) | Grant Input Monitoring; startup log shows the path |
-| "animation just disappears" after stopping | old pill-in-menu-bar design | Fixed: strip now shows blue processing shimmer (update) |
+| Dictation works but animation disappears | visual lifecycle fault | Export Diagnostics before restarting; attach the redacted zip to the report |
 | `golos is already running (pid N)` | Ctrl+Z-suspended instance | `./dictate.sh restart` (stale locks auto-cleaned) |
 | No bubble ever | idle is hidden by design | It appears only while recording/processing/success |
 | No bubble in fullscreen apps | — | Fixed: panels carry FullScreenAuxiliary (update) |
 | Junk in Suggestions | mis-anchored edit diffs | Fixed by anchor+similarity gates (update); Dismiss the rest |
-| Bubble visible but no transcription | check logs: STT backend error? | `dictate.sh` logs to stdout; verify API key / model id |
+| Bubble visible but no transcription | check logs: STT backend error? | Export Diagnostics; verify API key / model id locally |
 
 ## Config reference (`~/.golos/config.toml`)
 

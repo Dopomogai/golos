@@ -182,7 +182,7 @@ def _vscode_provider(window_title: str) -> dict:
         return {}
     root = locate_folder(folder)
     if not root:
-        log.info("VS Code workspace folder %r not found under candidate roots.", folder)
+        log.info("VS Code workspace folder was not found under candidate roots.")
         return {}
     files = list_workspace_files(root)
     return {"workspace_root": root, "workspace_files": "\n".join(files)}

@@ -225,6 +225,10 @@ The menu also has:
   Microphone (refreshed each time the menu opens); clicking a ✗ item opens the
   matching System Settings pane. The same three checks run at startup and log
   loud ⚠ warnings with deep links for anything missing.
+- **Export Diagnostics…** — creates a redacted local zip for a bug report.
+  Runtime logs rotate under `~/.golos/logs/`; export includes build,
+  permission, visual-state, and run-status metadata but excludes API keys,
+  prompts, transcript/context text, and audio. Nothing uploads automatically.
 
 Five tabs (History is first and opens by default):
 
@@ -486,6 +490,7 @@ dictate/          python package
   app.py          NSApplication + AppController state machine, instance lock, signal handling
   bubble.py       floating status NSPanel (notch wings + corner styles, waveform)
   settings.py     menu-bar chakra status item (Permissions submenu, Test insertion) + Settings window
+  diagnostics.py  private rotating logs + explicit redacted support-zip export
   onboarding.py   7-page first-run wizard (welcome → permissions → hold key → OpenRouter/local → formatting → try it → done)
   openrouter.py   OpenRouter key resolution, /models listing, defaults
   permissions.py  Accessibility / Input Monitoring / Microphone checks + deep links

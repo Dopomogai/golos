@@ -311,12 +311,15 @@ class Formatter:
                 {"type": "text", "text": raw_text},
             ]
         if self.debug:
-            log.info("=== FORMATTER SYSTEM PROMPT ===\n%s\n"
-                     "=== FORMATTER USER MESSAGE ===\n%s\n"
-                     "=== END FORMATTER DEBUG ===",
-                     system_prompt,
-                     f"<audio {len(audio_wav)} bytes> + {raw_text}"
-                     if isinstance(user_content, list) else raw_text)
+            # Debug can include transcript/context/prompt content. Keep it out
+            # of the default INFO rotating log; explicit DEBUG handlers may
+            # still opt in during a controlled developer session.
+            log.debug("=== FORMATTER SYSTEM PROMPT ===\n%s\n"
+                      "=== FORMATTER USER MESSAGE ===\n%s\n"
+                      "=== END FORMATTER DEBUG ===",
+                      system_prompt,
+                      f"<audio {len(audio_wav)} bytes> + {raw_text}"
+                      if isinstance(user_content, list) else raw_text)
         payload = {
             "model": self.model,
             "messages": [

@@ -106,6 +106,28 @@ def build_status_item(on_settings, on_reload=None, on_onboarding=None,
                         self._on_notice(
                             "Accessibility needed — open Permissions", "warn")
 
+            def exportDiagnostics_(self, sender):
+                """User-selected, redacted local support bundle; never uploads."""
+                from AppKit import NSSavePanel, NSModalResponseOK, NSWorkspace
+                from Foundation import NSURL
+                from .diagnostics import create_support_bundle, default_bundle_name
+                panel = NSSavePanel.savePanel()
+                panel.setNameFieldStringValue_(default_bundle_name())
+                panel.setCanCreateDirectories_(True)
+                panel.setPrompt_("Export")
+                if panel.runModal() != NSModalResponseOK:
+                    return
+                try:
+                    path = create_support_bundle(Path(panel.URL().path()))
+                    NSWorkspace.sharedWorkspace().activateFileViewerSelectingURLs_(
+                        [NSURL.fileURLWithPath_(str(path))])
+                    if self._on_notice:
+                        self._on_notice("diagnostics exported", "success")
+                except Exception as exc:
+                    log.exception("Diagnostics export failed: %s", exc)
+                    if self._on_notice:
+                        self._on_notice("diagnostics export failed", "warn")
+
             def addSelectionToDictionary_(self, sender):
                 from .learning import read_selection, promote_to_dictionary
                 from .config import load_config
@@ -208,6 +230,11 @@ def build_status_item(on_settings, on_reload=None, on_onboarding=None,
         "Permissions", "", "")
     perm_item.setSubmenu_(perm_menu)
     menu.addItem_(perm_item)
+
+    diagnostics_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+        "Export Diagnostics…", "exportDiagnostics:", "")
+    diagnostics_item.setTarget_(target)
+    menu.addItem_(diagnostics_item)
 
     menu.addItem_(NSMenuItem.separatorItem())
     # nil target -> terminate: travels the responder chain to NSApplication

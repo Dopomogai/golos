@@ -77,8 +77,7 @@ class EditWatcher:
             if (wrong, right) in self.seen:
                 continue
             self.seen.add((wrong, right))
-            log.info("Flushing pending edit cue on %s: %r -> %r",
-                     reason, wrong, right)
+            log.info("Flushing pending edit cue on %s.", reason)
             self._fire(wrong, right, {
                 "provenance": "deterministic-focus-loss",
                 "from_reviewer": False,
@@ -179,7 +178,7 @@ class EditWatcher:
     # -- cue -----------------------------------------------------------------
 
     def _fire(self, wrong: str, right: str, meta: dict | None = None) -> None:
-        log.info("Edit cue: %r -> %r", wrong, right)
+        log.info("Edit cue ready.")
         meta = meta or {}
         from .learning import append_suggestions
         try:

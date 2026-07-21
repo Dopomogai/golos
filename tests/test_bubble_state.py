@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from dictate.bubble import (
     Bubble,
     edge_falloff,
@@ -16,6 +18,8 @@ class _Panel:
     def __init__(self):
         self.visible = True
         self.alpha = 1.0
+        self._level = 25
+        self._window = id(self) & 0xFFFF
 
     def isVisible(self):
         return self.visible
@@ -28,6 +32,30 @@ class _Panel:
 
     def setAlphaValue_(self, value):
         self.alpha = value
+
+    def alphaValue(self):
+        return self.alpha
+
+    def setLevel_(self, value):
+        self._level = value
+
+    def level(self):
+        return self._level
+
+    def setCollectionBehavior_(self, _value):
+        pass
+
+    def displayIfNeeded(self):
+        pass
+
+    def windowNumber(self):
+        return self._window
+
+    def frame(self):
+        return SimpleNamespace(
+            origin=SimpleNamespace(x=100.0, y=800.0),
+            size=SimpleNamespace(width=500.0, height=48.0),
+        )
 
 
 class _View:
@@ -52,9 +80,14 @@ class _WingsView:
         self.collapse_started = False
         self._success_label = "✓ inserted"
         self._show_text = True
+        self._mode = "recording"
+        self._collapse_timer = None
+        self._shimmer_timer = None
+        self._collapse = 0.0
 
     def setMode_(self, mode):
         self.modes.append(mode)
+        self._mode = mode
 
     def startCollapse(self):
         self.collapse_started = True
@@ -75,6 +108,12 @@ def _bubble():
     bubble._geometry = (100, 200, 900)
     bubble._collapse = 0.0
     bubble._show_text = True
+    bubble._last_enforce_ok = True
+    bubble.is_notch = False  # avoid real screen geometry in headless model
+    bubble.style = "corner"  # fake geometry exercises strip without AppKit probes
+    bubble._NSStatusWindowLevel = 25
+    bubble._collection_behavior = 0
+    bubble._schedule_collapse_backup = lambda gen: None
     bubble._levels = []
     bubble._ema = 0.0
     bubble.panel = _Panel()
@@ -94,6 +133,32 @@ def test_processing_collapse_enters_processing_mode():
     assert bubble.wings_view.modes == ["processing"]
     assert bubble.wings.visible
     assert bubble.wings.alpha == 1.0
+
+
+def test_processing_schedules_generation_guarded_backup():
+    bubble = _bubble()
+    scheduled = []
+    bubble._schedule_collapse_backup = scheduled.append
+    bubble.set_state("processing")
+    assert scheduled == [bubble._vis_gen]
+
+
+def test_failed_strip_show_recreates_panel():
+    bubble = _bubble()
+    bubble._state = "recording"
+    bubble.wings.visible = False
+    bubble.wings.orderFrontRegardless = lambda: None  # AppKit ignored show
+    recreated = []
+
+    def recreate():
+        recreated.append(True)
+        bubble.wings = _Panel()
+
+    bubble._recreate_failed_wings = recreate
+    bubble._enforce_visibility()
+
+    assert recreated == [True]
+    assert bubble._last_enforce_ok is True
 
 
 def test_newer_state_invalidates_old_collapse_callback():

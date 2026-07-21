@@ -134,8 +134,9 @@ def append_suggestions(
             if conf is not None:
                 row["confidence"] = conf
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
-    log.info("Recorded %d suggestion(s): %s", len(pairs),
-             "; ".join(f"{w!r} -> {r!r}" for w, r in pairs))
+    log.info("Recorded %d suggestion(s).", len(pairs))
+    log.debug("Suggestion pairs: %s",
+              "; ".join(f"{w!r} -> {r!r}" for w, r in pairs))
 
 
 def propose_pairs(
@@ -266,14 +267,14 @@ def promote_to_corrections(corrections_path: str, wrong: str, right: str) -> Non
     """Append one wrong\\tright line to corrections.tsv (caller reloads live)."""
     with open(corrections_path, "a", encoding="utf-8") as f:
         f.write(f"{wrong}\t{right}\n")
-    log.info("Added correction: %r -> %r", wrong, right)
+    log.info("Added one correction.")
 
 
 def promote_to_dictionary(dictionary_path: str, term: str) -> None:
     """Append one vocabulary term to dictionary.txt (caller reloads live)."""
     with open(dictionary_path, "a", encoding="utf-8") as f:
         f.write(term.strip() + "\n")
-    log.info("Added dictionary term: %r", term)
+    log.info("Added one dictionary term.")
 
 
 # ---------------------------------------------------------------------------
