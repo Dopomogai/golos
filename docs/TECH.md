@@ -174,6 +174,23 @@ consumed by the tap while configured) and rebinding is live via
    mlx-whisper, `prompt` for OpenRouter's `/audio/transcriptions` (JSON body
    `{model, input_audio:{data: base64 wav, format}, prompt}` — verified
    against the live API; multipart is *not* accepted there).
+   **Cloud STT retry** (`dictate_core.stt.request_with_stt_retry`): OpenRouter,
+   openai_compatible, and Deepgram wrap each HTTP exchange with a bounded
+   loop (default **3** attempts, exponential backoff base **0.5 s** → 0.5 / 1.0 s
+   between attempts; injectable `sleep_fn` for tests). Retries only
+   transport/connect/read timeouts and related transport errors (e.g. idle
+   DNS `[Errno 8]`) plus HTTP **408 / 429 / 500 / 502 / 503 / 504**. Never
+   retries auth/other 4xx, successful empty transcripts, or local MLX.
+   Fresh `httpx.Client` per attempt so sticky DNS after long idle does not
+   poison the next try. Logs only `provider` + attempt + error class/status
+   — never audio, transcript, or keys. **Read-timeout tradeoff:** the
+   provider may already have accepted the upload when the client times out
+   reading the body; a retry can therefore duplicate provider cost (at most
+   `max_attempts - 1` extra uploads). That cost is accepted so ordinary
+   transient blips recover without a manual History retry; after exhaustion
+   the failure still flows through durable History + retained-audio recovery
+   unchanged. Formatter connection failure still degrades to raw (separate
+   path; no STT-style retry there).
 3. **Formatting** (`{base}/chat/completions`): system prompt from a
    template (`{{mode_rules}}` framing by `[formatting] answer_questions` —
    hardened transcribe-only vs guarded answer mode — plus

@@ -155,7 +155,11 @@ Re-measure after large refactors and update this section (date + numbers).
   system prompt modes (transcribe vs answer), disabled/empty passthrough,
   mocked network failure → raw
 - STT: `validate_languages`, `language_hint`, `wav_bytes` / `write_wav`,
-  `make_backend` factory, OpenRouter STT JSON body contract (mocked httpx)
+  `make_backend` factory, OpenRouter STT JSON body contract (mocked httpx),
+  bounded cloud retry (`request_with_stt_retry`: transport/DNS then success,
+  transient HTTP then success, give-up after max, no retry on 4xx / non-transport /
+  empty 200 transcript; injectable no-op `sleep_fn`; OpenRouter/openai_compatible/
+  Deepgram backends; MLX has no retry hook)
 - OpenRouter: key resolution (env > config, char-array heal), model id filters
 - VoicePipeline: wav decode contracts, key requirement, mlx construct, suggest_pairs
 

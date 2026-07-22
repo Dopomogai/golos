@@ -4,15 +4,22 @@ Privacy boundary: mlx keeps audio on-device. openrouter / openai_compatible /
 deepgram upload the 16 kHz wav (or base64 equivalent) to the remote API —
 that is when mic data leaves the Mac for transcription. The optional
 formatter send_audio path (stage 2) is separate and lives in formatter.py.
+
+Cloud backends share a bounded retry for ordinary transient transport/HTTP
+failures (idle DNS gaps, 429/5xx). Local MLX is never retried here. Valid
+empty transcripts are returned immediately (not treated as failure).
 """
+
+from __future__ import annotations
 
 import io
 import logging
-import os
 import platform
-import tempfile
+import time
 import wave
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import numpy as np
 
@@ -20,6 +27,14 @@ log = logging.getLogger(__name__)
 
 SAMPLE_RATE = 16000
 DEFAULT_MLX_MODEL = "mlx-community/whisper-large-v3-turbo"
+
+# Bounded cloud STT retry (live path). History/audio recovery remains the
+# durable fallback when all attempts fail.
+DEFAULT_STT_MAX_ATTEMPTS = 3
+DEFAULT_STT_BACKOFF_BASE_S = 0.5  # sleeps: 0.5s then 1.0s between attempts
+TRANSIENT_HTTP_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
+
+_T = TypeVar("_T")
 
 LANG_NAMES = {
     "en": "English", "uk": "Ukrainian", "ru": "Russian", "de": "German",
@@ -138,6 +153,145 @@ def wav_bytes(audio: np.ndarray, sample_rate: int = SAMPLE_RATE) -> bytes:
     return buf.getvalue()
 
 
+# ---------------------------------------------------------------------------
+# Bounded cloud STT retry (transport / transient HTTP only)
+# ---------------------------------------------------------------------------
+
+
+def is_transient_http_status(status_code: int) -> bool:
+    """HTTP statuses safe to retry for cloud STT (not auth/other 4xx)."""
+    try:
+        return int(status_code) in TRANSIENT_HTTP_STATUSES
+    except (TypeError, ValueError):
+        return False
+
+
+def is_transient_stt_transport_error(exc: BaseException) -> bool:
+    """True for connect/DNS/reset and connect/read (and other) timeouts.
+
+    Matches httpx TransportError / TimeoutException when available, plus
+    common OSError/ConnectionError shapes (e.g. macOS DNS ``[Errno 8]``).
+    Does not treat ordinary ValueError/RuntimeError as retryable.
+    """
+    try:
+        import httpx
+        if isinstance(exc, (httpx.TimeoutException, httpx.TransportError)):
+            return True
+    except ImportError:
+        pass
+    name = type(exc).__name__
+    if name in {
+        "TimeoutException", "ConnectTimeout", "ReadTimeout", "WriteTimeout",
+        "PoolTimeout", "ConnectError", "ReadError", "WriteError", "CloseError",
+        "NetworkError", "TransportError", "RemoteProtocolError",
+        "ProxyError",
+    }:
+        return True
+    if isinstance(exc, TimeoutError):
+        return True
+    if isinstance(exc, ConnectionError):
+        return True
+    if isinstance(exc, OSError) and getattr(exc, "errno", None) == 8:
+        return True
+    return False
+
+
+def stt_retry_backoff_seconds(
+    failed_attempt: int,
+    base: float = DEFAULT_STT_BACKOFF_BASE_S,
+) -> float:
+    """Exponential backoff after a failed attempt (1-indexed).
+
+    failed_attempt=1 → base; failed_attempt=2 → 2*base; …
+    """
+    if failed_attempt < 1:
+        return base
+    return float(base) * (2 ** (failed_attempt - 1))
+
+
+def request_with_stt_retry(
+    make_request: Callable[[], _T],
+    *,
+    provider: str,
+    max_attempts: int = DEFAULT_STT_MAX_ATTEMPTS,
+    sleep_fn: Callable[[float], None] | None = None,
+    backoff_base: float = DEFAULT_STT_BACKOFF_BASE_S,
+    response_status: Callable[[_T], int | None] | None = None,
+) -> _T:
+    """Run one cloud STT HTTP attempt with bounded transient retries.
+
+    ``make_request`` performs a single HTTP exchange and returns a response
+    object (or raises a transport/timeout error). When ``response_status``
+    is set and returns a transient HTTP code (408/429/5xx listed in
+    ``TRANSIENT_HTTP_STATUSES``), the call is retried. Non-transient 4xx and
+    successful responses (including empty-transcript bodies) are returned
+    immediately for the caller to parse or raise.
+
+    Logs only provider, attempt, error class, and status — never audio,
+    transcript, or API keys.
+
+    **Read-timeout tradeoff:** a read timeout may mean the provider already
+    accepted and billed the upload while the client never saw the body.
+    Retrying can therefore duplicate cost (at most ``max_attempts - 1``
+    extra uploads). We still retry within the bound so ordinary idle/DNS
+    and gateway blips recover without a manual History retry; durable
+    History + retained audio remains the fallback after exhaustion.
+    """
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be >= 1")
+    sleep = time.sleep if sleep_fn is None else sleep_fn
+    last_exc: BaseException | None = None
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            result = make_request()
+        except Exception as e:
+            last_exc = e
+            retryable = is_transient_stt_transport_error(e)
+            if not retryable or attempt >= max_attempts:
+                if retryable:
+                    log.warning(
+                        "STT provider=%s attempt=%d/%d error_class=%s (giving up)",
+                        provider, attempt, max_attempts, type(e).__name__,
+                    )
+                raise
+            delay = stt_retry_backoff_seconds(attempt, backoff_base)
+            log.warning(
+                "STT provider=%s attempt=%d/%d error_class=%s; retry in %.2fs",
+                provider, attempt, max_attempts, type(e).__name__, delay,
+            )
+            sleep(delay)
+            continue
+
+        status: int | None = None
+        if response_status is not None:
+            try:
+                status = response_status(result)
+            except Exception:
+                status = None
+        if status is not None and is_transient_http_status(status):
+            if attempt >= max_attempts:
+                log.warning(
+                    "STT provider=%s attempt=%d/%d status=%s (giving up)",
+                    provider, attempt, max_attempts, status,
+                )
+                return result
+            delay = stt_retry_backoff_seconds(attempt, backoff_base)
+            log.warning(
+                "STT provider=%s attempt=%d/%d status=%s; retry in %.2fs",
+                provider, attempt, max_attempts, status, delay,
+            )
+            sleep(delay)
+            continue
+
+        return result
+
+    # Unreachable when max_attempts >= 1 and make_request either returns or raises.
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError(f"STT provider={provider} retry loop exhausted without result")
+
+
 class MlxWhisperBackend:
     """Local on-device STT via mlx-whisper. Audio never leaves the machine."""
 
@@ -176,13 +330,17 @@ class MlxWhisperBackend:
 class OpenAICompatibleBackend:
     """POST multipart to {base_url}/audio/transcriptions (OpenAI/Groq-style).
 
-    Remote: wav bytes leave the Mac on every call.
+    Remote: wav bytes leave the Mac on every call (and on each retry attempt).
     """
 
-    def __init__(self, base_url: str, api_key: str, model: str):
+    def __init__(self, base_url: str, api_key: str, model: str,
+                 max_attempts: int = DEFAULT_STT_MAX_ATTEMPTS,
+                 sleep_fn: Callable[[float], None] | None = None):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
+        self.max_attempts = max_attempts
+        self._sleep_fn = sleep_fn
 
     def transcribe(self, audio: np.ndarray, prompt: str = "") -> str:
         import httpx
@@ -190,21 +348,31 @@ class OpenAICompatibleBackend:
         data = {"model": self.model}
         if prompt:
             data["prompt"] = prompt
+        # Materialize once so retries re-send the same body (no re-encode drift).
         files = {"file": ("audio.wav", wav_bytes(audio), "audio/wav")}
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        with httpx.Client(timeout=60) as client:
-            resp = client.post(
-                f"{self.base_url}/audio/transcriptions",
-                data=data, files=files, headers=headers,
-            )
-            resp.raise_for_status()
-            return resp.json().get("text", "").strip()
+        url = f"{self.base_url}/audio/transcriptions"
+
+        def _once():
+            # Fresh client per attempt so idle/DNS failures are not sticky.
+            with httpx.Client(timeout=60) as client:
+                return client.post(url, data=data, files=files, headers=headers)
+
+        resp = request_with_stt_retry(
+            _once,
+            provider="openai_compatible",
+            max_attempts=self.max_attempts,
+            sleep_fn=self._sleep_fn,
+            response_status=lambda r: r.status_code,
+        )
+        resp.raise_for_status()
+        return resp.json().get("text", "").strip()
 
 
 class OpenRouterSTTBackend:
     """OpenRouter /audio/transcriptions: JSON body with base64 wav (NOT multipart).
 
-    Remote: base64 wav leaves the Mac on every call.
+    Remote: base64 wav leaves the Mac on every call (and on each retry attempt).
 
     Verified against the live API 2026-07-18:
       POST {BASE_URL}/audio/transcriptions
@@ -214,11 +382,15 @@ class OpenRouterSTTBackend:
     """
 
     def __init__(self, base_url: str, api_key: str, model: str,
-                 languages: list[str] | None = None):
+                 languages: list[str] | None = None,
+                 max_attempts: int = DEFAULT_STT_MAX_ATTEMPTS,
+                 sleep_fn: Callable[[float], None] | None = None):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
         self.languages = languages or []
+        self.max_attempts = max_attempts
+        self._sleep_fn = sleep_fn
 
     def transcribe(self, audio: np.ndarray, prompt: str = "") -> str:
         import base64
@@ -245,9 +417,19 @@ class OpenRouterSTTBackend:
         if prompt:
             body["prompt"] = prompt
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        with httpx.Client(timeout=60) as client:
-            resp = client.post(f"{self.base_url}/audio/transcriptions",
-                               json=body, headers=headers)
+        url = f"{self.base_url}/audio/transcriptions"
+
+        def _once():
+            with httpx.Client(timeout=60) as client:
+                return client.post(url, json=body, headers=headers)
+
+        resp = request_with_stt_retry(
+            _once,
+            provider="openrouter",
+            max_attempts=self.max_attempts,
+            sleep_fn=self._sleep_fn,
+            response_status=lambda r: r.status_code,
+        )
         if resp.status_code != 200:
             # OpenRouter returns {"error": {"message": ...}} on failures.
             msg = resp.text[:300]
@@ -264,9 +446,13 @@ class OpenRouterSTTBackend:
 class DeepgramBackend:
     """POST wav bytes to Deepgram's /v1/listen endpoint. Remote: audio leaves Mac."""
 
-    def __init__(self, api_key: str, model: str = "nova-3"):
+    def __init__(self, api_key: str, model: str = "nova-3",
+                 max_attempts: int = DEFAULT_STT_MAX_ATTEMPTS,
+                 sleep_fn: Callable[[float], None] | None = None):
         self.api_key = api_key
         self.model = model
+        self.max_attempts = max_attempts
+        self._sleep_fn = sleep_fn
 
     def transcribe(self, audio: np.ndarray, prompt: str = "") -> str:
         import httpx
@@ -281,13 +467,24 @@ class DeepgramBackend:
             "Authorization": f"Token {self.api_key}",
             "Content-Type": "audio/wav",
         }
-        with httpx.Client(timeout=60) as client:
-            resp = client.post(
-                "https://api.deepgram.com/v1/listen",
-                params=params, content=wav_bytes(audio), headers=headers,
-            )
-            resp.raise_for_status()
-            payload = resp.json()
+        content = wav_bytes(audio)
+
+        def _once():
+            with httpx.Client(timeout=60) as client:
+                return client.post(
+                    "https://api.deepgram.com/v1/listen",
+                    params=params, content=content, headers=headers,
+                )
+
+        resp = request_with_stt_retry(
+            _once,
+            provider="deepgram",
+            max_attempts=self.max_attempts,
+            sleep_fn=self._sleep_fn,
+            response_status=lambda r: r.status_code,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
         try:
             return payload["results"]["channels"][0]["alternatives"][0]["transcript"].strip()
         except (KeyError, IndexError):
