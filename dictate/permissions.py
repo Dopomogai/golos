@@ -68,6 +68,50 @@ def granted(status) -> bool:
     return status is True or status == "authorized"
 
 
+def permission_snapshot(status: dict | None = None) -> dict:
+    """Content-free permission snapshot for wake/diagnostics logs.
+
+    Never includes deep links, paths, or user content — only grant flags
+    (bool for Accessibility/Input Monitoring) and the mic status string.
+    When *status* is None, runs ``check_all()`` (live TCC preflight).
+    """
+    if status is None:
+        status = check_all()
+    return {
+        "accessibility": bool(status.get("accessibility")),
+        "input_monitoring": bool(status.get("input_monitoring")),
+        "microphone": status.get("microphone", "unknown"),
+    }
+
+
+def missing_kinds(status: dict | None = None) -> list[str]:
+    """Permission keys that are not granted, in stable TITLES order."""
+    if status is None:
+        status = check_all()
+    out = []
+    for kind in TITLES:
+        if kind not in status:
+            continue
+        if not granted(status[kind]):
+            out.append(kind)
+    return out
+
+
+def wake_permission_notice(missing: list[str]) -> str:
+    """Single idle-safe warning when permissions are gone after wake.
+
+    One combined line (not one prompt per kind). Mentions observe-only when
+    Input Monitoring is among the missing set. Content-free — no deep links.
+    """
+    if not missing:
+        return ""
+    labels = [TITLES.get(k, k) for k in missing]
+    msg = "Permissions missing after wake: " + "; ".join(labels)
+    if "input_monitoring" in missing:
+        msg += " — hotkeys observe-only until Input Monitoring is granted"
+    return msg
+
+
 def open_settings_page(kind: str) -> None:
     """Open the System Settings pane for the given permission."""
     link = DEEP_LINKS[kind]

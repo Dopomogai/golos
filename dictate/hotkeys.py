@@ -135,6 +135,7 @@ class HotkeyMonitor:
         self._space_logged = False   # reset on each hold-key press
         self._monitors = []
         self._tap = None
+        self._tap_source = None      # CFRunLoopSource — retain + remove on stop
         self._tap_active = False
         self.configure(cfg)
 
@@ -151,20 +152,22 @@ class HotkeyMonitor:
     def start(self) -> None:
         """Install NSEvent monitors + CGEventTap. Call on the main thread.
 
-        Retained objects: each addGlobalMonitor… return value and the tap
-        Mach port must stay reachable (held on self) until stop(); CFRunLoop
-        source is tied to the current run loop (the main one at app launch).
+        Retained objects: each addGlobalMonitor… return value, the tap
+        Mach port, and the CFRunLoop source must stay reachable (held on
+        self) until stop(). The source is added to the current run loop
+        (main at app launch) and removed in stop() / tap teardown.
         """
         from AppKit import (
             NSEvent, NSEventMaskFlagsChanged, NSEventMaskKeyDown, NSEventMaskKeyUp,
         )
 
-        self._monitors.append(NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
-            NSEventMaskFlagsChanged, self._flags_changed))
-        self._monitors.append(NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
-            NSEventMaskKeyDown, self._key_down))
-        self._monitors.append(NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
-            NSEventMaskKeyUp, self._key_up))
+        if not self._monitors:
+            self._monitors.append(NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
+                NSEventMaskFlagsChanged, self._flags_changed))
+            self._monitors.append(NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
+                NSEventMaskKeyDown, self._key_down))
+            self._monitors.append(NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
+                NSEventMaskKeyUp, self._key_up))
         self._tap_active = self._start_event_tap()
         log.info("Hotkey monitor started (hold_key=%s, toggle=%s%s, combo path: %s).",
                  self.hold_key, self.toggle_combo,
@@ -173,16 +176,12 @@ class HotkeyMonitor:
                  else "monitor (observe-only)")
 
     def stop(self) -> None:
-        """Tear down monitors and disable the tap (idempotent if already stopped)."""
+        """Tear down monitors and the tap source (idempotent if already stopped)."""
         from AppKit import NSEvent
         for m in self._monitors:
             NSEvent.removeMonitor_(m)
         self._monitors = []
-        if self._tap is not None:
-            from Quartz import CGEventTapEnable
-            CGEventTapEnable(self._tap, False)
-            self._tap = None
-            self._tap_active = False
+        self._teardown_tap()
 
     def reconfigure(self, cfg: dict) -> None:
         """Live rebind: stop, re-read config, start again (no app restart)."""
@@ -191,12 +190,120 @@ class HotkeyMonitor:
         self.start()
         log.info("Hold key rebound live: %s", self.hold_key)
 
+    def reset_held_state(self) -> bool:
+        """Clear sticky hold-key bookkeeping without firing on_release.
+
+        Used after system/display wake when the physical key state is unknown
+        and any mid-hold recording was already aborted by the controller.
+        Returns True when a sticky held mark was cleared.
+        """
+        was_held = bool(self._fn_held)
+        self._fn_held = False
+        self._press_start = None
+        self._last_tap_end = None
+        self._space_logged = False
+        if was_held:
+            log.info("Cleared sticky held-key state (wake recovery).")
+        return was_held
+
+    def ensure_tap(self, *, input_monitoring: bool | None = None) -> str:
+        """Idempotent event-tap health recovery. Main-thread only.
+
+        Never installs duplicate NSEvent monitors or run-loop sources.
+
+        - Existing enabled tap → ``\"ok\"``
+        - Existing disabled tap → re-enable only → ``\"reenabled\"``
+        - Missing tap + Input Monitoring granted (or unknown) → create tap
+          only → ``\"created\"`` / ``\"unavailable\"``
+        - Missing tap + Input Monitoring denied → stay observe-only →
+          ``\"observe_only\"``
+
+        *input_monitoring* is the latest preflight bool when the caller
+        already checked; ``None`` means "unknown — try create if missing".
+        """
+        if self._tap is not None:
+            if self._cg_tap_enabled():
+                self._tap_active = True
+                return "ok"
+            self._cg_tap_enable(True)
+            self._tap_active = True
+            log.info("Event tap re-enabled after wake/health check.")
+            return "reenabled"
+
+        if input_monitoring is False:
+            self._tap_active = False
+            return "observe_only"
+
+        # Tap missing: create only the tap — leave existing NSEvent monitors.
+        if self._start_event_tap():
+            self._tap_active = True
+            log.info("Event tap recreated (Input Monitoring available).")
+            return "created"
+        self._tap_active = False
+        return "unavailable"
+
     # -- event tap: modifiers + swallow Space (combo) and F5 (hold key) -------
+
+    def _teardown_tap(self) -> None:
+        """Disable tap and remove its CFRunLoop source (idempotent)."""
+        if self._tap is None and self._tap_source is None:
+            self._tap_active = False
+            return
+        try:
+            if self._tap is not None:
+                from Quartz import CGEventTapEnable
+                CGEventTapEnable(self._tap, False)
+        except Exception as exc:
+            log.info("Event tap disable failed: %s", exc)
+        if self._tap_source is not None:
+            try:
+                from Quartz import (
+                    CFRunLoopRemoveSource, CFRunLoopGetCurrent,
+                    kCFRunLoopCommonModes,
+                )
+                CFRunLoopRemoveSource(
+                    CFRunLoopGetCurrent(), self._tap_source, kCFRunLoopCommonModes)
+            except Exception as exc:
+                log.info("Event tap run-loop source remove failed: %s", exc)
+        self._tap = None
+        self._tap_source = None
+        self._tap_active = False
+
+    def _cg_tap_enabled(self) -> bool:
+        """True when the retained tap port is currently enabled."""
+        if self._tap is None:
+            return False
+        try:
+            from Quartz import CGEventTapIsEnabled
+            return bool(CGEventTapIsEnabled(self._tap))
+        except Exception:
+            # Headless tests with a sentinel tap object: trust _tap_active.
+            return bool(self._tap_active)
+
+    def _cg_tap_enable(self, enabled: bool) -> None:
+        if self._tap is None:
+            return
+        try:
+            from Quartz import CGEventTapEnable
+            CGEventTapEnable(self._tap, bool(enabled))
+        except Exception as exc:
+            log.info("CGEventTapEnable failed: %s", exc)
 
     def _start_event_tap(self) -> bool:
         """Install a CGEventTap for modifier flagsChanged, combo Space, and
         (when hold_key=f5) F5 itself. Returns True when active. Falls back
-        to observe-only NSEvent monitors when creation fails."""
+        to observe-only NSEvent monitors when creation fails.
+
+        Idempotent: if a tap already exists, leaves it alone and reports
+        whether it is logically active (does not add a second source).
+        """
+        if self._tap is not None:
+            enabled = self._cg_tap_enabled()
+            if not enabled:
+                self._cg_tap_enable(True)
+                enabled = True
+            self._tap_active = enabled
+            return enabled
         try:
             from Quartz import (
                 CGEventTapCreate, CGEventMaskBit, CGEventTapEnable,
@@ -233,10 +340,11 @@ class HotkeyMonitor:
                         "permission missing?); observe-only fallback — "
                         "fn+Space will also type a space.")
             return False
-        self._tap = tap
         source = CFMachPortCreateRunLoopSource(None, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetCurrent(), source, kCFRunLoopCommonModes)
         CGEventTapEnable(tap, True)
+        self._tap = tap
+        self._tap_source = source
         return True
 
     def handle_cg_event(self, event_type: int, keycode: int, flags: int) -> bool:
@@ -302,11 +410,11 @@ class HotkeyMonitor:
                         "forcing release to avoid stuck state.")
             self._release()
         if self._tap is not None:
-            from Quartz import CGEventTapEnable
-            CGEventTapEnable(self._tap, True)
+            self._cg_tap_enable(True)
+            self._tap_active = True
         else:
             # Headless / tests: still mark the logical path re-enabled.
-            pass
+            self._tap_active = True
 
     # -- shared press/release routing ------------------------------------------
 

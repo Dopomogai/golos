@@ -23,8 +23,8 @@ keeps the shims + everything with UI or OS integration:
 | Module | Role |
 |---|---|
 | `__main__.py` | entry: logging, load config, `run_app` |
-| `app.py` | NSApplication setup, `AppController` state machine, instance lock, app-switch observer, threading boundaries |
-| `hotkeys.py` | 4 hold keys (fn/right_option/right_command via CGEventTap flagsChanged when active, NSEvent fallback; f5 via key events), CGEventTap swallowing Space + F5, double-tap detection, live rebind |
+| `app.py` | NSApplication setup, `AppController` state machine, instance lock, app-switch observer, display-lifecycle + runtime wake recovery, threading boundaries |
+| `hotkeys.py` | 4 hold keys (fn/right_option/right_command via CGEventTap flagsChanged when active, NSEvent fallback; f5 via key events), CGEventTap swallowing Space + F5, CFRunLoop source retain/remove, idempotent `ensure_tap`, double-tap detection, live rebind |
 | `bubble.py` | notch strip (recording wings / processing shimmer / success hill / notice / cue) + corner pill (NSPanel status-level UI) |
 | `context.py` | frontmost app/window/pid; focused-field text, text-before-cursor, surrounding visible text (AX; roles kept separate) |
 | `providers.py` | per-app context: browser tab, VS Code workspace, Finder selection |
@@ -33,7 +33,7 @@ keeps the shims + everything with UI or OS integration:
 | `editwatcher.py` | live edit cues: 2.5 s polling for 3 min, debounce, cue firing (workers for AX reads) |
 | `settings.py` | menu-bar status item (chakra template glyph, 14 pt; `mic.fill` fallback), Permissions submenu, 5-tab Settings (History first/default); **Fetch models** lives on General |
 | `onboarding.py` | 7-page branded wizard (welcome → permissions → hold key → OpenRouter/local → formatting → try it → done) |
-| `permissions.py` | Accessibility/Input Monitoring/Microphone preflight + deep links |
+| `permissions.py` | Accessibility/Input Monitoring/Microphone preflight + deep links; content-free wake snapshots |
 | `diagnostics.py` | private rotating logs + explicit redacted support-zip export; no telemetry/transcript/context/audio content |
 | `insert.py` | Accessibility preflight; single-line type path; multi-line paste + async changeCount/CAS restore (non-text snapshot when possible); True means events **posted**, not target-app delivery |
 | `history.py` | JSONL append + durable recovery (ts, app, bundle, raw, final, context, audio, fast, schema_version/run_id/stage/status/error/attempts); load/normalize/copy_ready/retry helpers |
@@ -116,6 +116,15 @@ tap creation fails (no Input Monitoring permission), the observe-only
 NSEvent monitors remain as fallback and the startup log says which path is
 active.
 
+The CFRunLoop source created for the tap is retained on
+`HotkeyMonitor._tap_source` and removed in `_teardown_tap` / `stop()` so
+sources do not accumulate across reconfigure or wake recovery.
+`ensure_tap(input_monitoring=…)` is the idempotent health path: re-enable a
+disabled tap, or create **only** the tap when the port is missing and Input
+Monitoring is granted — never a second set of NSEvent monitors or a second
+run-loop source. When IM is denied it returns `observe_only` without
+attempting a doomed recreate.
+
 `toggle_combo = "double_fn"`: taps are classified by the pure function
 `double_tap_decision` (tap ≤ 400 ms, gap ≤ 350 ms). While locked, hold-key
 down routes straight to `on_press` with no tap bookkeeping, so stop-on-press
@@ -123,6 +132,33 @@ works in both modes. The hold key is configurable
 (`fn`/`right_option`/`right_command` flagsChanged, `f5` key events — F5 is
 consumed by the tap while configured) and rebinding is live via
 `HotkeyMonitor.reconfigure`.
+
+## Runtime recovery after system/display wake
+
+The **same** `_DisplayLifecycleObserver` used for Bubble presentation
+recovery also invokes `AppController.handle_runtime_wake` when
+`is_wake_lifecycle_reason` matches (`NSWorkspaceDidWakeNotification`,
+`NSWorkspaceScreensDidWakeNotification`, short test tokens). Spaces and
+screen-parameter changes still only hit the Bubble path — no second
+competing observer.
+
+On the main thread, `handle_runtime_wake`:
+
+1. Logs a content-free marker (`runtime wake reason=…`) and a permission
+   snapshot (`permission_snapshot`: bool AX/IM + mic status string only).
+2. If state is `recording` or `locked`, flips to idle and aborts the
+   recorder on a **worker** (`_discard_recording` — CoreAudio rule; never
+   stop/abort on main). In-flight `processing` is left alone.
+3. Clears sticky held-key bookkeeping via `HotkeyMonitor.reset_held_state`
+   (no synthetic `on_release` into the pipeline).
+4. Calls `ensure_tap` with the latest Input Monitoring preflight.
+5. If any required permission is missing, shows **at most one** idle
+   warning per ~5 s wake burst (`wake_permission_notice`); no periodic
+   prompts and no System Settings deep-link spam. Observe-only stays
+   honest when IM is gone.
+
+Does **not** reopen audio devices, re-sign, redesign onboarding, or change
+Bubble visuals beyond the existing lifecycle handler.
 
 ## Bubble UI
 
@@ -150,8 +186,11 @@ consumed by the tap while configured) and rebinding is live via
   backoff (max 2 recreates per presentation token; delays 80/200/450 ms).
   Screen-parameter changes, workspace wake, and active-space changes call
   `Bubble.handle_display_lifecycle`: idle discards a stale strip (no polling);
-  non-idle rebuilds once and re-enforces. Diagnostics snapshots include
-  `present_token`, `recover_*`, and content-free `ws` / `ws_presented` fields.
+  non-idle rebuilds once and re-enforces. Wake notifications on the same
+  observer also call `AppController.handle_runtime_wake` (permissions /
+  hotkey tap / sticky-hold recovery — see above). Diagnostics snapshots
+  include `present_token`, `recover_*`, and content-free `ws` /
+  `ws_presented` fields.
 - **Pill**: 150×24 inside the 32 pt menu row, centered under the notch —
   corner style's whole UI, and the notch style's interactive surface for
   edit cues (`wrong → right ✓?`, click to accept). Its style mask includes

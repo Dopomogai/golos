@@ -11,8 +11,28 @@ recorder.stop()/abort() must only run on workers — see dictate_core.recorder.
 
 import logging
 import threading
+import time
 
 log = logging.getLogger(__name__)
+
+
+def is_wake_lifecycle_reason(reason: str) -> bool:
+    """True for system/display wake notifications (not Spaces / screen params).
+
+    Pure helper so the shared display-lifecycle observer can branch without a
+    second NSWorkspace observer. Accepts full NSNotification names and short
+    test tokens like ``\"wake\"``.
+    """
+    name = reason or ""
+    lower = name.lower()
+    if "activespace" in lower or "screenparameters" in lower:
+        return False
+    if "screensdidwake" in lower or "didwake" in lower:
+        return True
+    if lower in ("wake", "screens_wake", "display_wake", "system_wake"):
+        return True
+    # Bare token / log-friendly: require "wake" but not space/screen-param noise.
+    return "wake" in lower
 
 
 class CoalescedLevelBridge:
@@ -93,6 +113,9 @@ class AppController:
         self.hotkey_test_handler = None  # onboarding test pad: press/release hook
         self._fmt_context_ready = threading.Event()
         self._fmt_context_ready.set()
+        # Coalesce DidWake + ScreensDidWake so we show at most one idle
+        # permission warning per wake burst (no periodic prompts).
+        self._last_wake_perm_warn_at = 0.0
 
     # -- pipeline ownership (STT/formatter mutual exclusion) ---------------
 
@@ -452,16 +475,117 @@ class AppController:
             # flip state first, abort on a worker.
             self._set_state("idle")
             self.bubble.notice("cancelled", "warn", 1.0)
+            # Zero-arg target so test stubs replacing _discard_recording keep working.
             threading.Thread(target=self._discard_recording, daemon=True).start()
         elif state == "processing":
             self._cancel_requested = True
             log.info("Cancel requested — pipeline result will be discarded.")
 
-    def _discard_recording(self):
+    def handle_runtime_wake(self, reason: str = "wake", *, status: dict | None = None):
+        """Main thread: recover permissions/hotkey state after system/display wake.
+
+        Unit-testable (pass *status* to skip live TCC). Content-free logs only.
+        Invoked from the shared display-lifecycle observer for wake reasons —
+        not a second NSWorkspace observer.
+
+        - Log a wake marker + permission snapshot (no transcript/content).
+        - If recording/locked: idle immediately, abort recorder on a worker
+          (never on main — CoreAudio rule).
+        - Reset sticky held-key bookkeeping on the HotkeyMonitor.
+        - Idempotent ``ensure_tap``: re-enable disabled tap, or recreate only
+          the tap when missing and Input Monitoring is granted (no duplicate
+          NSEvent monitors / run-loop sources).
+        - At most one idle permission warning per wake burst when something
+          required is gone; observe-only remains honest when IM is missing.
+        - Does not reopen audio devices, re-prompt permissions, or redesign UI.
+        """
+        from .permissions import (
+            check_all,
+            missing_kinds,
+            permission_snapshot,
+            wake_permission_notice,
+        )
+
+        log.info("runtime wake reason=%s", reason)
+        if status is None:
+            try:
+                status = check_all()
+            except Exception as exc:
+                log.info("runtime wake permission check failed: %s", exc)
+                status = {
+                    "accessibility": False,
+                    "input_monitoring": False,
+                    "microphone": "unknown",
+                }
+        snap = permission_snapshot(status)
+        log.info("runtime wake permissions=%s", snap)
+
+        result = {
+            "reason": reason,
+            "permissions": snap,
+            "aborted_recording": False,
+            "held_reset": False,
+            "tap_action": None,
+            "permission_warning": False,
+            "missing": missing_kinds(status),
+        }
+
+        with self._lock:
+            state = self.state
+        if state in ("recording", "locked"):
+            # Worker-only abort — same rule as Esc cancel. Do not finish the
+            # pipeline (audio after sleep is not trustworthy). Zero-arg
+            # wrapper so _discard_recording stubs in tests stay valid.
+            self._set_state("idle")
+            discard_reason = f"wake abort ({reason})"
+
+            def _wake_discard():
+                self._discard_recording(discard_reason)
+
+            threading.Thread(target=_wake_discard, daemon=True).start()
+            result["aborted_recording"] = True
+            log.info("runtime wake aborted state=%s → idle", state)
+
+        mon = self._hotkey_monitor
+        if mon is not None:
+            try:
+                result["held_reset"] = bool(mon.reset_held_state())
+            except Exception as exc:
+                log.info("runtime wake held-key reset failed: %s", exc)
+            try:
+                im = status.get("input_monitoring")
+                # False → stay observe-only; True → recover; missing → try.
+                im_flag = bool(im) if im is not None else None
+                result["tap_action"] = mon.ensure_tap(input_monitoring=im_flag)
+            except Exception as exc:
+                log.info("runtime wake ensure_tap failed: %s", exc)
+                result["tap_action"] = "error"
+
+        missing = result["missing"]
+        if missing:
+            now = time.monotonic()
+            # Coalesce NSWorkspaceDidWake + ScreensDidWake (and rapid re-entry).
+            if now - self._last_wake_perm_warn_at >= 5.0:
+                notice = wake_permission_notice(missing)
+                if notice:
+                    self._idle_then_notice(notice, "warn", 2.5)
+                    self._last_wake_perm_warn_at = now
+                    result["permission_warning"] = True
+
+        log.info(
+            "runtime wake done aborted=%s held_reset=%s tap=%s warn=%s",
+            result["aborted_recording"],
+            result["held_reset"],
+            result["tap_action"],
+            result["permission_warning"],
+        )
+        return result
+
+    def _discard_recording(self, reason: str = "cancelled by user"):
         """Worker: abort the stream (no callback-completion wait) and discard."""
         try:
             self.recorder.abort()
-            log.info("Recording discarded (cancelled by user).")
+            log.info("Recording discarded (%s).", reason)
         except Exception as e:
             log.info("Discard failed: %s", e)
 
@@ -1421,9 +1545,17 @@ def run_app(cfg):
                     log.info("display lifecycle handler failed: %s", exc)
 
     def _on_display_lifecycle(reason: str):
+        # Same observer for Bubble presentation recovery and runtime
+        # permissions/hotkey recovery after sleep — never a second competing
+        # NSWorkspace observer.
         handler = getattr(bubble, "handle_display_lifecycle", None)
         if callable(handler):
             handler(reason)
+        if is_wake_lifecycle_reason(reason):
+            try:
+                controller.handle_runtime_wake(reason)
+            except Exception as exc:
+                log.info("runtime wake handler failed: %s", exc)
 
     display_observer = _DisplayLifecycleObserver.alloc().initWithCallback_(
         _on_display_lifecycle)

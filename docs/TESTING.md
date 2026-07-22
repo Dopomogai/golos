@@ -16,7 +16,8 @@ golos (`dictate` + `dictate_core`). It does **not** claim full coverage.
 |---|---|---|
 | **Pure / unit** | Learning, dictionary, formatter prompts/local corrections, WAV/STT helpers, OpenRouter key helpers | Live STT/LLM quality, mic capture |
 | **Headless app state** | Idle/recording/locked/processing/success transitions, stale timers, cancel | Real NSApplication run loop |
-| **Hotkey matrix** | fn/right modifiers, F5, Space swallow, tap recovery, monitor fallback | Input Monitoring permission, real CGEventTap on hardware |
+| **Hotkey matrix** | fn/right modifiers, F5, Space swallow, tap recovery, monitor fallback, `ensure_tap` re-enable/create/observe-only, held-state reset | Input Monitoring permission, real CGEventTap on hardware |
+| **Runtime wake** | `handle_runtime_wake`: content-free permission snapshot, recording/locked abort on worker, sticky-hold clear, one coalesced permission notice, wake-reason filter | Live sleep/wake, live TCC grant/revoke, real audio device reopen |
 | **Bubble model** | Collapse generation, stale callback rejection, success→recording visibility, self-heal enforce paths, WindowServer presentation-verify generation guard / bounded recreate / idle lifecycle discard | Real NSPanel/CoreAnimation drawing / live CGWindowList compositing |
 | **Diagnostics** | Redacted support-zip contents, secret scrubbing, history metadata only | Live menu Save panel, real `~/.golos/logs` on a user machine |
 | **Persistence** | Config heal/normalize, history JSONL, dict/corrections on **temp paths** | Live `~/.golos` migration on a user machine |
