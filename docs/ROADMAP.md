@@ -28,8 +28,8 @@ Public **v0.3.3 Mac beta** (macOS 13+):
 - **Accessibility insert preflight** and local **Export Diagnostics…** (redacted
   zip stays on disk until the user shares it)
 
-The beta is **unsigned**. First launch uses **right-click → Open**. Builds are
-not signed or notarized yet, and there is no automatic update install path.
+The beta is not **Developer ID signed or notarized**. First launch uses
+**right-click → Open**, and there is no automatic update install path.
 
 ## Near term
 

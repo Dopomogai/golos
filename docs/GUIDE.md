@@ -160,9 +160,9 @@ See also [Help Center → Privacy](https://golos.dopomogai.com/docs/privacy/).
 - **Multi-line text** (auto) uses a temporary pasteboard write + synthetic
   Cmd+V, then an **asynchronous restore** of the previous pasteboard
   (including non-text types when snapshotable). Restore is
-  **changeCount/CAS-guarded**: if you copy anything after Golos posts the
-  paste, Golos skips restore and never overwrites your copy. The long delay
-  does **not** block the AppKit main thread.
+  **changeCount/CAS-guarded**: if changeCount advances before restoration,
+  Golos skips the restore. This is designed not to overwrite a newer copy;
+  the long delay does **not** block the AppKit main thread.
 - **Default** `restore_clipboard = true` (Settings → General checkbox, and
   config). Leaving the transcript on the global clipboard indefinitely is
   treated as a privacy/UX bug.

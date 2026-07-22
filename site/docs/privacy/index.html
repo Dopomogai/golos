@@ -122,6 +122,8 @@
                   Recorded dictation audio (16&nbsp;kHz mono WAV), plus dictionary terms as a
                   recognition prompt/bias. Not the full formatter context block.
                   Also applies to OpenAI-compatible and Deepgram backends when selected.
+                  A transient failure can upload the same WAV up to three total attempts;
+                  after an ambiguous read timeout, that can duplicate provider cost.
                 </td>
                 <td>
                   Switch STT to local MLX on Apple Silicon
@@ -619,8 +621,9 @@ rm -R ~/.golos/recordings</code></pre>
         <p>
           <strong>Pasteboard (local only):</strong> multi-line insert briefly writes the transcript
           for synthetic Cmd+V. Default <code>restore_clipboard = true</code> restores the prior
-          pasteboard with a changeCount/CAS guard (a user copy after Golos posts is never
-          overwritten). Single-line insert types keystrokes and does not use the pasteboard.
+          pasteboard with a changeCount/CAS guard. If changeCount advances before restoration,
+          Golos skips the restore; this is designed not to replace a newer user copy.
+          Single-line insert types keystrokes and does not use the pasteboard.
           Nothing about the pasteboard is uploaded by golos. Opt out under Settings → General if
           a slow target needs the transcript left on the clipboard.
         </p>

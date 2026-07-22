@@ -55,8 +55,9 @@ Product page source: [`site/`](site/) (direct architecture chooser at
    app: single-line text is *typed* as synthetic keystrokes (no pasteboard);
    multi-line text goes via a temporary clipboard write + synthetic Cmd+V,
    then an **async changeCount/CAS-guarded restore** of the prior pasteboard
-   so the transcript does not stay on the global clipboard. A user copy made
-   after Golos posts the paste is never overwritten. Escape hatch:
+   so the transcript does not stay on the global clipboard. If pasteboard
+   changeCount advances before restoration, Golos skips the restore; this is
+   designed not to overwrite a newer user copy. Escape hatch:
    Settings → General → uncheck “Restore clipboard…”, or
    `[insert] restore_clipboard = false` (leaves the transcript for stubborn
    slow targets). Full clipboard-free path: `[insert] method = "type"`.

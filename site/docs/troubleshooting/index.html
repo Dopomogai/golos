@@ -263,15 +263,15 @@
           </li>
           <li>
             <strong>Strip vanishes mid-session</strong> (dictation still works):
-            v0.3.3 recreates the notch strip after wake and after 15+ minutes idle
-            (bounded), with improved WindowServer checks. This is recovery, not a
+            v0.3.3 rebuilds the notch strip on wake and before the first recording
+            after 15+ minutes idle (bounded), with improved WindowServer checks. This is recovery, not a
             promise of perfect visual restoration. Prefer
             <strong>Export Diagnostics…</strong> before restarting so the redacted
             zip keeps visual-state metadata for a report.
           </li>
           <li>
-            <strong>After sleep / long idle</strong>: hold/recording state and the
-            event tap are recovered on wake when possible. If the hotkey stops
+            <strong>After sleep / long idle</strong>: a recording interrupted by wake
+            is safely aborted; held-key and event-tap state are reset/recovered. If the hotkey stops
             responding, open menu <strong>Permissions</strong>, re-check Input
             Monitoring, then relaunch golos. Export Diagnostics first if visuals
             disappeared and you plan to report the session.
@@ -360,8 +360,9 @@
           <li>
             <strong>Clipboard after multi-line paste.</strong> Default
             <code>restore_clipboard = true</code> (Settings → General) restores the
-            prior pasteboard asynchronously with a changeCount/CAS guard: a user
-            copy made after Golos posts is never overwritten. Green success still
+            prior pasteboard asynchronously with a changeCount/CAS guard. If
+            changeCount advances before restoration, Golos skips it, by design
+            avoiding replacement of a newer copy. Green success still
             means events were posted — not verified text delivery. If a very slow
             target pastes the restored prior content instead of the transcript,
             uncheck “Restore clipboard…” (or set

@@ -347,8 +347,9 @@
             processing or inserted are hidden.</li>
           <li><strong>Restore clipboard after multi-line paste (recommended)</strong> —
             default <strong>on</strong>. After a multi-line insert, golos restores the
-            prior pasteboard asynchronously with a changeCount/CAS guard so a user copy
-            made after the paste is never overwritten. Uncheck only if a slow target
+            prior pasteboard asynchronously with a changeCount/CAS guard. If changeCount
+            advances before restoration, Golos skips it, by design avoiding replacement
+            of a newer user copy. Uncheck only if a slow target
             pastes the restored older content instead of the transcript (transcript then
             stays on the clipboard). Single-line inserts use typing and do not touch the
             pasteboard. Green success still means events were posted, not verified
@@ -656,7 +657,7 @@
               <td>Clipboard restore</td>
               <td><code>[insert] restore_clipboard</code></td>
               <td><code>true</code> by default (async changeCount/CAS restore after
-                multi-line paste; a user copy after Golos posts is never overwritten).
+                multi-line paste; restore is skipped if changeCount advances first).
                 Set <code>false</code> or uncheck Settings → General to leave the
                 transcript on the pasteboard for stubborn slow targets.</td>
             </tr>

@@ -35,7 +35,7 @@ rg -n 'sk-or-v1-|api_key = "[^" ]+' --glob '!dist/**' --glob '!build/**' .
 
 Apple Silicon includes OpenRouter plus optional MLX download (~1.5 GB weights
 only after the user clicks **Download local**). Intel is cloud-only
-(OpenRouter; no local MLX). Beta remains **unsigned / not notarized**.
+(OpenRouter; no local MLX). Beta remains **not Developer ID signed or notarized**.
 
 ```sh
 # Apple Silicon: cloud + optional local
@@ -66,11 +66,12 @@ Before release, preserve both DMGs, restore the Apple Silicon app as
 - **Accessibility preflight**: with Accessibility denied, insert aborts before
   posting, History keeps the result, and the bubble warns (no false green success);
 - **Clipboard restore (default on)**: multi-line paste restores the prior
-  pasteboard with changeCount/CAS guard; a user copy after Golos posts is not
-  overwritten; opt-out via Settings → General or `[insert] restore_clipboard = false`;
-- **Wake / long-idle recovery**: after sleep or 15+ minute idle, notch strip can
-  recreate (bounded); interrupted recording / sticky hold / event tap recover
-  without claiming perfect visual recovery;
+  pasteboard with a changeCount/CAS guard; restore is skipped if changeCount
+  advances first, by design avoiding replacement of a newer user copy; opt out
+  via Settings → General or `[insert] restore_clipboard = false`;
+- **Wake / long-idle recovery**: the notch strip rebuilds on wake and before the
+  first recording after 15+ minutes idle (bounded); a recording interrupted by
+  wake is safely aborted, while sticky hold / event-tap state is recovered;
 - **Export Diagnostics…**: menu creates a local redacted zip under a user-chosen
   path; bundle stays local until the user shares it; no keys/audio/transcript/
   prompt/context text; rotating logs under `~/.golos/logs/`;
@@ -96,8 +97,8 @@ gh release create v0.3.3 \
 
 ### Draft release notes (paste into GitHub Releases)
 
-Use the block below. **Do not invent checksum values** — the track lead fills
-SHA-256 after both architecture builds are final. Placeholder lines are marked.
+Use the block below. Hashes and sizes are the verified final v0.3.3 assets;
+recompute them if either DMG is rebuilt.
 
 ```markdown
 ## golos 0.3.3 — stability / privacy patch
@@ -109,30 +110,34 @@ on-device MLX (explicit download). **Intel**: cloud-only OpenRouter (no local ML
 
 | Architecture | DMG | SHA-256 |
 |---|---|---|
-| Apple Silicon | `golos-0.3.3-apple-silicon.dmg` | `«TRACK_LEAD: fill after build»` |
-| Intel (cloud-only) | `golos-0.3.3-intel.dmg` | `«TRACK_LEAD: fill after build»` |
+| Apple Silicon | `golos-0.3.3-apple-silicon.dmg` | `b4ea697871e5a1cb93b245b9d9f03df4cf882b35b5aa16da94ea814aedb664e7` |
+| Intel (cloud-only) | `golos-0.3.3-intel.dmg` | `bd2538112813a050e263cf8dd482491c58c9c972aa9927a99543c08cc545cad6` |
 
-Sizes: `«TRACK_LEAD: fill after build»`.
+Sizes: Apple Silicon 102,403,964 bytes; Intel 40,670,436 bytes.
 
-### First launch (unsigned / not notarized)
+### First launch (not Developer ID signed / not notarized)
 
-This release remains **ad-hoc unsigned and not notarized**. First launch:
-**right-click → Open**. Replacing an unsigned build may require regranting
+The Apple Silicon app is ad-hoc signed and the Intel app is unsigned; neither
+is **Developer ID signed or notarized**. First launch: **right-click → Open**.
+Replacing a beta build may require regranting
 Microphone, Input Monitoring, and Accessibility to **golos.app**; after
 granting Input Monitoring, relaunch so the event tap can install.
 
 ### What changed
 
 - **Clipboard restoration after multi-line paste** (default on), with a
-  changeCount/CAS guard so a user copy made after Golos posts is never
-  overwritten. Opt out: Settings → General → “Restore clipboard…”, or
-  `[insert] restore_clipboard = false`.
-- **Bounded notch-strip recreation** after display/system wake and after
-  15+ minutes idle (does not promise perfect visual recovery).
-- **Bounded transient cloud STT retries** for transport/HTTP blips.
+  changeCount/CAS guard. Restore is skipped if changeCount advances first,
+  which is designed not to replace a newer user copy. Opt out: Settings →
+  General → “Restore clipboard…”, or `[insert] restore_clipboard = false`.
+- **Bounded notch-strip recreation** on display/system wake and before the
+  first recording after 15+ minutes idle (does not promise perfect recovery).
+- **Bounded transient cloud STT retries** for transport/HTTP blips. A retry may
+  upload the same WAV up to three total attempts and an ambiguous read timeout
+  can duplicate provider cost.
 - **Correction-learning insertion TTL** so idle workers do not thrash on
   stale edit windows.
-- **Wake recovery** for interrupted recording, sticky hold state, and event tap.
+- **Wake recovery** safely aborts an interrupted recording and resets/repairs
+  sticky hold-key and event-tap state.
 - **Improved WindowServer diagnostics/recovery** for missing status panels.
 
 ### Diagnostics
@@ -150,12 +155,11 @@ false success when Accessibility is missing. No automatic updater.
 ```
 
 The release notes must state: macOS 13+; Intel is cloud-only; Apple Silicon can
-optionally download local STT; beta DMGs are **unsigned and not notarized**
+optionally download local STT; beta DMGs are **not Developer ID signed or notarized**
 and use right-click → Open; permissions may need regranting after replacing an
-unsigned build; diagnostics remain local until the user exports/shares them.
-**Do not invent checksum values** — the track lead publishes verified SHA-256
-hashes after both architecture builds are final. Placeholders live in the draft
-block above (SHA-256 and size rows).
+beta build; diagnostics remain local until the user exports/shares them.
+**Do not invent checksum values** — recompute and update the verified SHA-256
+and byte sizes above whenever either architecture is rebuilt.
 
 ## 4. Website product page
 
@@ -178,7 +182,7 @@ then verify `/golos` on desktop/mobile and every download/source link live.
 ## 5. Apple Developer ID signing + notarization (founder-gated)
 
 **Do not run this section unless the founder explicitly owns signing.**
-Public v0.3.3 ships unsigned (right-click → Open). With a paid Apple Developer
+Public v0.3.3 is not Developer ID signed (right-click → Open). With a paid Apple Developer
 account and founder approval:
 
 ```sh
