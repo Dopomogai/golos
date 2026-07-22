@@ -932,6 +932,7 @@ class Bubble:
             "window": None,
             "listed": None,
             "onscreen": None,
+            "onscreen_source": None,
             "occlusion_visible": None,
             "layer": None,
             "probe": "unavailable",
@@ -996,10 +997,32 @@ class Bubble:
             out["listed"] = True
             if "kCGWindowIsOnscreen" in rec:
                 out["onscreen"] = bool(rec["kCGWindowIsOnscreen"])
+                out["onscreen_source"] = "record"
             else:
-                # Key absent while the window is listed ⇒ not composited
-                # (same signal as idle orderOut panels).
-                out["onscreen"] = False
+                # On recent macOS versions the including-window query can
+                # omit kCGWindowIsOnscreen even for a healthy status-level
+                # panel.  Membership in an explicit on-screen-only query is
+                # the authoritative fallback; absence of the dictionary key
+                # alone is not evidence of a stale surface.
+                try:
+                    from Quartz import (
+                        kCGWindowListOptionOnScreenOnly,
+                        kCGWindowListExcludeDesktopElements,
+                    )
+                    visible_info = CGWindowListCopyWindowInfo(
+                        kCGWindowListOptionOnScreenOnly
+                        | kCGWindowListExcludeDesktopElements,
+                        kCGNullWindowID,
+                    ) or []
+                    out["onscreen"] = any(
+                        int(item.get("kCGWindowNumber", 0)) == win
+                        for item in visible_info
+                    )
+                    out["onscreen_source"] = "onscreen_list"
+                except Exception:
+                    # Keep this indeterminate so callers fail open rather
+                    # than rebuilding every strip presentation.
+                    out["onscreen"] = None
             if "kCGWindowLayer" in rec:
                 try:
                     out["layer"] = int(rec["kCGWindowLayer"])

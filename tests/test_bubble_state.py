@@ -372,6 +372,14 @@ def test_window_server_presented_interprets_probe():
     }) is True
 
 
+def test_missing_onscreen_key_is_indeterminate_not_hidden():
+    """Quartz may omit the record key for healthy status-level panels."""
+    assert window_server_presented({
+        "probe": "ok", "listed": True, "onscreen": None,
+        "onscreen_source": None, "occlusion_visible": None,
+    }) is None
+
+
 def test_ws_verify_does_not_recreate_ephemeral_notice_as_recording():
     bubble = _bubble()
     bubble._state = "notice"
