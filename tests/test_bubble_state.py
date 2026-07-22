@@ -353,19 +353,39 @@ def test_window_server_presented_interprets_probe():
         "probe": "ok", "listed": True, "onscreen": False,
         "occlusion_visible": None,
     }) is False
-    # Idle-style listing: key absent → treated as not composited.
+    # A synthetic indeterminate probe fails open unless occlusion can decide.
     assert window_server_presented({
         "probe": "ok", "listed": True, "onscreen": None,
         "occlusion_visible": None,
-    }) is False
+    }) is None
     assert window_server_presented({
         "probe": "ok", "listed": False, "onscreen": None,
         "occlusion_visible": None,
     }) is False
     assert window_server_presented({
         "probe": "ok", "listed": True, "onscreen": False,
-        "occlusion_visible": True,  # AppKit occlusion wins
+        "occlusion_visible": True,  # stale AppKit state must not win
+    }) is False
+    assert window_server_presented({
+        "probe": "ok", "listed": True, "onscreen": None,
+        "occlusion_visible": True,  # fallback only when Quartz is indeterminate
     }) is True
+
+
+def test_ws_verify_does_not_recreate_ephemeral_notice_as_recording():
+    bubble = _bubble()
+    bubble._state = "notice"
+    bubble._notice_surface = "wings"
+    bubble._present_token = 8
+    recreated = []
+    bubble._recreate_failed_wings = lambda **kwargs: recreated.append(kwargs)
+    bubble._window_server_status = lambda panel: {
+        "window": 1, "listed": True, "onscreen": False,
+        "occlusion_visible": False, "layer": 25, "probe": "ok",
+    }
+    bubble._verify_presentation(token=8, phase=0)
+    assert recreated == []
+    assert bubble._last_enforce_ok is False
 
 
 def test_enforce_schedules_presentation_verify_non_idle():

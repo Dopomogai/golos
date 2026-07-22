@@ -121,16 +121,18 @@ def window_server_presented(status: dict) -> bool | None:
     probe = status.get("probe")
     if probe != "ok":
         return None
-    if status.get("onscreen") is True:
-        return True
-    if status.get("occlusion_visible") is True:
-        return True
     if status.get("listed") is False:
         return False
-    # Listed without onscreen (key absent or false) after an orderFront is the
-    # long-idle failure mode: AppKit still claims visible, WindowServer does not.
-    if status.get("onscreen") is False or status.get("onscreen") is None:
+    # WindowServer is authoritative when it answers. AppKit's occlusion state
+    # can be stale in the same long-idle failure where isVisible() remains true.
+    if status.get("onscreen") is True:
+        return True
+    if status.get("onscreen") is False:
         return False
+    # Only use AppKit occlusion as a fallback when Quartz could list the
+    # window but did not provide an onscreen value.
+    if status.get("occlusion_visible") is True:
+        return True
     if status.get("occlusion_visible") is False:
         return False
     return None
@@ -1129,7 +1131,7 @@ class Bubble:
             self.diagnostic_snapshot())
 
         if surface == "wings" and self._state in (
-                RECORDING_STATES + ("processing", "success", "notice", "suggestion")):
+                RECORDING_STATES + ("processing", "success")):
             if self._recover_attempts >= MAX_STRIP_RECOVERIES:
                 self._last_enforce_ok = False
                 self._last_recover_action = {
