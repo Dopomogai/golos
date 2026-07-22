@@ -115,7 +115,7 @@ class AppController:
         self._fmt_context_ready.set()
         # Coalesce DidWake + ScreensDidWake so we show at most one idle
         # permission warning per wake burst (no periodic prompts).
-        self._last_wake_perm_warn_at = 0.0
+        self._last_wake_perm_warn_at = None
 
     # -- pipeline ownership (STT/formatter mutual exclusion) ---------------
 
@@ -565,12 +565,24 @@ class AppController:
         if missing:
             now = time.monotonic()
             # Coalesce NSWorkspaceDidWake + ScreensDidWake (and rapid re-entry).
-            if now - self._last_wake_perm_warn_at >= 5.0:
+            last_warn = self._last_wake_perm_warn_at
+            with self._lock:
+                idle_for_notice = self.state == "idle"
+            if idle_for_notice and (
+                    last_warn is None or now - last_warn >= 5.0):
                 notice = wake_permission_notice(missing)
                 if notice:
                     self._idle_then_notice(notice, "warn", 2.5)
                     self._last_wake_perm_warn_at = now
                     result["permission_warning"] = True
+            elif not idle_for_notice:
+                # Never force an in-flight STT/formatter pipeline to idle just
+                # to display a permission warning. The menu preflight remains
+                # available and the next wake/launch checks again.
+                log.info(
+                    "runtime wake permission warning deferred state=%s",
+                    self.state,
+                )
 
         log.info(
             "runtime wake done aborted=%s held_reset=%s tap=%s warn=%s",

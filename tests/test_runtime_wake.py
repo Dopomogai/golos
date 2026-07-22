@@ -207,6 +207,36 @@ def test_ensure_tap_creates_only_tap_when_missing(monkeypatch):
     assert created == [True]
 
 
+def test_ensure_tap_recreates_when_retained_port_will_not_enable(monkeypatch):
+    mon = _monitor()
+    mon._tap = object()
+    mon._tap_source = object()
+    mon._tap_active = False
+    created = []
+
+    monkeypatch.setattr(mon, "_cg_tap_enabled", lambda: False)
+    monkeypatch.setattr(mon, "_cg_tap_enable", lambda enabled: None)
+
+    def teardown():
+        mon._tap = None
+        mon._tap_source = None
+        mon._tap_active = False
+
+    def create():
+        created.append(True)
+        mon._tap = object()
+        mon._tap_source = object()
+        return True
+
+    monkeypatch.setattr(mon, "_teardown_tap", teardown)
+    monkeypatch.setattr(mon, "_start_event_tap", create)
+
+    assert mon.ensure_tap(input_monitoring=True) == "created"
+    assert created == [True]
+    assert mon._tap_active is True
+    assert mon._tap is not None
+
+
 def test_ensure_tap_unavailable_when_create_fails(monkeypatch):
     mon = _monitor()
     mon._tap = None
@@ -316,6 +346,20 @@ def test_wake_processing_not_aborted(monkeypatch):
     assert result["aborted_recording"] is False
     assert controller.state == "processing"
     assert controller.recorder.aborted == 0
+
+
+def test_wake_missing_permission_does_not_force_processing_idle(monkeypatch):
+    controller = _controller()
+    mon = _monitor()
+    monkeypatch.setattr(mon, "ensure_tap", lambda **k: "observe_only")
+    controller._hotkey_monitor = mon
+    controller._set_state("processing")
+
+    result = controller.handle_runtime_wake("wake", status=IM_MISSING)
+
+    assert controller.state == "processing"
+    assert result["permission_warning"] is False
+    assert controller.bubble.notices == []
 
 
 def test_wake_missing_permission_one_warning(monkeypatch):

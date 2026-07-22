@@ -226,9 +226,14 @@ class HotkeyMonitor:
                 self._tap_active = True
                 return "ok"
             self._cg_tap_enable(True)
-            self._tap_active = True
-            log.info("Event tap re-enabled after wake/health check.")
-            return "reenabled"
+            if self._cg_tap_enabled():
+                self._tap_active = True
+                log.info("Event tap re-enabled after wake/health check.")
+                return "reenabled"
+            # A retained Mach port can become invalid across permission or
+            # session changes. Drop it before attempting one fresh tap.
+            log.warning("Retained event tap did not re-enable; recreating it.")
+            self._teardown_tap()
 
         if input_monitoring is False:
             self._tap_active = False
@@ -301,7 +306,7 @@ class HotkeyMonitor:
             enabled = self._cg_tap_enabled()
             if not enabled:
                 self._cg_tap_enable(True)
-                enabled = True
+                enabled = self._cg_tap_enabled()
             self._tap_active = enabled
             return enabled
         try:
