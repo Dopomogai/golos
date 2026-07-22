@@ -245,8 +245,11 @@ class AppController:
 
         If an insertion is still pending in the app we just left, capture any
         manual edit from that app's focused field (best-effort AX via pid).
+        Stale insertions past the edit window are expired here (once) so a
+        long session never spawns thrashing too-old capture workers.
         """
-        li = self.last_insertion
+        from .learning import eligible_last_insertion
+        li = eligible_last_insertion(self)
         if not li or not li.get("bundle_id"):
             return
         if new_bundle_id == li["bundle_id"]:
@@ -266,7 +269,9 @@ class AppController:
         from .learning import capture_edit, read_focused_text_for_pid
         try:
             text = read_focused_text_for_pid(li.get("pid")) if li.get("pid") else None
-            pairs = capture_edit(self, text=text)
+            # expected=li: a newer paste must not be cleared or mis-diffed by
+            # this worker, which retained the pre-switch insertion dict.
+            pairs = capture_edit(self, text=text, expected=li)
             if pairs:
                 log.info("Learned %d suggestion(s) from your edit in %s.",
                          len(pairs), li.get("app_name", ""))
@@ -276,7 +281,8 @@ class AppController:
 
     def _capture_pending_edit(self):
         """45s fallback timer after an insertion (fires only if still pending)."""
-        if not self.last_insertion:
+        from .learning import eligible_last_insertion
+        if not eligible_last_insertion(self):
             return
         from .learning import capture_edit_async
         capture_edit_async(self, self._after_timed_capture)

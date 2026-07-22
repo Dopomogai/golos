@@ -6,6 +6,11 @@ record. Edit-capture triggers (next recording, app switch, 45s timer, the
 against the insertion; pairs go to suggestions.jsonl. The Settings → History
 tab lists aggregated suggestions with promote/dismiss actions.
 
+Age gate: `eligible_last_insertion` is the single edit-window check. Past
+`[learning] edit_window_seconds` the pending insertion is cleared once
+(identity-safe), the EditWatcher for that insertion is stopped, and one
+content-free expiry line is logged — then silence (no thrashing workers).
+
 Optional [learning] reviewer (OpenRouter, audio-aware) may propose candidates
 when enabled; deterministic suggest_pairs remains the offline/failure fallback.
 Nothing is auto-promoted — human approval only.
@@ -278,6 +283,87 @@ def promote_to_dictionary(dictionary_path: str, term: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# edit-window eligibility (authoritative age gate)
+
+
+def edit_window_seconds(cfg: dict) -> float:
+    """Configured `[learning] edit_window_seconds` (default 600)."""
+    learning = cfg.get("learning") or {}
+    return float(learning.get("edit_window_seconds", 600))
+
+
+def insertion_within_edit_window(
+    li: dict | None,
+    cfg: dict,
+    *,
+    now: float | None = None,
+) -> bool:
+    """True when *li* is present and not older than the edit window."""
+    if not li:
+        return False
+    if now is None:
+        now = time.time()
+    ts = li.get("ts") or 0
+    return (now - float(ts)) <= edit_window_seconds(cfg)
+
+
+def _stop_watcher_for_insertion(app_controller, li: dict, reason: str) -> None:
+    watcher = getattr(app_controller, "_watcher", None)
+    if watcher is None:
+        return
+    if getattr(watcher, "_insertion", None) is li:
+        watcher.stop(reason)
+
+
+def release_last_insertion(app_controller, li: dict) -> bool:
+    """Clear *last_insertion* only if it is still the same object as *li*.
+
+    Concurrent timer / app-switch workers that retained an older dict must not
+    wipe a newer insertion that landed while they were in flight.
+    """
+    if getattr(app_controller, "last_insertion", None) is not li:
+        return False
+    app_controller.last_insertion = None
+    return True
+
+
+def expire_last_insertion(app_controller, li: dict) -> bool:
+    """Expire one insertion: identity-safe clear, stop its watcher, log once.
+
+    Returns True only when *li* was still current and was cleared. Repeat
+    calls (or a worker holding a superseded dict) are silent no-ops.
+    """
+    if getattr(app_controller, "last_insertion", None) is not li:
+        return False
+    app_controller.last_insertion = None
+    _stop_watcher_for_insertion(app_controller, li, "edit window expired")
+    # Content-free: no transcript, app name, or path — ops signal only.
+    log.info("Learning insertion expired.")
+    return True
+
+
+def eligible_last_insertion(
+    app_controller,
+    *,
+    now: float | None = None,
+) -> dict | None:
+    """Authoritative gate: return *last_insertion* if still within the window.
+
+    When the pending insertion is older than `[learning] edit_window_seconds`,
+    clear it exactly once (identity-safe), stop its EditWatcher generation,
+    log one content-free expiry line, and return None. Subsequent calls with
+    no pending insertion are silent — no worker thrash, no repeat logs.
+    """
+    li = getattr(app_controller, "last_insertion", None)
+    if not li:
+        return None
+    if insertion_within_edit_window(li, app_controller.cfg, now=now):
+        return li
+    expire_last_insertion(app_controller, li)
+    return None
+
+
+# ---------------------------------------------------------------------------
 # main entry
 
 
@@ -294,7 +380,12 @@ def capture_edit_async(app_controller, on_done) -> None:
     threading.Thread(target=work, daemon=True).start()
 
 
-def capture_edit(app_controller, text: str | None = None) -> list[tuple[str, str]]:
+def capture_edit(
+    app_controller,
+    text: str | None = None,
+    *,
+    expected: dict | None = None,
+) -> list[tuple[str, str]]:
     """Look for manual edits to the last insertion; record suggestions.
 
     Triggers: start of every recording, the "Check for edits" button, an
@@ -302,18 +393,19 @@ def capture_edit(app_controller, text: str | None = None) -> list[tuple[str, str
     is passed in), and a 45s fallback timer. When `text` is given, the
     frontmost-app check and the AX read are skipped (caller already read the
     right field). Silent-ish on any failure (INFO log).
+
+    *expected*, when given, must still be the controller's eligible insertion
+    (identity); a worker that retained an older dict after a newer paste is
+    a silent no-op.
     """
     cfg = app_controller.cfg
     learning = cfg.get("learning", {})
     if not learning.get("enabled", True):
         return []
-    li = getattr(app_controller, "last_insertion", None)
+    li = eligible_last_insertion(app_controller)
     if not li:
         return []
-    window = learning.get("edit_window_seconds", 600)
-    age = time.time() - li.get("ts", 0)
-    if age > window:
-        log.info("Last insertion too old for edit capture (%.0fs > %ds).", age, window)
+    if expected is not None and li is not expected:
         return []
     if text is None:
         from .context import frontmost_context
@@ -332,8 +424,8 @@ def capture_edit(app_controller, text: str | None = None) -> list[tuple[str, str
     if watcher is not None and watcher.seen:
         pairs = [p for p in pairs if p not in watcher.seen]
     if pairs:
-        # Recorded: don't report the same insertion again.
-        app_controller.last_insertion = None
+        # Recorded: drop only this insertion (never a newer concurrent one).
+        release_last_insertion(app_controller, li)
         append_suggestions(
             cfg["paths"]["suggestions"],
             li.get("app_name", ""),

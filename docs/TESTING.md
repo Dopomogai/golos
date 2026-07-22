@@ -23,6 +23,7 @@ golos (`dictate` + `dictate_core`). It does **not** claim full coverage.
 | **Recovery** | Failed-run JSONL (STT/format/insert), legacy load compat, retry w/wo audio, copy-ready, no auto-insert; home grouping by `run_id`; busy retry vs live coordination | Real Settings UI retry buttons, live paste into apps |
 | **Pipeline contracts** | Success, formatter passthrough/failure, cancel, insert/history failure (all mocked); partial success → `✓ inserted raw` | Live OpenRouter/Deepgram, Accessibility insert, clipboard |
 | **Soak / adversarial** | ≥250 rapid state/event cycles: no stuck held key, no stale timer forcing a newer recording idle | Long-running production soak under load |
+| **Learning TTL** | Fake-clock edit-window expiry: clear once, identity-safe concurrent clear, 1000 stale app switches → zero worker starts | Live AX / real multi-hour session |
 
 Legacy focused scripts under `scripts/` remain available and must keep passing;
 pytest under `tests/` is the discoverable, CI-friendly path.

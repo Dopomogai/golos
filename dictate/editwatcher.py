@@ -42,7 +42,9 @@ class EditWatcher:
         cfg = self.app_controller.cfg
         if not cfg.get("learning", {}).get("live_cues", True):
             return
-        li = self.app_controller.last_insertion
+        from .learning import eligible_last_insertion
+        # Age gate before arming: never poll a past-window insertion.
+        li = eligible_last_insertion(self.app_controller)
         if not li:
             return
         self._insertion = li
@@ -100,6 +102,14 @@ class EditWatcher:
         li = self.app_controller.last_insertion
         if li is not self._insertion:
             self.stop("insertion consumed")
+            return
+        from .learning import expire_last_insertion, insertion_within_edit_window
+        if not insertion_within_edit_window(li, self.app_controller.cfg):
+            # Edit window elapsed: clear controller state once and disarm.
+            # expire_last_insertion stops the watcher when still armed for li.
+            expire_last_insertion(self.app_controller, li)
+            if self._insertion is not None:
+                self.stop("edit window expired")
             return
         if time.monotonic() - self._started > MAX_WATCH_SECONDS:
             self.stop("3 minutes elapsed")

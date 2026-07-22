@@ -275,6 +275,14 @@ consumed by the tap while configured) and rebinding is live via
 - Triggers: next recording, app switch (AX read of the old app's pid),
   45 s fallback timer, manual "Check for edits". Window: 600 s
   (`[learning] edit_window_seconds`).
+- **Edit-window TTL (P0 long-session)**: `eligible_last_insertion` is the
+  single age/eligibility gate. When `last_insertion` is older than the
+  configured window it is cleared **once** (identity-safe so a worker that
+  retained an older dict cannot wipe a newer paste), the EditWatcher
+  generation for that insertion is stopped, and one content-free
+  `Learning insertion expired.` line is logged — then silence. App-switch
+  and the 45 s timer call the gate **before** spawning capture workers so
+  a long idle session does not thrash threads that only log “too old”.
 
 ## Security & privacy model
 
