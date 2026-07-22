@@ -64,10 +64,10 @@
         <p class="lede">
           golos is cloud-first by default, with an explicit local STT option on Apple Silicon.
           Formatting, context reads, retained audio, and the optional learning reviewer are separate switches.
-          This page maps the real data paths in v0.3.2 — not marketing claims.
+          This page maps the real data paths in v0.3.3 — not marketing claims.
         </p>
         <div class="page-hero-meta">
-          <span class="version-badge" title="Documentation applies to this public beta">Applies to v0.3.2</span>
+          <span class="version-badge" title="Documentation applies to this public beta">Applies to v0.3.3</span>
           <span class="muted" style="font-size:13px">macOS 13+ · no built-in sync or encryption layer</span>
         </div>
       </header>
@@ -617,6 +617,14 @@ rm -R ~/.golos/recordings</code></pre>
           </table>
         </div>
         <p>
+          <strong>Pasteboard (local only):</strong> multi-line insert briefly writes the transcript
+          for synthetic Cmd+V. Default <code>restore_clipboard = true</code> restores the prior
+          pasteboard with a changeCount/CAS guard (a user copy after Golos posts is never
+          overwritten). Single-line insert types keystrokes and does not use the pasteboard.
+          Nothing about the pasteboard is uploaded by golos. Opt out under Settings → General if
+          a slow target needs the transcript left on the clipboard.
+        </p>
+        <p>
           Browser/Finder providers may also trigger a one-time <strong>Automation</strong> consent
           dialog. Denying simply disables that provider. Also set
           <strong>Keyboard → “Press 🌐/fn key to” → Do Nothing</strong> so macOS does not steal
@@ -660,7 +668,7 @@ rm -R ~/.golos/recordings</code></pre>
       <img class="brand-mark" src="../../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
       <span>golos</span>
     </a>
-    <p>Help Center · Applies to v0.3.2 · Privacy &amp; data</p>
+    <p>Help Center · Applies to v0.3.3 · Privacy &amp; data</p>
     <div class="docs-footer-links">
       <a href="../">Docs home</a>
       <a href="https://golos.dopomogai.com/#download">Download</a>

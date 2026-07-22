@@ -16,7 +16,7 @@
 - [ ] Ran documented suite: `.venv/bin/python -m pytest -q` (and relevant `scripts/` probes if applicable).
 - [ ] **Docs/copy alignment**: user-facing text matches the change (only files this PR intentionally updates).
 - [ ] **No secrets / personal data**: no API keys, no `~/.golos` dumps, no personal recordings, history JSONL, or private transcripts.
-- [ ] Scope stays honest for the **v0.3.1 unsigned macOS beta** (macOS 13+, Apple Silicon + Intel; no false signed/auto-update claims).
+- [ ] Scope stays honest for the **v0.3.3 unsigned macOS beta** (macOS 13+, Apple Silicon + Intel; no false signed/auto-update claims).
 
 ## Packaging changes (if any)
 

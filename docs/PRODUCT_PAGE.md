@@ -28,9 +28,9 @@ or IDE. Some apps may reject simulated insertion; History keeps the result.
 **Hero CTAs:** direct architecture downloads (not the generic releases index):
 
 - Apple Silicon DMG:
-  `https://github.com/Dopomogai/golos/releases/download/v0.3.2/golos-0.3.2-apple-silicon.dmg`
+  `https://github.com/Dopomogai/golos/releases/download/v0.3.3/golos-0.3.3-apple-silicon.dmg`
 - Intel DMG (cloud-only):
-  `https://github.com/Dopomogai/golos/releases/download/v0.3.2/golos-0.3.2-intel.dmg`
+  `https://github.com/Dopomogai/golos/releases/download/v0.3.3/golos-0.3.3-intel.dmg`
 
 Nav **Download** anchors to `#download`. Note: Intel is cloud-only; beta is
 unsigned — first launch uses right-click → Open. Keep the GitHub release page
@@ -94,9 +94,10 @@ Same voice. Your choice per machine, per moment.
 
 Mirror [`docs/ROADMAP.md`](ROADMAP.md) as a `#roadmap` section (no dates):
 
-- **Shipped now** — v0.3.2 Mac beta; Apple Silicon + Intel; cloud-first
+- **Shipped now** — v0.3.3 Mac beta; Apple Silicon + Intel; cloud-first
   OpenRouter; optional local MLX on Apple Silicon; context separation;
-  History/recovery; human-approved corrections.
+  History/recovery; human-approved corrections; default clipboard restore;
+  wake/long-idle strip recovery; local Export Diagnostics.
 - **Near term** — stability/compatibility hardening; Developer ID
   signing/notarization; launch at login; trustworthy update path; smoother
   diagnostics/recovery.
@@ -142,8 +143,8 @@ Nothing is learned without your approval.
 
 | Architecture | Asset |
 |---|---|
-| Apple Silicon | `…/releases/download/v0.3.2/golos-0.3.2-apple-silicon.dmg` |
-| Intel (cloud-only) | `…/releases/download/v0.3.2/golos-0.3.2-intel.dmg` |
+| Apple Silicon | `…/releases/download/v0.3.3/golos-0.3.3-apple-silicon.dmg` |
+| Intel (cloud-only) | `…/releases/download/v0.3.3/golos-0.3.3-intel.dmg` |
 
 Free and open-source under MIT. The current beta is **unsigned**, so first
 launch uses **right-click → Open**; do not describe it as signed, notarized,

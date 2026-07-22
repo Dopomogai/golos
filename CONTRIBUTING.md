@@ -1,5 +1,5 @@
 ---
-@purpose: "How to contribute to golos: environment, tests, PR expectations, and scope for the v0.3.2 macOS beta."
+@purpose: "How to contribute to golos: environment, tests, PR expectations, and scope for the v0.3.3 macOS beta."
 @why: "Keeps community patches aligned with real install paths, unsigned beta limits, and the documented test suite."
 @role: reference
 @stability: accepted
@@ -17,7 +17,7 @@ Thanks for helping. golos is an open-source macOS push-to-talk dictation app
 - **Platform:** macOS 13+ only for the shipping app.
 - **Architectures:** Apple Silicon (cloud + optional local MLX) and Intel
   (cloud-only OpenRouter).
-- **Current public build:** **v0.3.2 unsigned beta** DMGs. First launch is
+- **Current public build:** **v0.3.3 unsigned beta** DMGs. First launch is
   **right-click → Open**. Builds are **not** signed or notarized, and there
   is **no** automatic updater (releases open via GitHub; install is manual).
 - **User data:** runtime state lives under **`~/.golos/`** (config, history,

@@ -17,12 +17,12 @@ sys.setrecursionlimit(20000)
 
 APP = ["app_launcher.py"]
 INCLUDE_MLX = os.environ.get("GOLOS_INCLUDE_MLX", "1") != "0"
-APP_VERSION = os.environ.get("GOLOS_VERSION", "0.3.2")
+APP_VERSION = os.environ.get("GOLOS_VERSION", "0.3.3")
 try:
     _major, _minor, _patch = (int(part) for part in APP_VERSION.split(".", 2))
     _default_build = str((_major * 10_000) + (_minor * 100) + _patch)
 except (TypeError, ValueError):
-    _default_build = "302"
+    _default_build = "303"
 APP_BUILD = os.environ.get("GOLOS_BUILD", _default_build)
 PACKAGES = [
     "dictate", "dictate_core", "sounddevice", "_sounddevice_data",

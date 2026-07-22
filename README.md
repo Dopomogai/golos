@@ -18,11 +18,11 @@ A minimal macOS push-to-talk dictation app, in Python + PyObjC
 > [docs/VISION.md](docs/VISION.md) · [docs/ROADMAP.md](docs/ROADMAP.md) ·
 > [docs/PRODUCT_PAGE.md](docs/PRODUCT_PAGE.md) · [docs/TESTING.md](docs/TESTING.md)
 
-**Download (v0.3.2 beta DMGs — pick your architecture):**
+**Download (v0.3.3 beta DMGs — pick your architecture):**
 
-- [Apple Silicon](https://github.com/Dopomogai/golos/releases/download/v0.3.2/golos-0.3.2-apple-silicon.dmg)
+- [Apple Silicon](https://github.com/Dopomogai/golos/releases/download/v0.3.3/golos-0.3.3-apple-silicon.dmg)
   — cloud + optional local MLX
-- [Intel](https://github.com/Dopomogai/golos/releases/download/v0.3.2/golos-0.3.2-intel.dmg)
+- [Intel](https://github.com/Dopomogai/golos/releases/download/v0.3.3/golos-0.3.3-intel.dmg)
   — cloud-only OpenRouter
 
 Unsigned beta: first launch is **right-click → Open**. Release notes and
@@ -137,10 +137,10 @@ the bench harness).
 ```sh
 # Apple Silicon edition (install requirements-local.txt first):
 ./build_app.sh
-./make_dmg.sh 0.3.2-apple-silicon
+./make_dmg.sh 0.3.3-apple-silicon
 # Intel/cloud-only edition (requires an x86_64 Python 3.11+):
 ./build_intel_app.sh
-./make_dmg.sh 0.3.2-intel
+./make_dmg.sh 0.3.3-intel
 ```
 
 Requires `py2app` and `setuptools<80` (in the requirements files). The bundle is

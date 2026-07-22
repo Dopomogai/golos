@@ -70,7 +70,7 @@
           review, and your personal dictionary. Everything below is verified against the
           current app UI and config surface.
         </p>
-        <p class="version-badge" title="Documentation version">Applies to v0.3.2</p>
+        <p class="version-badge" title="Documentation version">Applies to v0.3.3</p>
       </header>
 
       <section id="open" class="docs-section">
@@ -345,6 +345,14 @@
           <li><strong>Show status words in the top animation</strong> — when off, the
             recording/processing/success animations still run, but status labels such as
             processing or inserted are hidden.</li>
+          <li><strong>Restore clipboard after multi-line paste (recommended)</strong> —
+            default <strong>on</strong>. After a multi-line insert, golos restores the
+            prior pasteboard asynchronously with a changeCount/CAS guard so a user copy
+            made after the paste is never overwritten. Uncheck only if a slow target
+            pastes the restored older content instead of the transcript (transcript then
+            stays on the clipboard). Single-line inserts use typing and do not touch the
+            pasteboard. Green success still means events were posted, not verified
+            delivery.</li>
         </ul>
         <p>
           Hands-free lock is <kbd>hold key</kbd>+Space (and optionally double-tap when
@@ -647,8 +655,10 @@
             <tr>
               <td>Clipboard restore</td>
               <td><code>[insert] restore_clipboard</code></td>
-              <td><code>false</code> by default (paste keeps the transcript). Escape hatch
-                restores the previous clipboard after a delay.</td>
+              <td><code>true</code> by default (async changeCount/CAS restore after
+                multi-line paste; a user copy after Golos posts is never overwritten).
+                Set <code>false</code> or uncheck Settings → General to leave the
+                transcript on the pasteboard for stubborn slow targets.</td>
             </tr>
             <tr>
               <td>Hotkey combo</td>
@@ -746,7 +756,7 @@
       <img class="brand-mark" src="../../golos-mark.svg" width="22" height="22" alt="" aria-hidden="true">
       <span>golos</span>
     </a>
-    <p>Open-source macOS dictation · Help Center · v0.3.2 beta</p>
+    <p>Open-source macOS dictation · Help Center · v0.3.3 beta</p>
     <div class="docs-footer-links">
       <a href="../">Docs home</a>
       <a href="https://golos.dopomogai.com/#download">Download</a>

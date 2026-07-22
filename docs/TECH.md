@@ -375,7 +375,7 @@ Bubble visuals beyond the existing lifecycle handler.
 
 Public end-user UI maps are in the Help Center
 ([Settings](https://golos.dopomogai.com/docs/settings/)); this table is the
-code/config contract. **config-only** = no Settings control in v0.3.2.
+code/config contract. **config-only** = no Settings control in v0.3.3.
 
 | Key | Default | Notes |
 |---|---|---|

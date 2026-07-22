@@ -12,7 +12,7 @@ Direction only. No ship dates, no promises.
 
 ## Shipped now
 
-Public **v0.3.2 Mac beta** (macOS 13+):
+Public **v0.3.3 Mac beta** (macOS 13+):
 
 - Separate **Apple Silicon** (cloud + optional local MLX) and **Intel**
   (cloud-only OpenRouter; no MLX) DMGs
@@ -21,6 +21,12 @@ Public **v0.3.2 Mac beta** (macOS 13+):
 - **Context separation** (app / window / field / visible text roles)
 - **History and recovery** (retry, copy, retained audio when kept)
 - **Human-approved corrections** (suggestions and live cues never auto-promote)
+- **Stability / privacy patch**: default clipboard restore after multi-line paste
+  (changeCount/CAS-guarded); bounded notch-strip recreation after wake and long
+  idle; wake recovery for hold/recording/event tap; bounded cloud STT retries;
+  correction-learning insertion TTL; WindowServer diagnostics/recovery
+- **Accessibility insert preflight** and local **Export Diagnostics…** (redacted
+  zip stays on disk until the user shares it)
 
 The beta is **unsigned**. First launch uses **right-click → Open**. Builds are
 not signed or notarized yet, and there is no automatic update install path.

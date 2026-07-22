@@ -8,21 +8,22 @@ related_docs: [docs/PRODUCT_PAGE.md, site/README.md, docs/VISION.md, README.md]
 ---
 # golos — release checklist
 
-Source is public at <https://github.com/Dopomogai/golos>. v0.3.0 and v0.3.1
-are public; **v0.3.2** is the accessibility-preflight / diagnostics /
-visual-panel hardening beta. This is the repeatable patch-release path;
+Source is public at <https://github.com/Dopomogai/golos>. v0.3.0, v0.3.1, and
+v0.3.2 are public; **v0.3.3** is the stability / privacy patch beta (clipboard
+restore, wake and long-idle recovery, bounded cloud STT retries, correction
+TTL, WindowServer diagnostics). This is the repeatable patch-release path;
 **signing and notarization remain founder-gated** — do not run codesign,
 notarytool, or staple unless the founder explicitly owns that step.
 
 ## 1. Repository and release branch
 
-The repository and initial public push are complete. For v0.3.2, work on a
+The repository and initial public push are complete. For v0.3.3, work on a
 feature branch until both architecture builds and tests pass. Never commit
 `~/.golos`, a populated API key, build output, or personal JSONL/WAV data.
 
 ```sh
 cd ~/dictate
-git switch -c release/v0.3.2
+git switch -c release/v0.3.3
 git status --short
 rg -n 'sk-or-v1-|api_key = "[^" ]+' --glob '!dist/**' --glob '!build/**' .
 ./.venv/bin/pytest -q
@@ -39,15 +40,15 @@ only after the user clicks **Download local**). Intel is cloud-only
 ```sh
 # Apple Silicon: cloud + optional local
 ./build_app.sh
-./make_dmg.sh 0.3.2-apple-silicon
+./make_dmg.sh 0.3.3-apple-silicon
 file dist/golos.app/Contents/MacOS/golos
-# expect: dist/golos-0.3.2-apple-silicon.dmg
+# expect: dist/golos-0.3.3-apple-silicon.dmg
 
 # Intel: cloud-only (requires an x86_64 Python and Rosetta on the build Mac)
 ./build_intel_app.sh
-./make_dmg.sh 0.3.2-intel
+./make_dmg.sh 0.3.3-intel
 file dist/golos.app/Contents/MacOS/golos
-# expect: dist/golos-0.3.2-intel.dmg
+# expect: dist/golos-0.3.3-intel.dmg
 ```
 
 `make_dmg.sh` builds a Finder drag-to-install window (dark Golos background,
@@ -64,6 +65,12 @@ Before release, preserve both DMGs, restore the Apple Silicon app as
   animations, insertion, and correction approval all work;
 - **Accessibility preflight**: with Accessibility denied, insert aborts before
   posting, History keeps the result, and the bubble warns (no false green success);
+- **Clipboard restore (default on)**: multi-line paste restores the prior
+  pasteboard with changeCount/CAS guard; a user copy after Golos posts is not
+  overwritten; opt-out via Settings → General or `[insert] restore_clipboard = false`;
+- **Wake / long-idle recovery**: after sleep or 15+ minute idle, notch strip can
+  recreate (bounded); interrupted recording / sticky hold / event tap recover
+  without claiming perfect visual recovery;
 - **Export Diagnostics…**: menu creates a local redacted zip under a user-chosen
   path; bundle stays local until the user shares it; no keys/audio/transcript/
   prompt/context text; rotating logs under `~/.golos/logs/`;
@@ -72,26 +79,83 @@ Before release, preserve both DMGs, restore the Apple Silicon app as
 - replaced unsigned app may need the three permissions regranted; after granting
   **Input Monitoring**, relaunch golos so the event tap can install.
 
-## 3. Publish v0.3.2
+## 3. Publish v0.3.3
 
 ```sh
 git add -A
 git status --short
-git commit -m "golos 0.3.2 — accessibility preflight, diagnostics, visual harden"
-git push -u origin release/v0.3.2
+git commit -m "golos 0.3.3 — clipboard restore, wake recovery, stability"
+git push -u origin release/v0.3.3
 # Merge after review, then tag/release from main.
-gh release create v0.3.2 \
-  dist/golos-0.3.2-apple-silicon.dmg \
-  dist/golos-0.3.2-intel.dmg \
-  --repo Dopomogai/golos --title "golos 0.3.2" --generate-notes
+gh release create v0.3.3 \
+  dist/golos-0.3.3-apple-silicon.dmg \
+  dist/golos-0.3.3-intel.dmg \
+  --repo Dopomogai/golos --title "golos 0.3.3" \
+  --notes-file /tmp/golos-0.3.3-release-notes.md
 ```
 
-The release notes must say: macOS 13+; Intel is cloud-only; Apple Silicon can
+### Draft release notes (paste into GitHub Releases)
+
+Use the block below. **Do not invent checksum values** — the track lead fills
+SHA-256 after both architecture builds are final. Placeholder lines are marked.
+
+```markdown
+## golos 0.3.3 — stability / privacy patch
+
+Public macOS beta. **macOS 13+**. **Apple Silicon**: cloud OpenRouter + optional
+on-device MLX (explicit download). **Intel**: cloud-only OpenRouter (no local MLX).
+
+### Assets
+
+| Architecture | DMG | SHA-256 |
+|---|---|---|
+| Apple Silicon | `golos-0.3.3-apple-silicon.dmg` | `«TRACK_LEAD: fill after build»` |
+| Intel (cloud-only) | `golos-0.3.3-intel.dmg` | `«TRACK_LEAD: fill after build»` |
+
+Sizes: `«TRACK_LEAD: fill after build»`.
+
+### First launch (unsigned / not notarized)
+
+This release remains **ad-hoc unsigned and not notarized**. First launch:
+**right-click → Open**. Replacing an unsigned build may require regranting
+Microphone, Input Monitoring, and Accessibility to **golos.app**; after
+granting Input Monitoring, relaunch so the event tap can install.
+
+### What changed
+
+- **Clipboard restoration after multi-line paste** (default on), with a
+  changeCount/CAS guard so a user copy made after Golos posts is never
+  overwritten. Opt out: Settings → General → “Restore clipboard…”, or
+  `[insert] restore_clipboard = false`.
+- **Bounded notch-strip recreation** after display/system wake and after
+  15+ minutes idle (does not promise perfect visual recovery).
+- **Bounded transient cloud STT retries** for transport/HTTP blips.
+- **Correction-learning insertion TTL** so idle workers do not thrash on
+  stale edit windows.
+- **Wake recovery** for interrupted recording, sticky hold state, and event tap.
+- **Improved WindowServer diagnostics/recovery** for missing status panels.
+
+### Diagnostics
+
+Rotating logs stay under `~/.golos/logs/`. **Export Diagnostics…** builds a
+redacted zip on disk only — nothing leaves the Mac until the user exports and
+shares the file. Prefer Export Diagnostics before restart when the strip or
+visuals disappear.
+
+### Still true
+
+Green “✓ inserted” means insert events were **posted**, not that the target
+app verified delivery. Accessibility preflight still aborts insert without a
+false success when Accessibility is missing. No automatic updater.
+```
+
+The release notes must state: macOS 13+; Intel is cloud-only; Apple Silicon can
 optionally download local STT; beta DMGs are **unsigned and not notarized**
-and use right-click → Open; Accessibility insertion preflight; local rotating
-diagnostics + privacy-sanitized **Export Diagnostics…**. **Do not invent
-checksum values** — the track lead publishes verified SHA-256 hashes after
-both architecture builds are final.
+and use right-click → Open; permissions may need regranting after replacing an
+unsigned build; diagnostics remain local until the user exports/shares them.
+**Do not invent checksum values** — the track lead publishes verified SHA-256
+hashes after both architecture builds are final. Placeholders live in the draft
+block above (SHA-256 and size rows).
 
 ## 4. Website product page
 
@@ -114,7 +178,7 @@ then verify `/golos` on desktop/mobile and every download/source link live.
 ## 5. Apple Developer ID signing + notarization (founder-gated)
 
 **Do not run this section unless the founder explicitly owns signing.**
-Public v0.3.2 ships unsigned (right-click → Open). With a paid Apple Developer
+Public v0.3.3 ships unsigned (right-click → Open). With a paid Apple Developer
 account and founder approval:
 
 ```sh
@@ -124,13 +188,13 @@ codesign --deep --force --options runtime \
 codesign --verify --deep --strict --verbose=2 dist/golos.app
 
 # package + notarize each architecture build
-./make_dmg.sh 0.3.2-apple-silicon
+./make_dmg.sh 0.3.3-apple-silicon
 codesign --sign "Developer ID Application: Andrii Solovei (TEAMID)" \
-  dist/golos-0.3.2-apple-silicon.dmg
-xcrun notarytool submit dist/golos-0.3.2-apple-silicon.dmg \
+  dist/golos-0.3.3-apple-silicon.dmg
+xcrun notarytool submit dist/golos-0.3.3-apple-silicon.dmg \
   --apple-id "APPLE_ID_EMAIL" --team-id "TEAMID" --password "APP_SPECIFIC_PW" \
   --wait
-xcrun stapler staple dist/golos-0.3.2-apple-silicon.dmg
+xcrun stapler staple dist/golos-0.3.3-apple-silicon.dmg
 ```
 
 Verify a fresh machine: `spctl -a -t exec -vv dist/golos.app` → "accepted".

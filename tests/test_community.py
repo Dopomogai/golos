@@ -26,7 +26,7 @@ def test_contributing_exists_with_budai_front_matter_and_beta_facts():
     body = _text(CONTRIBUTING)
     assert body.lstrip().startswith("---")
     assert "@purpose:" in body
-    assert "v0.3.2" in body
+    assert "v0.3.3" in body
     assert "unsigned" in body.lower()
     assert "macOS 13" in body
     assert "Apple Silicon" in body
@@ -43,7 +43,7 @@ def test_security_exists_without_invented_email():
     body = _text(SECURITY)
     assert body.lstrip().startswith("---")
     assert "@purpose:" in body
-    assert "v0.3.2" in body
+    assert "v0.3.3" in body
     assert "private vulnerability" in body.lower()
     assert "github.com/Dopomogai/golos" in body
     # No fabricated security@ addresses in this file.
@@ -91,3 +91,4 @@ def test_pull_request_template_checklist():
     assert "unsigned" in body.lower()
     assert "notariz" in body.lower() or "sign" in body.lower()
     assert "personal" in body.lower() or "recording" in body.lower()
+    assert "v0.3.3" in body

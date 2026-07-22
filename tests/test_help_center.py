@@ -384,3 +384,34 @@ def test_docs_css_defines_table_wrap_overflow():
     css = DOCS_CSS.read_text(encoding="utf-8")
     assert ".table-wrap" in css
     assert "overflow" in css
+
+
+def test_help_center_applies_to_current_public_beta():
+    """Version badges and primary DMG CTAs track the current public beta."""
+    public = "v0.3.3"
+    stale_dmg = (
+        "releases/download/v0.3.2/golos-0.3.2-apple-silicon.dmg",
+        "releases/download/v0.3.2/golos-0.3.2-intel.dmg",
+    )
+    for path in HELP_ROUTES:
+        html = path.read_text(encoding="utf-8")
+        assert public in html, f"{path.relative_to(ROOT)} missing {public}"
+        for marker in stale_dmg:
+            assert marker not in html, (
+                f"{path.relative_to(ROOT)} still links stale asset {marker}"
+            )
+
+
+def test_help_documents_default_clipboard_restore_and_wake_recovery():
+    settings = (DOCS / "settings" / "index.html").read_text(encoding="utf-8")
+    troubleshooting = (DOCS / "troubleshooting" / "index.html").read_text(encoding="utf-8")
+    privacy = (DOCS / "privacy" / "index.html").read_text(encoding="utf-8")
+    assert "restore_clipboard" in settings
+    assert re.search(r"true</code>\s+by\s+default|true\s+by\s+default|default\s+.*on", settings, re.I)
+    assert re.search(r"changeCount|CAS", settings)
+    assert re.search(r"wake|long idle|15\+", troubleshooting, re.I)
+    assert "Export Diagnostics" in troubleshooting
+    assert re.search(r"restore_clipboard\s*=\s*true|restore clipboard", privacy, re.I)
+    # Must not reintroduce the inverted default claim.
+    assert "false by default (paste keeps the transcript)" not in settings
+    assert "restoring the previous clipboard is opt-in" not in troubleshooting

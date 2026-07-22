@@ -3,7 +3,7 @@
 # Packages whichever app bundle the caller built (architecture-neutral).
 #
 # Usage: ./make_dmg.sh [version]
-#   Default version: 0.3.2 → dist/golos-0.3.2.dmg
+#   Default version: 0.3.3 → dist/golos-0.3.3.dmg
 # Optional env (tests / custom layouts):
 #   GOLOS_APP       path to .app (default: dist/golos.app)
 #   GOLOS_DMG       output DMG path (default: dist/golos-${VERSION}.dmg)
@@ -14,7 +14,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-VERSION="${1:-0.3.2}"
+VERSION="${1:-0.3.3}"
 APP_SRC="${GOLOS_APP:-$ROOT/dist/golos.app}"
 DMG="${GOLOS_DMG:-$ROOT/dist/golos-${VERSION}.dmg}"
 WORK="${GOLOS_DMG_WORK:-$ROOT/dist/dmg-build}"

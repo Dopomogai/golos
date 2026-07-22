@@ -1,5 +1,5 @@
 ---
-@purpose: "Why golos exists, design principles, and status-aligned direction after the public v0.3.2 Mac beta."
+@purpose: "Why golos exists, design principles, and status-aligned direction after the public v0.3.3 Mac beta."
 @why: "Anchors product decisions so processing choices stay explicit, human-gated, and legible."
 @role: reference
 @stability: evolving
@@ -37,12 +37,15 @@ a prompt you can print.
 - **Small and legible.** One process, ~15 modules, no framework. If a
   feature can't be explained in the README, it doesn't ship.
 
-## Status (public v0.3.2 beta)
+## Status (public v0.3.3 beta)
 
 golos is a **public Mac beta**. Apple Silicon and Intel DMGs ship today;
 OpenRouter is the default path; optional local MLX is available on Apple
 Silicon after an explicit download. Onboarding, History/recovery, context
-separation, and human-approved learning are in the product.
+separation, and human-approved learning are in the product. v0.3.3 adds a
+stability/privacy patch: default clipboard restore after multi-line paste,
+wake and long-idle notch-strip recovery, bounded cloud STT retries, and
+local diagnostics export (still redacted and on-disk until the user shares).
 
 What is **not** true of this beta: Developer ID signing, notarization, or
 automatic updates. First launch still uses **right-click → Open**. Treat

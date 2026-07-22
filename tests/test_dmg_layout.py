@@ -316,4 +316,4 @@ def test_published_v031_assets_untouched_by_source_changes():
         assert path.stat().st_size > 1_000_000
     # Script default follows the current release while explicit old versions
     # remain supported by the positional argument.
-    assert 'VERSION="${1:-0.3.2}"' in _script()
+    assert 'VERSION="${1:-0.3.3}"' in _script()

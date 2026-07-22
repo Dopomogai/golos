@@ -231,9 +231,9 @@ keys, audio, transcript/prompt/context content.
 
 ```sh
 ./build_app.sh                      # Apple Silicon -> dist/golos.app
-./make_dmg.sh 0.3.2-apple-silicon
+./make_dmg.sh 0.3.3-apple-silicon
 ./build_intel_app.sh                # Intel cloud-only -> dist/golos.app
-./make_dmg.sh 0.3.2-intel
+./make_dmg.sh 0.3.3-intel
 ```
 
 **Install from the DMG**: open it, drag **golos** onto **Applications**,
@@ -278,7 +278,7 @@ Build notes: requires `setuptools<80`; `build_app.sh` temporarily hides
 
 ## Config reference (`~/.golos/config.toml`)
 
-Keys marked **config-only** have no Settings control in v0.3.2 (edit the file).
+Keys marked **config-only** have no Settings control in v0.3.3 (edit the file).
 UI coverage detail: [Help Center → Settings](https://golos.dopomogai.com/docs/settings/#config-only).
 
 | Key | Default | Meaning |
