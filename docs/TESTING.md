@@ -249,11 +249,14 @@ terminal venv. Permissions must be granted to **golos.app** itself.
 3. **Lock** — fn+Space (or configured toggle): locked recording continues
    after release; single fn press stops and processes.
 4. **Processing** — Visible processing state after release; no permanent hang.
-5. **Insert + Accessibility preflight** — Single-line types; multi-line pastes;
-   no wrong clipboard paste; success UI means events posted (not target-app
+5. **Insert + Accessibility preflight** — Single-line types; multi-line pastes
+   then async CAS restore (transcript should not remain on Cmd+V after ~1.5 s
+   unless you copied something else or disabled restore). No wrong clipboard
+   paste into the target; success UI means events posted (not target-app
    verified delivery). With Accessibility denied: no green success, History
    keeps the result, warning notice. Menu Test insertion posts
-   `✅ golos insertion test` into a slow app (default: clipboard keeps transcript).
+   `✅ golos insertion test`. Escape hatch: Settings uncheck restore, or
+   `method=type` for clipboard-free multi-line.
 6. **Rapid repeat** — Immediately press fn again during the green success
    flash: new recording starts; strip does not disappear permanently
    (visual-panel self-heal; do not claim every UI glitch is gone).

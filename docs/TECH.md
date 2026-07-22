@@ -35,7 +35,7 @@ keeps the shims + everything with UI or OS integration:
 | `onboarding.py` | 7-page branded wizard (welcome → permissions → hold key → OpenRouter/local → formatting → try it → done) |
 | `permissions.py` | Accessibility/Input Monitoring/Microphone preflight + deep links |
 | `diagnostics.py` | private rotating logs + explicit redacted support-zip export; no telemetry/transcript/context/audio content |
-| `insert.py` | Accessibility preflight; single-line synthetic keystrokes; multi-line clipboard + Cmd+V (pasteboard keeps transcript); True means events **posted**, not target-app delivery |
+| `insert.py` | Accessibility preflight; single-line type path; multi-line paste + async changeCount/CAS restore (non-text snapshot when possible); True means events **posted**, not target-app delivery |
 | `history.py` | JSONL append + durable recovery (ts, app, bundle, raw, final, context, audio, fast, schema_version/run_id/stage/status/error/attempts); load/normalize/copy_ready/retry helpers |
 | `config.py` | tomllib read, toml write (`update_config`), char-array healing, `~/.golos` migration |
 | `bench.py` | STT benchmark harness (`record` / `run`) |
@@ -176,15 +176,22 @@ consumed by the tap while configured) and rebinding is live via
    transcript, logged. STT languages are narrowed via `[stt] languages`
    (deepgram `multi`, whisper code/prompt-hint, mlx single-language).
 4. **Insert**: single-line text is typed as synthetic keystrokes
-   (CGEventKeyboardSetUnicodeString, ~40 chars/event — no pasteboard race).
-   Multi-line text: pasteboard set → 60 ms settle → synthetic Cmd+V → done;
-   the pasteboard keeps the transcript (restoring raced slow target apps
-   into pasting the OLD clipboard — Universal Clipboard stalls;
-   `restore_clipboard = true` restores after 1500 ms as an escape hatch).
-   Missing Accessibility aborts first, writes a recoverable insert failure to
-   History, and shows a permission warning. Otherwise success flashes after
-   events are posted (not app-confirmed delivery); the insertion is remembered
-   for learning.
+   (CGEventKeyboardSetUnicodeString, ~40 chars/event — no pasteboard).
+   Multi-line (auto → paste): snapshot pasteboard items → temporary
+   setString → record `changeCount` → 60 ms settle → Cmd+V → return.
+   After 1500 ms on a daemon thread (restore runs via `AppHelper.callAfter`
+   when available), restore the snapshot **only if** `changeCount` still
+   matches (CAS — never clobber a user copy). No long sleep on the main
+   insert path. `restore_clipboard = false` leaves the temporary write
+   (slow-target / Universal Clipboard escape hatch; the known old-content
+   race of *synchronous* restore-before-consume is avoided by async delay +
+   CAS, but extremely late pasteboard readers can still see restored prior
+   contents — use leave-clipboard or `method=type`). `method=type` types
+   newlines as Return (clipboard-free). Never log transcript/clipboard
+   contents. Missing Accessibility aborts first, writes a recoverable insert
+   failure to History, and shows a permission warning. Otherwise success
+   flashes after events are posted (not app-confirmed delivery); the
+   insertion is remembered for learning.
 5. **History / recovery**: append-only JSONL (`~/.golos/history.jsonl`) with
    the full context dict (`workspace_files` truncated to 50 lines). Schema
    v2 adds recovery fields while remaining backward compatible with legacy
@@ -326,7 +333,7 @@ code/config contract. **config-only** = no Settings control in v0.3.2.
 | `[context] focused_field_text` | `true` | full focused-input draft (≤4000) |
 | `[context] visible_text` | `true` | surrounding on-screen text only (≤4000) |
 | `[context] text_before_cursor` | `true` | pre-caret slice (≤500) |
-| `[insert] method` / `restore_clipboard` | `"auto"` / `false` | **config-only** type/paste override; clipboard restore escape hatch |
+| `[insert] method` / `restore_clipboard` | `"auto"` / `true` | method config-only; restore default true (Settings + config); false leaves transcript |
 | `[audio] device` / `keep_recordings` | `0` / `true` | **config-only** sounddevice index; wav archive |
 | `[app] onboarded` | — | set by the wizard |
 | `[paths] *` | `~/.golos/` | dictionary / corrections / history / suggestions / dismissed |

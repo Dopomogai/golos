@@ -21,7 +21,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-WINDOW_W, WINDOW_H = 620.0, 600.0
+WINDOW_W, WINDOW_H = 620.0, 680.0
 LATEST_RELEASE_URL = "https://github.com/Dopomogai/golos/releases/latest"
 
 # ObjC class names are process-global: define each exactly once.
@@ -932,6 +932,34 @@ def build_settings_window(app_controller):
                 NSMakeRect(INSET + 90, y - 4, INNER_W - 106, 24))
             v.addSubview_(self.key_field)
 
+            # --- Insertion (clipboard policy) ---
+            y = card_top - card_h - 20
+            v.addSubview_(make_section_label("INSERTION", INSET, y, w=200))
+            card_top = y - 4
+            card_h = 72
+            make_card(v, INSET - 4, card_top - card_h, INNER_W + 8, card_h)
+            y = card_top - 28
+
+            self.restore_clipboard_checkbox = NSButton.alloc().initWithFrame_(
+                NSMakeRect(INSET + 8, y, 520, 20))
+            self.restore_clipboard_checkbox.setButtonType_(3)
+            self.restore_clipboard_checkbox.setTitle_(
+                "Restore clipboard after multi-line paste (recommended)")
+            self.restore_clipboard_checkbox.setToolTip_(
+                "Multi-line dictation temporarily uses the pasteboard + Cmd+V. "
+                "When checked (default), golos restores the previous clipboard "
+                "asynchronously after a short delay, and only if you have not "
+                "copied something else in the meantime. Uncheck only if a slow "
+                "app pastes the wrong content — the transcript then stays on "
+                "the clipboard. Single-line text is typed without the pasteboard. "
+                "History → Copy always leaves text on the clipboard intentionally.")
+            v.addSubview_(self.restore_clipboard_checkbox)
+            y -= 20
+            v.addSubview_(make_hint(
+                "Default: clear temporary paste without blocking the UI. "
+                "Uncheck to leave transcript on the clipboard (compat).",
+                INSET + 28, y, w=500, h=24, size=10))
+
             # --- Bubble & hotkey ---
             y = card_top - card_h - 20
             v.addSubview_(make_section_label(
@@ -1107,6 +1135,8 @@ def build_settings_window(app_controller):
                 1 if cfg.get("formatting", {}).get("enabled", True) else 0)
             self.fast_checkbox.setState_(
                 1 if cfg.get("formatting", {}).get("fast_mode", False) else 0)
+            self.restore_clipboard_checkbox.setState_(
+                1 if cfg.get("insert", {}).get("restore_clipboard", True) else 0)
             self._update_local_model_button()
 
         def _load_stt_model_value(self):
@@ -1266,6 +1296,10 @@ def build_settings_window(app_controller):
                            "sensitivity": round(self.sens_slider.doubleValue(), 1),
                            "show_text": bool(self.bubble_text_checkbox.state())},
                 "hotkey": {"hold_key": self.holdkey_popup.titleOfSelectedItem()},
+                "insert": {
+                    "restore_clipboard": bool(
+                        self.restore_clipboard_checkbox.state()),
+                },
             }
             if backend == "openrouter":
                 updates["stt.openrouter"] = {"model": self.stt_model_combo.stringValue()}

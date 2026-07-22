@@ -156,14 +156,23 @@ See also [Help Center → Privacy](https://golos.dopomogai.com/docs/privacy/).
 ## Insertion
 
 - **Single-line text** is *typed* as synthetic keystrokes (40-char chunks) —
-  no pasteboard, no races.
-- **Multi-line text** is pasted via the clipboard + synthetic Cmd+V. The
-  pasteboard **keeps the transcript** afterwards (like mainstream dictation
-  apps): restoring the old clipboard raced slow apps into pasting that old
-  content. Escape hatch: `[insert] restore_clipboard = true` (restores after
-  1.5 s, with a warning logged).
+  no pasteboard, no races. Newlines become Return when `method = "type"`.
+- **Multi-line text** (auto) uses a temporary pasteboard write + synthetic
+  Cmd+V, then an **asynchronous restore** of the previous pasteboard
+  (including non-text types when snapshotable). Restore is
+  **changeCount/CAS-guarded**: if you copy anything after Golos posts the
+  paste, Golos skips restore and never overwrites your copy. The long delay
+  does **not** block the AppKit main thread.
+- **Default** `restore_clipboard = true` (Settings → General checkbox, and
+  config). Leaving the transcript on the global clipboard indefinitely is
+  treated as a privacy/UX bug.
+- **Escape hatch**: uncheck “Restore clipboard after multi-line paste” or set
+  `[insert] restore_clipboard = false` if a slow target / Universal Clipboard
+  stall pastes the *old* content after restore. Fully clipboard-free:
+  `[insert] method = "type"` (config-only).
 - `[insert] method = "auto" | "type" | "paste"` overrides the per-text choice
-  (**config-only** — not a Settings control).
+  (**config-only**). History → **Copy text** intentionally leaves text on the
+  pasteboard.
 - Missing Accessibility is preflighted before insertion; the completed result
   is saved as an insert failure in History instead of showing green success.
   Return value / green success = events **posted**, not destination-app
@@ -256,7 +265,8 @@ Build notes: requires `setuptools<80`; `build_app.sh` temporarily hides
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Old clipboard pasted instead of transcript | pasteboard restore raced the app | Fixed: clipboard now keeps the transcript (update) |
+| Old clipboard pasted instead of transcript | slow target read pasteboard after restore | Settings → uncheck restore clipboard, or `method = "type"` |
+| Dictated text still on Cmd+V later | restore disabled or skipped after your copy | Default restores async; History Copy is intentional |
 | Nothing inserted at all | Accessibility missing | Permissions submenu → grant, restart app |
 | fn+Space types a space | event tap inactive (no Input Monitoring) | Grant Input Monitoring; startup log shows the path |
 | Dictation works but animation disappears | visual lifecycle fault | Export Diagnostics before restarting; attach the redacted zip to the report |
@@ -302,7 +312,7 @@ UI coverage detail: [Help Center → Settings](https://golos.dopomogai.com/docs/
 | `[context] visible_text` | `true` | surrounding on-screen text only |
 | `[context] text_before_cursor` | `true` | pre-caret continuation slice |
 | `[insert] method` | `"auto"` | **config-only**; `auto` / `type` / `paste` |
-| `[insert] restore_clipboard` | `false` | **config-only**; true = restore old clipboard after 1.5 s |
+| `[insert] restore_clipboard` | `true` | **Settings → General** + config; async CAS restore after paste; false = leave transcript |
 | `[audio] device` | `0` | **config-only**; sounddevice input index |
 | `[audio] keep_recordings` | `true` | **config-only**; save wav per dictation |
 | `[app] onboarded` | — | set by the wizard |

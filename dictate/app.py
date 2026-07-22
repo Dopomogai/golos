@@ -706,7 +706,7 @@ class AppController:
                 ok = insert_text(
                     snap["final"],
                     method=ins_cfg.get("method", "auto"),
-                    restore_clipboard=ins_cfg.get("restore_clipboard", False),
+                    restore_clipboard=ins_cfg.get("restore_clipboard", True),
                 )
                 if ok:
                     import time as _time
@@ -1087,7 +1087,7 @@ class AppController:
                 inserted = bool(insert_text(
                     text,
                     method=ins_cfg.get("method", "auto"),
-                    restore_clipboard=ins_cfg.get("restore_clipboard", False),
+                    restore_clipboard=ins_cfg.get("restore_clipboard", True),
                 ))
                 if not inserted:
                     rec = append_failure(

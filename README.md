@@ -52,10 +52,14 @@ Product page source: [`site/`](site/) (direct architecture chooser at
    from `corrections.tsv` applied, spoken filenames turned into real ones using
    the app/window context. Skipped gracefully if no API key is configured.
 4. The final text is **posted for insertion** at the cursor of the frontmost
-   app: single-line text is *typed* as synthetic keystrokes; multi-line text
-   goes via the clipboard + synthetic Cmd+V — and the clipboard then simply
-   keeps the transcript (restoring the old clipboard raced slow apps into
-   pasting the OLD content; `[insert] restore_clipboard = true` opts back in).
+   app: single-line text is *typed* as synthetic keystrokes (no pasteboard);
+   multi-line text goes via a temporary clipboard write + synthetic Cmd+V,
+   then an **async changeCount/CAS-guarded restore** of the prior pasteboard
+   so the transcript does not stay on the global clipboard. A user copy made
+   after Golos posts the paste is never overwritten. Escape hatch:
+   Settings → General → uncheck “Restore clipboard…”, or
+   `[insert] restore_clipboard = false` (leaves the transcript for stubborn
+   slow targets). Full clipboard-free path: `[insert] method = "type"`.
    Missing Accessibility now stops before posting and preserves the result as
    an insert failure in History. Green "✓ inserted" means the permission
    preflight passed and events were posted—not that the target app verified
@@ -472,10 +476,11 @@ has a hard 1.5 s timeout — a stuck app can't stall dictation.
   `fast_mode_max_words` is config-only (default 10).
 - `[bubble]` — `style = "notch" | "corner"`, waveform `sensitivity`, and
   `show_text = true | false` (status words or animation-only).
-- `[insert]` — `method` and `restore_clipboard` are **config-only**.
-  `method = "auto" | "type" | "paste"` (auto types single-line, pastes
-  multi-line). The pasteboard keeps the transcript afterwards;
-  `restore_clipboard = true` opts back into restoring it after 1.5 s.
+- `[insert]` — `method` is **config-only** (`auto` | `type` | `paste`; auto
+  types single-line, pastes multi-line). `restore_clipboard` defaults **true**
+  (async CAS restore after paste) and is also on **Settings → General**.
+  Set `false` only for target-app compatibility (transcript stays on the
+  pasteboard). History → Copy remains an intentional pasteboard write.
 - `[audio]` — `device` and `keep_recordings` are **config-only**
   (`device = 0` = default input; `keep_recordings = true` archives WAVs under
   `~/.golos/recordings/`).
@@ -510,7 +515,7 @@ dictate/          python package
   recorder.py     16 kHz mono capture (sounddevice) + RMS level callback
   stt.py          mlx / openrouter / openai_compatible / deepgram backends
   formatter.py    LLM second pass (OpenRouter or OpenAI-compatible)
-  insert.py       clipboard + synthetic Cmd+V
+  insert.py       type path + paste with async CAS clipboard restore
   context.py      frontmost app + window title + cursor/visible text (AX)
   config.py       config load + persistence (tomllib read, toml write), ~/.dictate migration
   dictionary.py   dictionary/corrections loading
@@ -529,9 +534,10 @@ worker threads. `recorder.start()` is the single tolerated fast-path
 exception on main; `recorder.stop()`/`abort()` on the main thread once
 deadlocked CoreAudio and must never happen again (guarded, idempotent).
 
-- The paste path does not restore the clipboard by default — the transcript
-  stays on the pasteboard (restoring raced slow apps into pasting the OLD
-  clipboard; opt back in with `[insert] restore_clipboard = true`).
+- The paste path restores the prior pasteboard by default (async, only if
+  `changeCount` still matches Golos’s temporary write). Opt out with
+  Settings or `[insert] restore_clipboard = false` if a slow app pastes the
+  wrong content; use `method = "type"` for a fully clipboard-free path.
 - Saving config from Settings drops comments in `config.toml`.
 - Bubble style changes need an app restart.
 - Global monitors are observe-only; they don't swallow the fn key for other apps.

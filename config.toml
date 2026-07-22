@@ -46,6 +46,10 @@ enabled = true
 
 [insert]
 method = "auto"           # auto | type | paste (auto: type for single-line, paste for multi-line)
+# After multi-line paste: async changeCount/CAS restore of prior pasteboard
+# (default true — do not leave the transcript on the global clipboard).
+# false = leave transcript (slow-target / Universal Clipboard escape hatch).
+restore_clipboard = true
 
 [audio]
 device = 0                 # 0 = default input
