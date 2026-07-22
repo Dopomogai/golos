@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 from dictate.bubble import (
     MAX_STRIP_RECOVERIES,
+    STALE_STRIP_IDLE_SECONDS,
     Bubble,
     edge_falloff,
     shimmer_amplitude,
@@ -378,6 +379,41 @@ def test_missing_onscreen_key_is_indeterminate_not_hidden():
         "probe": "ok", "listed": True, "onscreen": None,
         "onscreen_source": None, "occlusion_visible": None,
     }) is None
+
+
+def test_first_recording_after_long_idle_rebuilds_strip(monkeypatch):
+    bubble = _bubble()
+    bubble._state = "idle"
+    bubble._idle_since = 100.0
+    discarded = []
+    shown = []
+    bubble._discard_wings = lambda: discarded.append(True)
+    bubble._show_wings_mode = lambda mode: shown.append(mode)
+    bubble._enforce_visibility = lambda: None
+    monkeypatch.setattr(
+        "dictate.bubble.time.monotonic",
+        lambda: 100.0 + STALE_STRIP_IDLE_SECONDS + 1.0,
+    )
+
+    bubble.set_state("recording")
+
+    assert discarded == [True]
+    assert shown == ["recording"]
+    assert bubble._last_recover_action["reason"] == "long_idle_rebuild"
+
+
+def test_short_idle_reuses_existing_strip(monkeypatch):
+    bubble = _bubble()
+    bubble._state = "idle"
+    bubble._idle_since = 100.0
+    discarded = []
+    bubble._discard_wings = lambda: discarded.append(True)
+    bubble._enforce_visibility = lambda: None
+    monkeypatch.setattr("dictate.bubble.time.monotonic", lambda: 101.0)
+
+    bubble.set_state("recording")
+
+    assert discarded == []
 
 
 def test_ws_verify_does_not_recreate_ephemeral_notice_as_recording():

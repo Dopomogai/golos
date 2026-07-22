@@ -154,6 +154,10 @@ LEVEL_EMA = 0.5              # smoothing: new = 0.5*old + 0.5*incoming
 # Delays give WindowServer time to composite; backoff avoids recreate storms.
 WS_VERIFY_DELAYS = (0.08, 0.20, 0.45)
 MAX_STRIP_RECOVERIES = 2     # max recreates per presentation token
+# WindowServer can keep reporting a status-level panel as onscreen even when
+# its surface is no longer visible after a long idle. Recreate the cheap,
+# transient strip before the first recording after this interval.
+STALE_STRIP_IDLE_SECONDS = 15 * 60
 
 # state -> (label, dot RGB, pulsing?)
 STATES = {
@@ -745,6 +749,7 @@ class Bubble:
         self._last_level_draw = 0.0
         self.wings = None            # NSPanel, created lazily on first recording
         self._state = "idle"
+        self._idle_since = time.monotonic()
         self._notice_gen = 0
         self._vis_gen = 0
         self._notice_surface = "pill"
@@ -1450,12 +1455,30 @@ class Bubble:
         """
         if state not in STATES:
             return
+        now = time.monotonic()
+        previous_state = self._state
+        if state in RECORDING_STATES and previous_state == "idle":
+            idle_for = max(0.0, now - getattr(self, "_idle_since", now))
+            if idle_for >= STALE_STRIP_IDLE_SECONDS and self.wings is not None:
+                old_window = int(self.wings.windowNumber())
+                self._discard_wings()
+                self._last_recover_action = {
+                    "reason": "long_idle_rebuild",
+                    "old_window": old_window,
+                    "idle_seconds": round(idle_for, 1),
+                }
+                self._recover_total += 1
+                log.info(
+                    "Bubble discarded after long idle: seconds=%.1f old_window=%s",
+                    idle_for, old_window)
         # This is a *state* generation, not a repaint/visibility generation.
         # Collapse captures it below; only a newer state may stale that callback.
         self._vis_gen += 1
         # Any real state change dismisses a pending notice/suggestion instantly.
         self._notice_gen += 1
         self._state = state
+        if state == "idle":
+            self._idle_since = now
         wings_up = self.wings is not None and self.wings.isVisible()
         if state in RECORDING_STATES:
             self._levels.clear()
