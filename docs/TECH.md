@@ -142,6 +142,16 @@ consumed by the tap while configured) and rebinding is live via
   (`cos^0.9` envelope × time ebb over ~1.2 s); notices/cues = faint bars +
   text (the cue uses the clickable pill instead). On stop, bars collapse
   outside-in over 0.2 s before the strip returns in blue. Idle = hidden.
+- **Long-session presentation recovery**: AppKit `isVisible` + alpha + frame
+  intersection is necessary but not sufficient after display sleep / long
+  idle. After every non-idle `orderFront`, a generation-token-guarded delayed
+  WindowServer/occlusion probe (`CGWindowList` + `NSWindow.occlusionState`)
+  confirms compositing. Explicit failure recreates the strip with bounded
+  backoff (max 2 recreates per presentation token; delays 80/200/450 ms).
+  Screen-parameter changes, workspace wake, and active-space changes call
+  `Bubble.handle_display_lifecycle`: idle discards a stale strip (no polling);
+  non-idle rebuilds once and re-enforces. Diagnostics snapshots include
+  `present_token`, `recover_*`, and content-free `ws` / `ws_presented` fields.
 - **Pill**: 150×24 inside the 32 pt menu row, centered under the notch —
   corner style's whole UI, and the notch style's interactive surface for
   edit cues (`wrong → right ✓?`, click to accept). Its style mask includes

@@ -1388,6 +1388,59 @@ def run_app(cfg):
             "NSWorkspaceDidActivateApplicationNotification", None)
     controller._app_switch_observer = observer  # keep alive
 
+    # Display sleep/wake, screen reconfiguration, and Spaces can leave the
+    # status strip AppKit-visible while WindowServer stops compositing it.
+    # Bubble.handle_display_lifecycle rebuilds/re-verifies on the main thread
+    # without permanent idle polling.
+    global _DisplayLifecycleObserver
+    try:
+        _DisplayLifecycleObserver
+    except NameError:
+        class _DisplayLifecycleObserver(NSObject):
+            def initWithCallback_(self, cb):
+                self = objc.super(_DisplayLifecycleObserver, self).init()
+                if self is None:
+                    return None
+                self._cb = cb
+                return self
+
+            def displayLifecycle_(self, note):
+                try:
+                    name = str(note.name()) if note is not None else "unknown"
+                except Exception:
+                    name = "unknown"
+                try:
+                    self._cb(name)
+                except Exception as exc:
+                    log.info("display lifecycle handler failed: %s", exc)
+
+    def _on_display_lifecycle(reason: str):
+        handler = getattr(bubble, "handle_display_lifecycle", None)
+        if callable(handler):
+            handler(reason)
+
+    display_observer = _DisplayLifecycleObserver.alloc().initWithCallback_(
+        _on_display_lifecycle)
+    ws_center = NSWorkspace.sharedWorkspace().notificationCenter()
+    for notif in (
+        "NSWorkspaceDidWakeNotification",
+        "NSWorkspaceScreensDidWakeNotification",
+        "NSWorkspaceActiveSpaceDidChangeNotification",
+    ):
+        try:
+            ws_center.addObserver_selector_name_object_(
+                display_observer, "displayLifecycle:", notif, None)
+        except Exception as exc:
+            log.info("Could not observe %s: %s", notif, exc)
+    try:
+        from Foundation import NSNotificationCenter
+        NSNotificationCenter.defaultCenter().addObserver_selector_name_object_(
+            display_observer, "displayLifecycle:",
+            "NSApplicationDidChangeScreenParametersNotification", None)
+    except Exception as exc:
+        log.info("Could not observe screen parameters: %s", exc)
+    controller._display_lifecycle_observer = display_observer  # keep alive
+
     # An accessory app's windows stay off-screen until the app has been
     # activated once (Window Server quirk). Activate briefly at launch, then
     # return focus to the app the user was in.

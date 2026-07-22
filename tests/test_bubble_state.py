@@ -5,12 +5,14 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from dictate.bubble import (
+    MAX_STRIP_RECOVERIES,
     Bubble,
     edge_falloff,
     shimmer_amplitude,
     success_decay,
     success_envelope,
     suggestion_inward,
+    window_server_presented,
 )
 
 
@@ -109,11 +111,26 @@ def _bubble():
     bubble._collapse = 0.0
     bubble._show_text = True
     bubble._last_enforce_ok = True
+    bubble._present_token = 0
+    bubble._recover_attempts = 0
+    bubble._last_ws_status = None
+    bubble._last_recover_action = None
+    bubble._recover_total = 0
     bubble.is_notch = False  # avoid real screen geometry in headless model
     bubble.style = "corner"  # fake geometry exercises strip without AppKit probes
     bubble._NSStatusWindowLevel = 25
     bubble._collection_behavior = 0
     bubble._schedule_collapse_backup = lambda gen: None
+    # Headless: do not touch real AppHelper / Quartz.
+    bubble._schedule_presentation_verify = lambda *a, **k: None
+    bubble._window_server_status = lambda panel: {
+        "window": getattr(panel, "_window", None),
+        "listed": True,
+        "onscreen": True,
+        "occlusion_visible": True,
+        "layer": 25,
+        "probe": "ok",
+    }
     bubble._levels = []
     bubble._ema = 0.0
     bubble.panel = _Panel()
@@ -150,7 +167,7 @@ def test_failed_strip_show_recreates_panel():
     bubble.wings.orderFrontRegardless = lambda: None  # AppKit ignored show
     recreated = []
 
-    def recreate():
+    def recreate(**_kwargs):
         recreated.append(True)
         bubble.wings = _Panel()
 
@@ -278,26 +295,22 @@ def test_suggestion_anim_cannot_replace_newer_recording(monkeypatch):
     bubble._enforce_visibility = lambda: None
     scheduled = []
 
-    class _AH:
-        @staticmethod
-        def callLater(delay, fn, *args):
-            scheduled.append((delay, fn, args))
-
-    monkeypatch.setattr("PyObjCTools.AppHelper", _AH, raising=False)
-    import dictate.bubble as bubble_mod
-    monkeypatch.setattr(bubble_mod, "prefers_reduced_motion", lambda: False)
-
-    # Avoid real AppHelper import path inside suggestion_ready
     import sys
+    import types
+
     class FakeAppHelper:
         @staticmethod
         def callLater(delay, fn, *args):
             scheduled.append((delay, fn, args))
 
-    # suggestion_ready does `from PyObjCTools import AppHelper`
-    fake_pyobjc = type(sys)("PyObjCTools")
+    # suggestion_ready does `from PyObjCTools import AppHelper` — stub the
+    # package so headless environments without pyobjc still run this guard.
+    fake_pyobjc = types.ModuleType("PyObjCTools")
     fake_pyobjc.AppHelper = FakeAppHelper
     monkeypatch.setitem(sys.modules, "PyObjCTools", fake_pyobjc)
+
+    import dictate.bubble as bubble_mod
+    monkeypatch.setattr(bubble_mod, "prefers_reduced_motion", lambda: False)
 
     bubble.wings_view.setMode_ = lambda mode: bubble.wings_view.modes.append(mode)
     bubble.suggestion_ready("teh", "the", 8, lambda w, r: None)
@@ -325,3 +338,185 @@ def test_suggestion_ready_reduced_motion_goes_to_cue(monkeypatch):
     monkeypatch.setattr(bubble_mod, "prefers_reduced_motion", lambda: True)
     bubble.suggestion_ready("teh", "the", 8, lambda w, r: None)
     assert cued == [("teh", "the")]
+
+
+# -- WindowServer presentation recovery (long idle / display sleep) ----------
+
+
+def test_window_server_presented_interprets_probe():
+    assert window_server_presented({"probe": "unavailable"}) is None
+    assert window_server_presented({
+        "probe": "ok", "listed": True, "onscreen": True,
+        "occlusion_visible": False,
+    }) is True
+    assert window_server_presented({
+        "probe": "ok", "listed": True, "onscreen": False,
+        "occlusion_visible": None,
+    }) is False
+    # Idle-style listing: key absent → treated as not composited.
+    assert window_server_presented({
+        "probe": "ok", "listed": True, "onscreen": None,
+        "occlusion_visible": None,
+    }) is False
+    assert window_server_presented({
+        "probe": "ok", "listed": False, "onscreen": None,
+        "occlusion_visible": None,
+    }) is False
+    assert window_server_presented({
+        "probe": "ok", "listed": True, "onscreen": False,
+        "occlusion_visible": True,  # AppKit occlusion wins
+    }) is True
+
+
+def test_enforce_schedules_presentation_verify_non_idle():
+    bubble = _bubble()
+    scheduled = []
+    bubble._schedule_presentation_verify = (
+        lambda token, phase=0: scheduled.append((token, phase)))
+    bubble._state = "recording"
+    bubble._enforce_visibility()
+    assert scheduled
+    token, phase = scheduled[0]
+    assert token == bubble._present_token
+    assert phase == 0
+    assert bubble._present_token >= 1
+
+
+def test_idle_enforce_does_not_schedule_ws_poll():
+    bubble = _bubble()
+    scheduled = []
+    bubble._schedule_presentation_verify = (
+        lambda token, phase=0: scheduled.append((token, phase)))
+    bubble.wings.visible = True
+    bubble._state = "recording"
+    bubble.set_state("idle")
+    # Idle may bump present_token to invalidate callbacks, but must not arm
+    # a verify schedule for a hidden surface.
+    assert scheduled == []
+    assert bubble.wings.visible is False
+
+
+def test_stale_presentation_verify_ignored_after_newer_state():
+    bubble = _bubble()
+    bubble._state = "recording"
+    bubble._present_token = 3
+    recreated = []
+    bubble._recreate_failed_wings = lambda **k: recreated.append(k)
+    bubble._window_server_status = lambda panel: {
+        "window": 1, "listed": True, "onscreen": False,
+        "occlusion_visible": False, "layer": 25, "probe": "ok",
+    }
+    # Stale token from a previous show episode.
+    bubble._verify_presentation(token=2, phase=0)
+    assert recreated == []
+
+
+def test_ws_verify_failure_recreates_strip_with_backoff():
+    bubble = _bubble()
+    bubble._state = "recording"
+    bubble._present_token = 5
+    bubble._recover_attempts = 0
+    recreated = []
+    scheduled = []
+
+    def recreate(**kwargs):
+        recreated.append(kwargs)
+        bubble.wings = _Panel()
+
+    bubble._recreate_failed_wings = recreate
+    bubble._schedule_presentation_verify = (
+        lambda token, phase=0: scheduled.append((token, phase)))
+    bubble._window_server_status = lambda panel: {
+        "window": 1, "listed": True, "onscreen": False,
+        "occlusion_visible": False, "layer": 25, "probe": "ok",
+    }
+    bubble._verify_presentation(token=5, phase=0)
+    assert len(recreated) == 1
+    assert recreated[0].get("reason") == "window_server"
+    assert bubble._recover_attempts == 1
+    assert scheduled == [(5, 1)]
+
+
+def test_ws_recover_exhausted_no_infinite_loop():
+    bubble = _bubble()
+    bubble._state = "locked"
+    bubble._present_token = 9
+    bubble._recover_attempts = MAX_STRIP_RECOVERIES
+    recreated = []
+    scheduled = []
+    bubble._recreate_failed_wings = lambda **k: recreated.append(k)
+    bubble._schedule_presentation_verify = (
+        lambda token, phase=0: scheduled.append((token, phase)))
+    bubble._window_server_status = lambda panel: {
+        "window": 1, "listed": True, "onscreen": False,
+        "occlusion_visible": None, "layer": 25, "probe": "ok",
+    }
+    bubble._verify_presentation(token=9, phase=0)
+    assert recreated == []
+    assert scheduled == []
+    assert bubble._last_enforce_ok is False
+    assert bubble._last_recover_action["reason"] == "ws_exhausted"
+
+
+def test_ws_probe_unavailable_fail_open_no_recreate():
+    bubble = _bubble()
+    bubble._state = "recording"
+    bubble._present_token = 1
+    recreated = []
+    bubble._recreate_failed_wings = lambda **k: recreated.append(k)
+    bubble._window_server_status = lambda panel: {
+        "window": 1, "listed": None, "onscreen": None,
+        "occlusion_visible": None, "layer": None, "probe": "unavailable",
+    }
+    bubble._verify_presentation(token=1, phase=0)
+    assert recreated == []
+    assert bubble._last_enforce_ok is True
+
+
+def test_idle_display_lifecycle_discards_wings_without_poll():
+    bubble = _bubble()
+    bubble._state = "idle"
+    discarded = []
+    scheduled = []
+    bubble._discard_wings = lambda: discarded.append(True)
+    bubble._schedule_presentation_verify = (
+        lambda *a, **k: scheduled.append(a))
+    bubble.handle_display_lifecycle("NSWorkspaceDidWakeNotification")
+    assert discarded == [True]
+    assert scheduled == []
+
+
+def test_non_idle_display_lifecycle_rebuilds_and_enforces():
+    bubble = _bubble()
+    bubble._state = "recording"
+    events = []
+    bubble._discard_wings = lambda: events.append("discard")
+    bubble._ensure_wings = lambda: events.append("ensure")
+    bubble._restore_wings_mode = lambda: events.append("restore")
+    bubble._enforce_visibility = lambda: events.append("enforce")
+    bubble.handle_display_lifecycle("NSApplicationDidChangeScreenParametersNotification")
+    assert events == ["discard", "ensure", "restore", "enforce"]
+    assert bubble._last_recover_action["reason"].startswith("lifecycle_rebuild")
+
+
+def test_diagnostic_snapshot_includes_recovery_fields(monkeypatch):
+    bubble = _bubble()
+    bubble._state = "recording"
+    bubble._present_token = 4
+    bubble._recover_attempts = 1
+    bubble._recover_total = 2
+    bubble._last_recover_action = {"reason": "window_server"}
+    bubble._last_ws_status = {
+        "window": bubble.wings._window, "listed": True, "onscreen": False,
+        "occlusion_visible": False, "probe": "ok",
+    }
+    bubble._panel_on_screen = lambda panel: True
+    import dictate.bubble as bubble_mod
+    monkeypatch.setattr(bubble_mod, "notch_geometry", lambda screen=None: bubble._geometry)
+    snap = bubble.diagnostic_snapshot()
+    assert snap["present_token"] == 4
+    assert snap["recover_attempts"] == 1
+    assert snap["recover_total"] == 2
+    assert snap["last_recover"]["reason"] == "window_server"
+    assert snap["wings"]["ws"]["probe"] == "ok"
+    assert snap["wings"]["ws_presented"] is False

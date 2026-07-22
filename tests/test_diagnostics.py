@@ -7,6 +7,7 @@ from dictate.diagnostics import (
     _sanitized_log,
     configure_logging,
     create_support_bundle,
+    visual_health_summary,
 )
 
 
@@ -99,3 +100,29 @@ def test_configure_logging_rotates_to_private_file(tmp_path):
             handler.close()
         root.handlers[:] = old_handlers
         root.setLevel(old_level)
+
+
+def test_visual_health_summary_is_content_free():
+    snap = {
+        "state": "recording",
+        "enforce_ok": True,
+        "present_token": 3,
+        "recover_attempts": 1,
+        "recover_total": 2,
+        "last_recover": {"reason": "window_server", "old_window": 1},
+        "wings": {
+            "window": 34420,
+            "visible": True,
+            "ws": {"probe": "ok", "onscreen": False, "listed": True},
+            "ws_presented": False,
+        },
+        "pill": {"window": 34417, "visible": False},
+    }
+    summary = visual_health_summary(snap)
+    assert summary["available"] is True
+    assert summary["state"] == "recording"
+    assert summary["wings_window"] == 34420
+    assert summary["wings_ws_presented"] is False
+    assert summary["recover_total"] == 2
+    assert visual_health_summary(None) == {"available": False}
+    assert visual_health_summary("bad") == {"available": False}

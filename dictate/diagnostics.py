@@ -274,3 +274,33 @@ def create_support_bundle(destination: Path, *, data_dir: Path = DATA_DIR,
 
 def default_bundle_name() -> str:
     return f"golos-diagnostics-{datetime.now().strftime('%Y%m%d-%H%M%S')}.zip"
+
+
+def visual_health_summary(snapshot: dict | None) -> dict:
+    """Content-free strip/pill health fields for logs and support triage.
+
+    Expects a ``Bubble.diagnostic_snapshot()`` dict (or similar). Never includes
+    spoken text, paths, or window titles — only visibility / WindowServer /
+    recovery counters already present on the snapshot.
+    """
+    if not isinstance(snapshot, dict):
+        return {"available": False}
+    wings = snapshot.get("wings") if isinstance(snapshot.get("wings"), dict) else {}
+    pill = snapshot.get("pill") if isinstance(snapshot.get("pill"), dict) else {}
+    return {
+        "available": True,
+        "state": snapshot.get("state"),
+        "enforce_ok": snapshot.get("enforce_ok"),
+        "present_token": snapshot.get("present_token"),
+        "recover_attempts": snapshot.get("recover_attempts"),
+        "recover_total": snapshot.get("recover_total"),
+        "last_recover": snapshot.get("last_recover"),
+        "wings_window": wings.get("window"),
+        "wings_visible": wings.get("visible"),
+        "wings_ws": wings.get("ws"),
+        "wings_ws_presented": wings.get("ws_presented"),
+        "pill_window": pill.get("window"),
+        "pill_visible": pill.get("visible"),
+        "pill_ws": pill.get("ws"),
+        "pill_ws_presented": pill.get("ws_presented"),
+    }

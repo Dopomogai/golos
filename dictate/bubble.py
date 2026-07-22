@@ -108,6 +108,34 @@ def prefers_reduced_motion() -> bool:
         return False
 
 
+def window_server_presented(status: dict) -> bool | None:
+    """Interpret a content-free WindowServer/occlusion probe.
+
+    Returns:
+      True  — WindowServer reports the panel as composited/visible
+      False — listed but not onscreen / fully occluded (stale presentation)
+      None  — probe unavailable or indeterminate (callers must fail-open)
+    """
+    if not isinstance(status, dict):
+        return None
+    probe = status.get("probe")
+    if probe != "ok":
+        return None
+    if status.get("onscreen") is True:
+        return True
+    if status.get("occlusion_visible") is True:
+        return True
+    if status.get("listed") is False:
+        return False
+    # Listed without onscreen (key absent or false) after an orderFront is the
+    # long-idle failure mode: AppKit still claims visible, WindowServer does not.
+    if status.get("onscreen") is False or status.get("onscreen") is None:
+        return False
+    if status.get("occlusion_visible") is False:
+        return False
+    return None
+
+
 def circle_rect_values(i: int, side: int, notch_w: float, mid_y: float):
     """Geometry of one silence dot (identical for every bar: same y, w, h)."""
     if side == 0:
@@ -119,6 +147,11 @@ COLLAPSE_SECONDS = 0.2
 LEVEL_COUNT = 52             # rolling RMS buffer (feeds both wings)
 LEVEL_MIN_INTERVAL = 1/30    # redraw throttle (~30 fps)
 LEVEL_EMA = 0.5              # smoothing: new = 0.5*old + 0.5*incoming
+
+# Post-orderFront WindowServer presentation check (generation-guarded).
+# Delays give WindowServer time to composite; backoff avoids recreate storms.
+WS_VERIFY_DELAYS = (0.08, 0.20, 0.45)
+MAX_STRIP_RECOVERIES = 2     # max recreates per presentation token
 
 # state -> (label, dot RGB, pulsing?)
 STATES = {
@@ -717,6 +750,14 @@ class Bubble:
         self._sensitivity = 1.0
         self._show_text = True
         self._last_enforce_ok = True
+        # Presentation recovery: delayed WindowServer check after orderFront.
+        # Token invalidates stale callLater callbacks; attempts are bounded
+        # per token so a broken probe cannot recreate forever.
+        self._present_token = 0
+        self._recover_attempts = 0
+        self._last_ws_status = None
+        self._last_recover_action = None
+        self._recover_total = 0
 
         # NonactivatingPanel: the cue pill is clickable WITHOUT stealing focus.
         self._pill_style_mask = (NSWindowStyleMaskBorderless
@@ -878,6 +919,123 @@ class Bubble:
         except Exception:
             return False
 
+    @staticmethod
+    def _window_server_status(panel) -> dict:
+        """Content-free WindowServer / occlusion probe for one NSPanel.
+
+        Never raises. ``probe`` is ``ok`` only when Quartz answered; other
+        values mean callers must fail-open (no recreate loop on missing API).
+        """
+        out = {
+            "window": None,
+            "listed": None,
+            "onscreen": None,
+            "occlusion_visible": None,
+            "layer": None,
+            "probe": "unavailable",
+        }
+        if panel is None:
+            out["probe"] = "no_panel"
+            return out
+        try:
+            win = int(panel.windowNumber())
+            out["window"] = win
+        except Exception as exc:
+            out["probe"] = f"window_error:{type(exc).__name__}"
+            return out
+        if win <= 0:
+            out["probe"] = "no_window_number"
+            return out
+        try:
+            from AppKit import NSWindowOcclusionStateVisible
+            occ = int(panel.occlusionState())
+            out["occlusion_visible"] = bool(occ & int(NSWindowOcclusionStateVisible))
+        except Exception:
+            pass
+        try:
+            from Quartz import (
+                CGWindowListCopyWindowInfo,
+                kCGWindowListOptionIncludingWindow,
+                kCGNullWindowID,
+            )
+            info = CGWindowListCopyWindowInfo(
+                kCGWindowListOptionIncludingWindow, win)
+            if not info:
+                # Some SDKs want kCGNullWindowID as the second arg with options
+                # that include the window; retry the all-windows path filtered.
+                info = CGWindowListCopyWindowInfo(0, kCGNullWindowID) or []
+                rec = None
+                for item in info:
+                    try:
+                        if int(item.get("kCGWindowNumber", 0)) == win:
+                            rec = item
+                            break
+                    except Exception:
+                        continue
+                if rec is None:
+                    out["listed"] = False
+                    out["probe"] = "ok"
+                    return out
+            else:
+                rec = None
+                for item in info:
+                    try:
+                        if int(item.get("kCGWindowNumber", 0)) == win:
+                            rec = item
+                            break
+                    except Exception:
+                        continue
+                if rec is None and len(info) >= 1:
+                    rec = info[0]
+                if rec is None:
+                    out["listed"] = False
+                    out["probe"] = "ok"
+                    return out
+            out["listed"] = True
+            if "kCGWindowIsOnscreen" in rec:
+                out["onscreen"] = bool(rec["kCGWindowIsOnscreen"])
+            else:
+                # Key absent while the window is listed ⇒ not composited
+                # (same signal as idle orderOut panels).
+                out["onscreen"] = False
+            if "kCGWindowLayer" in rec:
+                try:
+                    out["layer"] = int(rec["kCGWindowLayer"])
+                except Exception:
+                    pass
+            out["probe"] = "ok"
+        except Exception as exc:
+            out["probe"] = f"cg_error:{type(exc).__name__}"
+        return out
+
+    @classmethod
+    def _panel_presented(cls, panel, status: dict | None = None) -> bool:
+        """True when WindowServer appears to composite the panel.
+
+        Fail-open when the probe is unavailable so headless/tests and
+        restricted environments do not thrash recreates.
+        """
+        st = status if status is not None else cls._window_server_status(panel)
+        presented = window_server_presented(st)
+        if presented is None:
+            return True
+        return bool(presented)
+
+    def _strip_should_show(self) -> bool:
+        if self._geometry is None:
+            return False
+        if self._state in RECORDING_STATES + ("processing", "success"):
+            return True
+        if self._state in ("notice", "suggestion") and self._notice_surface == "wings":
+            return True
+        return False
+
+    def _pill_should_show(self) -> bool:
+        if self._geometry is None:
+            return self._state != "idle"
+        return ((self._state == "notice" and self._notice_surface == "pill")
+                or (self._state == "suggestion" and self._notice_surface == "pill"))
+
     def _restore_wings_mode(self) -> None:
         """Restore a newly created strip from the current semantic state."""
         if self._state in RECORDING_STATES:
@@ -886,8 +1044,12 @@ class Bubble:
             self._show_wings_mode("processing")
         elif self._state == "success":
             self._show_wings_mode("success")
+        elif self._state in ("notice", "suggestion") and self.wings_view is not None:
+            # Notices set their own drawing; ensure a mode exists for timers.
+            if getattr(self.wings_view, "_mode", None) in (None, ""):
+                self.wings_view.setMode_("recording")
 
-    def _recreate_failed_wings(self) -> None:
+    def _recreate_failed_wings(self, *, reason: str = "appkit") -> None:
         old_window = int(self.wings.windowNumber()) if self.wings is not None else None
         self._discard_wings()
         self._ensure_wings()
@@ -895,9 +1057,151 @@ class Bubble:
         self.wings.orderFrontRegardless()
         self.wings.setAlphaValue_(1.0)
         self.wings.displayIfNeeded()
-        log.warning("Bubble strip recreated: old_window=%s new_window=%s state=%s ok=%s",
-                    old_window, int(self.wings.windowNumber()), self._state,
-                    self._panel_ok(self.wings))
+        self._last_recover_action = {
+            "reason": reason,
+            "old_window": old_window,
+            "new_window": int(self.wings.windowNumber()) if self.wings else None,
+            "state": self._state,
+            "token": self._present_token,
+            "attempt": self._recover_attempts,
+        }
+        self._recover_total += 1
+        log.warning(
+            "Bubble strip recreated: reason=%s old_window=%s new_window=%s "
+            "state=%s attempt=%s ok=%s",
+            reason, old_window,
+            int(self.wings.windowNumber()) if self.wings else None,
+            self._state, self._recover_attempts, self._panel_ok(self.wings))
+
+    def _schedule_presentation_verify(self, token: int, phase: int = 0) -> None:
+        """Generation-guarded delayed WS check. No permanent idle polling."""
+        if phase >= len(WS_VERIFY_DELAYS):
+            return
+        delay = WS_VERIFY_DELAYS[phase]
+        try:
+            from PyObjCTools import AppHelper
+            AppHelper.callLater(
+                delay, self._verify_presentation, token, phase)
+        except Exception as exc:
+            log.info("Bubble presentation verify not scheduled: %s",
+                     type(exc).__name__)
+
+    def _verify_presentation(self, token: int, phase: int) -> None:
+        """After orderFront: confirm WindowServer composited the active surface.
+
+        Only evaluates the current non-idle presentation token. On failure,
+        recreates the strip with bounded backoff; never depends on animation
+        completions.
+        """
+        if token != self._present_token:
+            return
+        if self._state == "idle":
+            return
+        if not self._strip_should_show() and not self._pill_should_show():
+            return
+
+        panel = None
+        surface = None
+        if self._strip_should_show() and self.wings is not None:
+            panel, surface = self.wings, "wings"
+        elif self._pill_should_show() and self.panel is not None:
+            panel, surface = self.panel, "pill"
+        if panel is None:
+            return
+
+        appkit_ok = self._panel_ok(panel)
+        status = self._window_server_status(panel)
+        self._last_ws_status = status
+        presented = window_server_presented(status)
+        # Fail-open when probe is unavailable; only act on explicit False.
+        ws_ok = True if presented is None else bool(presented)
+
+        if appkit_ok and ws_ok:
+            log.info(
+                "Bubble presentation verify ok: surface=%s token=%s phase=%s "
+                "ws=%s", surface, token, phase, status)
+            return
+
+        log.warning(
+            "Bubble presentation verify failed: surface=%s token=%s phase=%s "
+            "appkit_ok=%s ws_ok=%s ws=%s snapshot=%s",
+            surface, token, phase, appkit_ok, ws_ok, status,
+            self.diagnostic_snapshot())
+
+        if surface == "wings" and self._state in (
+                RECORDING_STATES + ("processing", "success", "notice", "suggestion")):
+            if self._recover_attempts >= MAX_STRIP_RECOVERIES:
+                self._last_enforce_ok = False
+                self._last_recover_action = {
+                    "reason": "ws_exhausted",
+                    "token": token,
+                    "phase": phase,
+                    "ws": status,
+                }
+                log.error(
+                    "Bubble strip recovery exhausted: token=%s attempts=%s ws=%s",
+                    token, self._recover_attempts, status)
+                return
+            self._recover_attempts += 1
+            self._recreate_failed_wings(reason="window_server")
+            # Re-check after backoff; token unchanged so only this episode continues.
+            self._schedule_presentation_verify(token, phase + 1)
+            return
+
+        if surface == "pill":
+            # Corner / cue pill: re-present without a recreate loop.
+            try:
+                panel.setLevel_(self._NSStatusWindowLevel)
+                panel.setCollectionBehavior_(self._collection_behavior)
+                panel.orderFrontRegardless()
+                panel.setAlphaValue_(1.0)
+                panel.displayIfNeeded()
+            except Exception:
+                pass
+            self._last_recover_action = {
+                "reason": "pill_reorder",
+                "token": token,
+                "phase": phase,
+                "ws": status,
+            }
+            if phase + 1 < len(WS_VERIFY_DELAYS):
+                self._schedule_presentation_verify(token, phase + 1)
+            else:
+                self._last_enforce_ok = self._panel_ok(panel)
+            return
+
+        self._last_enforce_ok = False
+
+    def handle_display_lifecycle(self, reason: str) -> None:
+        """Main thread: screen-parameter change, workspace wake, or space shift.
+
+        Idle: drop potentially stale wings so the next show builds a fresh
+        WindowServer binding (no polling). Non-idle: rebuild the strip once
+        and re-enforce visibility with a new presentation-verify token.
+        """
+        log.info("Bubble display lifecycle reason=%s state=%s",
+                 reason, self._state)
+        if self._state == "idle":
+            if self.wings is not None:
+                self._discard_wings()
+                self._last_recover_action = {
+                    "reason": f"lifecycle_idle_discard:{reason}",
+                    "token": self._present_token,
+                }
+            return
+        # Non-idle after sleep/wake/spaces: panels often keep AppKit-visible
+        # state while WindowServer no longer composites them.
+        if self._strip_should_show():
+            self._discard_wings()
+            self._ensure_wings()
+            self._restore_wings_mode()
+            self._last_recover_action = {
+                "reason": f"lifecycle_rebuild:{reason}",
+                "token": self._present_token,
+                "state": self._state,
+            }
+            self._recover_total += 1
+        self._enforce_visibility()
 
     def set_sensitivity(self, value: float) -> None:
         """Display gain for the recording waveform ([bubble] sensitivity,
@@ -921,12 +1225,12 @@ class Bubble:
 
     def diagnostic_snapshot(self) -> dict:
         """Content-free visual state for rotating logs and race diagnosis."""
-        def panel_state(panel):
+        def panel_state(panel, *, probe_ws: bool = False):
             if panel is None:
                 return None
             try:
                 frame = panel.frame()
-                return {
+                data = {
                     "window": int(panel.windowNumber()),
                     "visible": bool(panel.isVisible()),
                     "alpha": round(float(panel.alphaValue()), 3),
@@ -939,6 +1243,17 @@ class Bubble:
                     ],
                     "on_screen": self._panel_on_screen(panel),
                 }
+                if probe_ws:
+                    # Prefer last scheduled-verify result; live-probe only when
+                    # the surface is currently expected on screen (avoids
+                    # idle noise and extra CGWindowList traffic).
+                    if self._last_ws_status and (
+                            self._last_ws_status.get("window") == data["window"]):
+                        data["ws"] = self._last_ws_status
+                    else:
+                        data["ws"] = self._window_server_status(panel)
+                    data["ws_presented"] = window_server_presented(data["ws"])
+                return data
             except Exception as exc:
                 return {"snapshot_error": type(exc).__name__}
 
@@ -952,6 +1267,7 @@ class Bubble:
             screen_count = len(NSScreen.screens())
         except Exception:
             screen_count = None
+        probe = self._state != "idle"
         return {
             "state": self._state,
             "style": self.style,
@@ -960,8 +1276,12 @@ class Bubble:
             "show_text": self._show_text,
             "vis_gen": self._vis_gen,
             "notice_gen": self._notice_gen,
-            "pill": panel_state(self.panel),
-            "wings": panel_state(self.wings),
+            "present_token": self._present_token,
+            "recover_attempts": self._recover_attempts,
+            "recover_total": self._recover_total,
+            "last_recover": self._last_recover_action,
+            "pill": panel_state(self.panel, probe_ws=probe and self._pill_should_show()),
+            "wings": panel_state(self.wings, probe_ws=probe and self._strip_should_show()),
             "wings_mode": getattr(self.wings_view, "_mode", None),
             "collapse_timer": bool(
                 self.wings_view is not None
@@ -987,24 +1307,22 @@ class Bubble:
     # bug that made the strip disappear permanently in extended use).
 
     def _enforce_visibility(self) -> None:
-        """Set final panel visibility from the state matrix. Synchronous."""
+        """Set final panel visibility from the state matrix. Synchronous.
+
+        AppKit isVisible/alpha is necessary but not sufficient after long
+        idle/display sleep: a delayed WindowServer probe (``_verify_presentation``)
+        confirms compositing. Scheduling is generation-token-guarded and
+        only armed for non-idle surfaces — never a permanent idle poll.
+        """
         if self._state != "idle":
             self._refresh_live_geometry()
         enforce_ok = True
+        schedule_verify = False
         if self._geometry is not None:
             # Notch path: strip handles real states; notice may use strip
             # (notice) or pill (cue).
-            strip_states = RECORDING_STATES + ("processing", "success")
-            show_strip = (self._state in strip_states
-                          or (self._state == "notice"
-                              and self._notice_surface == "wings")
-                          or (self._state == "suggestion"
-                              and self._notice_surface == "wings")
-                          )
-            show_pill = ((self._state == "notice"
-                          and self._notice_surface == "pill")
-                         or (self._state == "suggestion"
-                             and self._notice_surface == "pill"))
+            show_strip = self._strip_should_show()
+            show_pill = self._pill_should_show()
             if show_strip:
                 self._ensure_wings()
                 self.wings.setLevel_(self._NSStatusWindowLevel)
@@ -1016,8 +1334,10 @@ class Bubble:
                     before = self.diagnostic_snapshot()
                     log.warning("Bubble strip show verification failed: %s", before)
                     if self._state in RECORDING_STATES + ("processing", "success"):
-                        self._recreate_failed_wings()
+                        self._recover_attempts += 1
+                        self._recreate_failed_wings(reason="appkit")
                     enforce_ok = self._panel_ok(self.wings)
+                schedule_verify = True
             elif self.wings is not None:
                 self.wings.orderOut_(None)
             if show_pill:
@@ -1027,6 +1347,7 @@ class Bubble:
                 self.panel.setAlphaValue_(1.0)
                 self.panel.displayIfNeeded()
                 enforce_ok = enforce_ok and self._panel_ok(self.panel)
+                schedule_verify = True
             else:
                 self.panel.orderOut_(None)
         else:
@@ -1040,10 +1361,20 @@ class Bubble:
                 self.panel.setAlphaValue_(1.0)
                 self.panel.displayIfNeeded()
                 enforce_ok = self._panel_ok(self.panel)
+                schedule_verify = True
         self._last_enforce_ok = enforce_ok
         if not enforce_ok:
             log.error("Bubble visibility remains unhealthy: %s",
                       self.diagnostic_snapshot())
+        if schedule_verify and self._state != "idle":
+            # New token invalidates any in-flight verify from a prior show.
+            self._present_token += 1
+            self._recover_attempts = 0
+            self._schedule_presentation_verify(self._present_token, 0)
+        elif self._state == "idle":
+            # Invalidate pending verifies without scheduling replacements.
+            self._present_token += 1
+            self._recover_attempts = 0
 
     def _show_panel(self, panel, duration=0.0):
         # Visibility is set by _enforce_visibility; this only fades in
